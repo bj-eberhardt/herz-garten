@@ -64,6 +64,52 @@ async function getCurrentCouple(userId: string) {
   return result.rows[0] ?? null;
 }
 
+async function getCoupleMemberIds(client: Queryable, coupleId: string) {
+  const result = await client.query('select user_id as "userId" from couple_members where couple_id = $1', [coupleId]);
+  return result.rows.map((row: { userId: string }) => row.userId);
+}
+
+async function createNotifications(
+  client: Queryable,
+  options: {
+    coupleId: string;
+    userIds: string[];
+    type:
+      | 'daily_answer_waiting'
+      | 'daily_revealed'
+      | 'quest_waiting_confirmation'
+      | 'quest_completed'
+      | 'love_jar_note'
+      | 'memory_created';
+    title: string;
+    body: string;
+    sourceType: string;
+    sourceId?: string;
+  },
+) {
+  const uniqueUserIds = [...new Set(options.userIds)].filter(Boolean);
+
+  for (const userId of uniqueUserIds) {
+    await client.query(
+      `
+        insert into notifications (id, couple_id, user_id, type, title, body, source_type, source_id)
+        values ($1, $2, $3, $4, $5, $6, $7, $8)
+        on conflict do nothing
+      `,
+      [
+        randomUUID(),
+        options.coupleId,
+        userId,
+        options.type,
+        options.title,
+        options.body,
+        options.sourceType,
+        options.sourceId ?? null,
+      ],
+    );
+  }
+}
+
 async function getOrCreateTodayInstance(client: Queryable, coupleId: string) {
   const date = todayIsoDate();
   const questionResult = await client.query(
@@ -301,6 +347,50 @@ function mapMemoryEntry(row: Record<string, unknown>) {
     category: row.category,
     linkedGardenObjectId: row.linkedGardenObjectId,
     createdAt: row.createdAt,
+  };
+}
+
+function mapNotification(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    coupleId: row.coupleId,
+    userId: row.userId,
+    type: row.type,
+    title: row.title,
+    body: row.body,
+    sourceType: row.sourceType,
+    sourceId: row.sourceId,
+    readAt: row.readAt,
+    createdAt: row.createdAt,
+  };
+}
+
+async function buildNotificationPayload(userId: string) {
+  const result = await pool.query(
+    `
+      select
+        id,
+        couple_id as "coupleId",
+        user_id as "userId",
+        type,
+        title,
+        body,
+        source_type as "sourceType",
+        source_id as "sourceId",
+        read_at as "readAt",
+        created_at as "createdAt"
+      from notifications
+      where user_id = $1
+      order by created_at desc
+      limit 50
+    `,
+    [userId],
+  );
+  const notifications = result.rows.map(mapNotification);
+
+  return {
+    notifications,
+    unreadCount: notifications.filter((notification) => !notification.readAt).length,
   };
 }
 
@@ -676,6 +766,52 @@ export function apiRouter(): Router {
     response.json({ user, couple });
   });
 
+  router.get('/notifications', requireAuth, async (request, response) => {
+    const user = currentUser(request);
+
+    try {
+      response.json(await buildNotificationPayload(user.id));
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.post('/notifications/read-all', requireAuth, async (request, response) => {
+    const user = currentUser(request);
+
+    try {
+      await pool.query('update notifications set read_at = now() where user_id = $1 and read_at is null', [user.id]);
+      response.json(await buildNotificationPayload(user.id));
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.post('/notifications/:notificationId/read', requireAuth, async (request, response) => {
+    const user = currentUser(request);
+
+    try {
+      const result = await pool.query(
+        `
+          update notifications
+          set read_at = coalesce(read_at, now())
+          where id = $1 and user_id = $2
+          returning id
+        `,
+        [request.params.notificationId, user.id],
+      );
+
+      if (!result.rows[0]) {
+        response.status(404).json({ error: 'Notification not found' });
+        return;
+      }
+
+      response.json(await buildNotificationPayload(user.id));
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
   router.get('/me/export', requireAuth, async (request, response) => {
     const user = currentUser(request);
 
@@ -688,7 +824,7 @@ export function apiRouter(): Router {
       };
 
       if (couple) {
-        const [members, answers, quests, gardenObjects, loveJarNotes, memories] = await Promise.all([
+        const [members, answers, quests, gardenObjects, loveJarNotes, memories, notifications] = await Promise.all([
           pool.query(
             `
               select p.id, p.email, p.display_name as "displayName", cm.role, cm.joined_at as "joinedAt"
@@ -713,6 +849,7 @@ export function apiRouter(): Router {
           pool.query('select * from garden_objects where couple_id = $1 order by created_at', [couple.id]),
           pool.query('select * from love_jar_notes where couple_id = $1 order by created_at', [couple.id]),
           pool.query('select * from memory_entries where couple_id = $1 order by date desc, created_at desc', [couple.id]),
+          pool.query('select * from notifications where couple_id = $1 order by created_at desc', [couple.id]),
         ]);
 
         payload.data = {
@@ -722,6 +859,7 @@ export function apiRouter(): Router {
           gardenObjects: gardenObjects.rows,
           loveJarNotes: loveJarNotes.rows,
           memories: memories.rows,
+          notifications: notifications.rows,
         };
       }
 
@@ -985,6 +1123,27 @@ export function apiRouter(): Router {
         await client.query('update daily_question_instances set reward_applied_at = now() where id = $1', [
           instance.id,
         ]);
+        const memberIds = await getCoupleMemberIds(client, couple.id);
+        await createNotifications(client, {
+          coupleId: couple.id,
+          userIds: memberIds,
+          type: 'daily_revealed',
+          title: 'Eure Antworten sind sichtbar',
+          body: 'Aus euren Antworten ist ein neuer Gartenmoment gewachsen.',
+          sourceType: 'today',
+          sourceId: instance.id,
+        });
+      } else if (answersResult.rows.length === 1) {
+        const memberIds = await getCoupleMemberIds(client, couple.id);
+        await createNotifications(client, {
+          coupleId: couple.id,
+          userIds: memberIds.filter((memberId) => memberId !== user.id),
+          type: 'daily_answer_waiting',
+          title: 'Eine Antwort wartet',
+          body: `${user.displayName} hat die Tagesfrage beantwortet. Wenn du antwortest, seht ihr beide eure Gedanken.`,
+          sourceType: 'today',
+          sourceId: instance.id,
+        });
       }
 
       await client.query('commit');
@@ -1138,6 +1297,27 @@ export function apiRouter(): Router {
 
       if (isCompleted && !coupleQuest.rewardAppliedAt) {
         await applyQuestReward(client, couple.id, coupleQuestId, quest);
+        const memberIds = await getCoupleMemberIds(client, couple.id);
+        await createNotifications(client, {
+          coupleId: couple.id,
+          userIds: memberIds,
+          type: 'quest_completed',
+          title: 'Quest abgeschlossen',
+          body: `Eure Quest "${quest.title}" hat euren Garten wachsen lassen.`,
+          sourceType: 'quest',
+          sourceId: coupleQuestId,
+        });
+      } else if (!isCompleted) {
+        const memberIds = await getCoupleMemberIds(client, couple.id);
+        await createNotifications(client, {
+          coupleId: couple.id,
+          userIds: memberIds.filter((memberId) => memberId !== user.id),
+          type: 'quest_waiting_confirmation',
+          title: 'Quest wartet auf dich',
+          body: `${user.displayName} hat "${quest.title}" bestaetigt. Wenn es fuer dich auch passt, kannst du sie abschliessen.`,
+          sourceType: 'quest',
+          sourceId: coupleQuestId,
+        });
       }
 
       await client.query('commit');
@@ -1201,6 +1381,16 @@ export function apiRouter(): Router {
         [noteId, couple.id, user.id, text, category],
       );
       await createLoveJarLight(client, couple.id, noteId);
+      const memberIds = await getCoupleMemberIds(client, couple.id);
+      await createNotifications(client, {
+        coupleId: couple.id,
+        userIds: memberIds.filter((memberId) => memberId !== user.id),
+        type: 'love_jar_note',
+        title: 'Ein neuer Zettel wartet',
+        body: `${user.displayName} hat etwas in euren Love Jar gelegt.`,
+        sourceType: 'love_jar',
+        sourceId: noteId,
+      });
       await client.query('commit');
 
       const payload = await buildLoveJarPayload(user.id);
@@ -1352,6 +1542,16 @@ export function apiRouter(): Router {
           memoryId,
         ]);
       }
+      const memberIds = await getCoupleMemberIds(client, couple.id);
+      await createNotifications(client, {
+        coupleId: couple.id,
+        userIds: memberIds.filter((memberId) => memberId !== user.id),
+        type: 'memory_created',
+        title: 'Neue Erinnerung',
+        body: `${user.displayName} hat "${title}" in eure Timeline gelegt.`,
+        sourceType: 'memory',
+        sourceId: memoryId,
+      });
       await client.query('commit');
 
       const payload = await buildMemoryPayload(user.id);

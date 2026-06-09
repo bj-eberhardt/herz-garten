@@ -51,6 +51,7 @@ a {
 
 .brand,
 .invite-code,
+.notification-link,
 .stats-row span,
 .quest-meta span,
 .privacy-note {
@@ -82,6 +83,34 @@ a {
   font-size: 0.85rem;
   font-weight: 700;
   padding: 8px 12px;
+}
+
+.notification-link {
+  background: #fff8f2;
+  border: 1px solid #efd7ca;
+  border-radius: 999px;
+  color: #7e4a3f;
+  height: 40px;
+  justify-content: center;
+  position: relative;
+  width: 40px;
+}
+
+.notification-badge {
+  background: #ef7d70;
+  border: 2px solid #fff8f2;
+  border-radius: 999px;
+  color: #fff;
+  display: grid;
+  font-size: 0.68rem;
+  font-weight: 900;
+  min-height: 20px;
+  min-width: 20px;
+  padding: 1px 5px;
+  place-items: center;
+  position: absolute;
+  right: -6px;
+  top: -6px;
 }
 
 .app-main {
@@ -415,6 +444,53 @@ textarea {
 .detail-panel {
   display: grid;
   gap: 16px;
+}
+
+.notification-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.notification-toolbar p,
+.notification-toolbar h2 {
+  margin-bottom: 0;
+}
+
+.notification-list {
+  display: grid;
+  gap: 12px;
+}
+
+.notification-item {
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid #efd7ca;
+  border-radius: 8px;
+  color: #382f2a;
+  cursor: pointer;
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  text-align: left;
+  width: 100%;
+}
+
+.notification-item.unread {
+  border-color: #ef7d70;
+  box-shadow: 0 14px 34px rgba(159, 76, 67, 0.12);
+}
+
+.notification-item span {
+  display: grid;
+  gap: 4px;
+}
+
+.notification-item small {
+  color: #806456;
+  font-size: 0.92rem;
+  line-height: 1.4;
 }
 
 .detail-header {

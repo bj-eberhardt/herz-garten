@@ -4,6 +4,7 @@ import type { Couple, LoveJarCategory, LoveJarNote } from '@/types/domain';
 import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
 import { useGardenStore } from './gardenStore';
+import { useNotificationStore } from './notificationStore';
 
 export type LoveJarNoteView = Omit<LoveJarNote, 'text'> & {
   text: string | null;
@@ -71,6 +72,7 @@ export const useLoveJarStore = defineStore('loveJar', {
         });
         this.applyLoveJarPayload(payload);
         await useGardenStore().loadGarden();
+        await useNotificationStore().loadNotifications();
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Zettel konnte nicht gespeichert werden';
         throw error;
@@ -86,6 +88,7 @@ export const useLoveJarStore = defineStore('loveJar', {
           method: 'POST',
         });
         this.applyLoveJarPayload(payload);
+        await useNotificationStore().loadNotifications();
       } catch (error) {
         if (error instanceof ApiError && error.status === 409) {
           this.error = 'Du hast heute schon einen Zettel gezogen. Morgen wartet wieder einer auf dich.';

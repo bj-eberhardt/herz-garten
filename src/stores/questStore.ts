@@ -4,6 +4,7 @@ import type { Couple, Quest } from '@/types/domain';
 import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
 import { useGardenStore } from './gardenStore';
+import { useNotificationStore } from './notificationStore';
 
 export interface QuestProgress {
   id: string;
@@ -56,6 +57,7 @@ export const useQuestStore = defineStore('quests', {
           method: 'POST',
         });
         this.applyQuestPayload(payload);
+        await useNotificationStore().loadNotifications();
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Quest konnte nicht aktualisiert werden';
         throw error;

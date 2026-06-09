@@ -3,6 +3,7 @@ import { apiRequest } from '@/services/api';
 import type { Couple, DailyQuestion, DailyQuestionAnswer } from '@/types/domain';
 import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
+import { useNotificationStore } from './notificationStore';
 
 type TodayAnswer = Omit<DailyQuestionAnswer, 'answerText'> & {
   displayName?: string;
@@ -71,6 +72,7 @@ export const useDailyQuestionStore = defineStore('dailyQuestion', {
           body: JSON.stringify({ answerText }),
         });
         this.applyToday(payload);
+        await useNotificationStore().loadNotifications();
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Antwort konnte nicht gespeichert werden';
         throw error;

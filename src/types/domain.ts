@@ -6,6 +6,13 @@ export type GardenObjectType = 'flower' | 'tree' | 'bench' | 'light' | 'stone' |
 export type GardenSourceType = 'question' | 'quest' | 'memory' | 'love_jar' | 'milestone';
 export type LoveJarCategory = 'compliment' | 'memory' | 'voucher' | 'wish' | 'surprise';
 export type MemoryCategory = 'date' | 'travel' | 'milestone' | 'funny' | 'everyday' | 'special';
+export type NotificationType =
+  | 'daily_answer_waiting'
+  | 'daily_revealed'
+  | 'quest_waiting_confirmation'
+  | 'quest_completed'
+  | 'love_jar_note'
+  | 'memory_created';
 
 export interface User {
   id: string;
@@ -101,5 +108,18 @@ export interface MemoryEntry {
   imageUrl?: string;
   category: MemoryCategory;
   linkedGardenObjectId?: string;
+  createdAt: string;
+}
+
+export interface NotificationItem {
+  id: string;
+  coupleId: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  sourceType: string;
+  sourceId?: string;
+  readAt?: string | null;
   createdAt: string;
 }

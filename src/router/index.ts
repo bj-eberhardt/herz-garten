@@ -5,6 +5,7 @@ import QuestsView from '@/views/QuestsView.vue';
 import LoveJarView from '@/views/LoveJarView.vue';
 import MemoriesView from '@/views/MemoriesView.vue';
 import SettingsView from '@/views/SettingsView.vue';
+import NotificationsView from '@/views/NotificationsView.vue';
 import OnboardingView from '@/views/OnboardingView.vue';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -18,6 +19,7 @@ const router = createRouter({
     { path: '/quests', name: 'quests', component: QuestsView },
     { path: '/love-jar', name: 'loveJar', component: LoveJarView },
     { path: '/memories', name: 'memories', component: MemoriesView },
+    { path: '/notifications', name: 'notifications', component: NotificationsView },
     { path: '/settings', name: 'settings', component: SettingsView },
   ],
 });

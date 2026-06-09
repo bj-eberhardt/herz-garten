@@ -4,6 +4,7 @@ import type { Couple, MemoryCategory, MemoryEntry } from '@/types/domain';
 import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
 import { useGardenStore } from './gardenStore';
+import { useNotificationStore } from './notificationStore';
 
 export type MemoryEntryView = MemoryEntry & {
   authorName?: string;
@@ -54,6 +55,7 @@ export const useMemoryStore = defineStore('memories', {
         });
         this.applyMemoryPayload(payload);
         await useGardenStore().loadGarden();
+        await useNotificationStore().loadNotifications();
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Erinnerung konnte nicht gespeichert werden';
         throw error;
