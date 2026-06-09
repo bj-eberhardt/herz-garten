@@ -114,12 +114,27 @@ async function getOrCreateTodayInstance(client: Queryable, coupleId: string) {
   const date = todayIsoDate();
   const questionResult = await client.query(
     `
-      select id
-      from daily_questions
-      where active = true
-      order by id
+      with couple_context as (
+        select relationship_type, content_preference
+        from couples
+        where id = $1
+      )
+      select q.id
+      from daily_questions q
+      cross join couple_context c
+      where q.active = true
+        and (c.relationship_type = 'long_distance' or q.long_distance_suitable = true)
+      order by
+        case
+          when c.content_preference = 'romantic' and q.category in ('romance', 'gratitude', 'connection') then 0
+          when c.content_preference = 'playful' and q.category in ('humor', 'date', 'ritual') then 0
+          when c.content_preference = 'deep' and q.category in ('deep', 'trust', 'future', 'support') then 0
+          else 1
+        end,
+        md5(q.id::text || $1 || $2)
       limit 1
     `,
+    [coupleId, date],
   );
   const questionId = questionResult.rows[0]?.id;
   if (!questionId) {
@@ -241,10 +256,58 @@ async function buildTodayPayload(userId: string) {
   };
 }
 
-async function buildQuestPayload(userId: string) {
+interface QuestFilters {
+  category?: string;
+  effortLevel?: string;
+  maxMinutes?: number;
+  mode?: string;
+}
+
+function normalizeQuestFilters(query: Request['query']): QuestFilters {
+  const category = normalizeText(query.category);
+  const effortLevel = normalizeText(query.effortLevel);
+  const mode = normalizeText(query.mode);
+  const maxMinutesValue = Number(normalizeText(query.maxMinutes));
+
+  return {
+    category: category && category !== 'all' ? category : undefined,
+    effortLevel: effortLevel && effortLevel !== 'all' ? effortLevel : undefined,
+    maxMinutes: Number.isFinite(maxMinutesValue) && maxMinutesValue > 0 ? maxMinutesValue : undefined,
+    mode: mode && mode !== 'all' ? mode : undefined,
+  };
+}
+
+async function buildQuestPayload(userId: string, filters: QuestFilters = {}) {
   const couple = await getCurrentCouple(userId);
   if (!couple) {
     return null;
+  }
+
+  const validCategories = new Set(['romance', 'date', 'humor', 'memory', 'teamwork', 'long_distance']);
+  const validEffortLevels = new Set(['low', 'medium', 'high']);
+  const validModes = new Set(['solo', 'together', 'long_distance']);
+  const whereClauses = ['1 = 1'];
+  const params: unknown[] = [couple.id];
+
+  if (filters.category && validCategories.has(filters.category)) {
+    params.push(filters.category);
+    whereClauses.push(`q.category = $${params.length}`);
+  }
+
+  if (filters.effortLevel && validEffortLevels.has(filters.effortLevel)) {
+    params.push(filters.effortLevel);
+    whereClauses.push(`q.effort_level = $${params.length}`);
+  }
+
+  if (filters.maxMinutes) {
+    params.push(filters.maxMinutes);
+    whereClauses.push(`q.estimated_minutes <= $${params.length}`);
+  }
+
+  if (filters.mode && validModes.has(filters.mode)) {
+    if (filters.mode === 'solo') whereClauses.push('q.requires_both_partners = false');
+    if (filters.mode === 'together') whereClauses.push('q.requires_both_partners = true');
+    if (filters.mode === 'long_distance') whereClauses.push(`q.category = 'long_distance'`);
   }
 
   const result = await pool.query(
@@ -266,14 +329,16 @@ async function buildQuestPayload(userId: string) {
         cq.reward_applied_at as "rewardAppliedAt"
       from quests q
       left join couple_quests cq on cq.quest_id = q.id and cq.couple_id = $1
+      where ${whereClauses.join(' and ')}
       order by q.title
     `,
-    [couple.id],
+    params,
   );
 
   return {
     couple,
     quests: result.rows.map(mapQuest),
+    filters,
   };
 }
 
@@ -1162,7 +1227,7 @@ export function apiRouter(): Router {
     const user = currentUser(request);
 
     try {
-      const payload = await buildQuestPayload(user.id);
+      const payload = await buildQuestPayload(user.id, normalizeQuestFilters(request.query));
       if (!payload) {
         response.status(409).json({ error: 'No couple connected' });
         return;

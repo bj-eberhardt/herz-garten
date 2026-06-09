@@ -41,6 +41,7 @@ Die Tests laufen gegen `http://localhost:5173` und `http://localhost:3000`. Dock
 ### Quests
 
 - Offene Quests werden in einem eigenen Bereich angezeigt.
+- Quest-Filter nach Kategorie, Aufwand, Dauer und Modus grenzen Vorschlaege sichtbar ein.
 - Angenommene Quests wechseln in den aktiven Bereich.
 - Bei Partnerquests wartet die Quest auf die zweite Bestaetigung.
 - Nach Bestaetigung beider Partner landet die Quest im abgeschlossenen Bereich.

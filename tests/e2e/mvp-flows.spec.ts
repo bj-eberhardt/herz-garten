@@ -78,6 +78,27 @@ test('quests move through open active and completed states with partner confirma
   await contextB.close();
 });
 
+test('quest filters narrow visible quest suggestions', async ({ browser, request }) => {
+  const { contextA, contextB, pageA } = await setupPages(browser, request, 'quest-filters');
+
+  await pageA.goto('/quests');
+  await expect(pageA.getByTestId('quest-filters')).toBeVisible();
+  const initialCount = await pageA.getByTestId('quest-card').count();
+  expect(initialCount).toBeGreaterThan(3);
+
+  await pageA.getByTestId('quest-filter-category').selectOption('long_distance');
+  await expect(pageA.getByTestId('quest-card').first()).toBeVisible();
+  const filteredCount = await pageA.getByTestId('quest-card').count();
+  expect(filteredCount).toBeLessThan(initialCount);
+  await expect(pageA.getByTestId('quest-card').first()).toContainText(/Aktueller|Fern|Song|Sprachnachricht|Wiedersehen/);
+
+  await pageA.getByTestId('quest-filter-duration').selectOption('5');
+  await expect(pageA.getByTestId('quest-card').first()).toBeVisible();
+
+  await contextA.close();
+  await contextB.close();
+});
+
 test('love jar note can be drawn once per day and shows empty state for new couples', async ({ browser, request }) => {
   const { contextA, contextB, pageA, pageB } = await setupPages(browser, request, 'lovejar');
 

@@ -357,6 +357,20 @@ textarea {
   gap: 12px;
 }
 
+.quest-filters {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+}
+
+.quest-filters label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  margin-bottom: -4px;
+  text-transform: uppercase;
+}
+
 .section-heading h2 {
   margin-bottom: 0;
 }
@@ -655,6 +669,10 @@ textarea {
   .bottom-nav {
     bottom: 10px;
     width: calc(100% - 20px);
+  }
+
+  .quest-filters {
+    grid-template-columns: 1fr;
   }
 
   .nav-item span {

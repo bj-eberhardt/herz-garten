@@ -18,9 +18,24 @@ export type QuestWithProgress = Quest & {
   coupleQuest: QuestProgress | null;
 };
 
+export interface QuestFilters {
+  category: Quest['category'] | 'all';
+  effortLevel: Quest['effortLevel'] | 'all';
+  maxMinutes: 'all' | '5' | '10' | '15' | '30';
+  mode: 'all' | 'solo' | 'together' | 'long_distance';
+}
+
+const defaultFilters: QuestFilters = {
+  category: 'all',
+  effortLevel: 'all',
+  maxMinutes: 'all',
+  mode: 'all',
+};
+
 export const useQuestStore = defineStore('quests', {
   state: () => ({
     quests: [] as QuestWithProgress[],
+    filters: { ...defaultFilters },
     loading: false,
     error: '',
   }),
@@ -30,11 +45,19 @@ export const useQuestStore = defineStore('quests', {
       useCoupleStore().setCouple(payload.couple);
       useAuthStore().couple = payload.couple;
     },
-    async loadQuests() {
+    async loadQuests(filters: Partial<QuestFilters> = {}) {
+      this.filters = { ...this.filters, ...filters };
       this.loading = true;
       this.error = '';
       try {
-        const payload = await apiRequest<{ couple: Couple; quests: QuestWithProgress[] }>('/api/quests');
+        const params = new URLSearchParams();
+        Object.entries(this.filters).forEach(([key, value]) => {
+          if (value !== 'all') params.set(key, value);
+        });
+        const query = params.toString();
+        const payload = await apiRequest<{ couple: Couple; quests: QuestWithProgress[] }>(
+          `/api/quests${query ? `?${query}` : ''}`,
+        );
         this.applyQuestPayload(payload);
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Quests konnten nicht geladen werden';
