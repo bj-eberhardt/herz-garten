@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+.env
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+backend/node_modules
+backend/dist
+
