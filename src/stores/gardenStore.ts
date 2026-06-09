@@ -26,6 +26,8 @@ export interface GardenProgress {
   loveJarNoteCount: number;
   drawnLoveJarNoteCount: number;
   memoryCount: number;
+  knowMeRoundCount: number;
+  knowMeHitCount: number;
   gardenObjectCount: number;
   lastGardenMomentAt?: string | null;
 }
@@ -39,6 +41,8 @@ export const useGardenStore = defineStore('garden', {
       loveJarNoteCount: 0,
       drawnLoveJarNoteCount: 0,
       memoryCount: 0,
+      knowMeRoundCount: 0,
+      knowMeHitCount: 0,
       gardenObjectCount: 0,
       lastGardenMomentAt: null,
     } as GardenProgress,

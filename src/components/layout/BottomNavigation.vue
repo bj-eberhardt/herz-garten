@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { CalendarHeart, Flower2, GlassWater, HeartHandshake, Images, Settings } from '@lucide/vue';
+import { CalendarHeart, Flower2, Gamepad2, GlassWater, HeartHandshake, Images, Settings } from '@lucide/vue';
 
 const items = [
   { to: '/garden', label: 'Garten', icon: Flower2, testId: 'nav-garden' },
   { to: '/today', label: 'Heute', icon: CalendarHeart, testId: 'nav-today' },
   { to: '/quests', label: 'Quests', icon: HeartHandshake, testId: 'nav-quests' },
+  { to: '/know-me', label: 'Spiel', icon: Gamepad2, testId: 'nav-know-me' },
   { to: '/love-jar', label: 'Love Jar', icon: GlassWater, testId: 'nav-love-jar' },
   { to: '/memories', label: 'Momente', icon: Images, testId: 'nav-memories' },
   { to: '/settings', label: 'Profil', icon: Settings, testId: 'nav-settings' },

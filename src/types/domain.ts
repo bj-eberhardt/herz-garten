@@ -3,7 +3,7 @@ export type ContentPreference = 'romantic' | 'playful' | 'deep' | 'balanced';
 export type QuestCategory = 'romance' | 'date' | 'humor' | 'memory' | 'teamwork' | 'long_distance';
 export type EffortLevel = 'low' | 'medium' | 'high';
 export type GardenObjectType = 'flower' | 'tree' | 'bench' | 'light' | 'stone' | 'pond' | 'decoration';
-export type GardenSourceType = 'question' | 'quest' | 'memory' | 'love_jar' | 'milestone';
+export type GardenSourceType = 'question' | 'quest' | 'memory' | 'love_jar' | 'milestone' | 'know_me';
 export type LoveJarCategory = 'compliment' | 'memory' | 'voucher' | 'wish' | 'surprise';
 export type MemoryCategory = 'date' | 'travel' | 'milestone' | 'funny' | 'everyday' | 'special';
 export type NotificationType =
@@ -12,7 +12,9 @@ export type NotificationType =
   | 'quest_waiting_confirmation'
   | 'quest_completed'
   | 'love_jar_note'
-  | 'memory_created';
+  | 'memory_created'
+  | 'know_me_question'
+  | 'know_me_answered';
 
 export interface User {
   id: string;
@@ -122,4 +124,28 @@ export interface NotificationItem {
   sourceId?: string;
   readAt?: string | null;
   createdAt: string;
+}
+
+export interface KnowMeGuess {
+  id: string;
+  userId: string;
+  userName?: string;
+  selectedOptionIndex: number;
+  isCorrect: boolean;
+  createdAt: string;
+}
+
+export interface KnowMeRound {
+  id: string;
+  coupleId: string;
+  authorId: string;
+  authorName?: string;
+  questionText: string;
+  options: string[];
+  correctOptionIndex: number;
+  status: 'open' | 'answered';
+  rewardAppliedAt?: string | null;
+  answeredAt?: string | null;
+  createdAt: string;
+  guess: KnowMeGuess | null;
 }

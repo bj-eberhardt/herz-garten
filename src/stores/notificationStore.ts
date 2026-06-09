@@ -11,6 +11,7 @@ function routeForNotification(notification: NotificationItem) {
   if (notification.sourceType === 'today') return '/today';
   if (notification.sourceType === 'quest') return '/quests';
   if (notification.sourceType === 'love_jar') return '/love-jar';
+  if (notification.sourceType === 'know_me') return '/know-me';
   if (notification.sourceType === 'memory') return '/memories';
   return '/garden';
 }

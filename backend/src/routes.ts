@@ -80,7 +80,9 @@ async function createNotifications(
       | 'quest_waiting_confirmation'
       | 'quest_completed'
       | 'love_jar_note'
-      | 'memory_created';
+      | 'memory_created'
+      | 'know_me_question'
+      | 'know_me_answered';
     title: string;
     body: string;
     sourceType: string;
@@ -415,6 +417,32 @@ function mapMemoryEntry(row: Record<string, unknown>) {
   };
 }
 
+function mapKnowMeRound(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    coupleId: row.coupleId,
+    authorId: row.authorId,
+    authorName: row.authorName,
+    questionText: row.questionText,
+    options: row.options,
+    correctOptionIndex: row.correctOptionIndex,
+    status: row.status,
+    rewardAppliedAt: row.rewardAppliedAt,
+    answeredAt: row.answeredAt,
+    createdAt: row.createdAt,
+    guess: row.guessId
+      ? {
+          id: row.guessId,
+          userId: row.guessUserId,
+          userName: row.guessUserName,
+          selectedOptionIndex: row.selectedOptionIndex,
+          isCorrect: row.isCorrect,
+          createdAt: row.guessCreatedAt,
+        }
+      : null,
+  };
+}
+
 function mapNotification(row: Record<string, unknown>) {
   return {
     id: row.id,
@@ -493,6 +521,48 @@ async function buildMemoryPayload(userId: string) {
   };
 }
 
+async function buildKnowMePayload(userId: string) {
+  const couple = await getCurrentCouple(userId);
+  if (!couple) {
+    return null;
+  }
+
+  const result = await pool.query(
+    `
+      select
+        q.id,
+        q.couple_id as "coupleId",
+        q.author_id as "authorId",
+        author.display_name as "authorName",
+        q.question_text as "questionText",
+        q.options,
+        q.correct_option_index as "correctOptionIndex",
+        q.status,
+        q.reward_applied_at as "rewardAppliedAt",
+        q.answered_at as "answeredAt",
+        q.created_at as "createdAt",
+        g.id as "guessId",
+        g.user_id as "guessUserId",
+        guesser.display_name as "guessUserName",
+        g.selected_option_index as "selectedOptionIndex",
+        g.is_correct as "isCorrect",
+        g.created_at as "guessCreatedAt"
+      from know_me_questions q
+      join profiles author on author.id = q.author_id
+      left join know_me_guesses g on g.question_id = q.id
+      left join profiles guesser on guesser.id = g.user_id
+      where q.couple_id = $1
+      order by q.created_at desc
+    `,
+    [couple.id],
+  );
+
+  return {
+    couple,
+    rounds: result.rows.map(mapKnowMeRound),
+  };
+}
+
 async function createMemoryStone(client: Queryable, coupleId: string, memoryId: string, title: string) {
   const countResult = await client.query('select count(*)::int as count from garden_objects where couple_id = $1', [
     coupleId,
@@ -522,6 +592,34 @@ async function createMemoryStone(client: Queryable, coupleId: string, memoryId: 
   );
 
   return result.rows[0]?.id as string | undefined;
+}
+
+async function createKnowMeFlower(client: Queryable, coupleId: string, questionId: string) {
+  const countResult = await client.query('select count(*)::int as count from garden_objects where couple_id = $1', [
+    coupleId,
+  ]);
+  const [positionX, positionY] = gardenPositions[countResult.rows[0].count % gardenPositions.length];
+
+  await client.query(
+    `
+      insert into garden_objects (
+        id, couple_id, type, source_type, source_id, label, position_x, position_y, level
+      )
+      values ($1, $2, 'flower', 'know_me', $3, 'Kennst-du-mich-Blume', $4, $5, 1)
+      on conflict do nothing
+    `,
+    [randomUUID(), coupleId, questionId, positionX, positionY],
+  );
+  await client.query(
+    `
+      update couples
+      set heart_points = heart_points + 12,
+          garden_stage = greatest(1, floor((heart_points + 12) / 80) + 1)
+      where id = $1
+    `,
+    [coupleId],
+  );
+  await client.query('update know_me_questions set reward_applied_at = now() where id = $1', [questionId]);
 }
 
 async function buildGardenObjectDetail(userId: string, objectId: string) {
@@ -642,6 +740,32 @@ async function buildGardenObjectDetail(userId: string, objectId: string) {
     source = result.rows[0] ? { type: 'memory', ...result.rows[0] } : null;
   }
 
+  if (object.sourceType === 'know_me') {
+    const result = await pool.query(
+      `
+        select
+          q.id,
+          q.question_text as "questionText",
+          q.options,
+          q.correct_option_index as "correctOptionIndex",
+          q.answered_at as "answeredAt",
+          q.created_at as "createdAt",
+          author.display_name as "authorName",
+          guesser.display_name as "guessUserName",
+          g.selected_option_index as "selectedOptionIndex",
+          g.is_correct as "isCorrect",
+          g.created_at as "guessCreatedAt"
+        from know_me_questions q
+        join profiles author on author.id = q.author_id
+        left join know_me_guesses g on g.question_id = q.id
+        left join profiles guesser on guesser.id = g.user_id
+        where q.id = $1 and q.couple_id = $2
+      `,
+      [object.sourceId, couple.id],
+    );
+    source = result.rows[0] ? { type: 'know_me', ...result.rows[0] } : null;
+  }
+
   return {
     couple,
     object: mapGardenObject(object),
@@ -658,6 +782,8 @@ async function buildGardenProgress(coupleId: string) {
         count(distinct n.id)::int as "loveJarNoteCount",
         count(distinct n.id) filter (where n.is_drawn = true)::int as "drawnLoveJarNoteCount",
         count(distinct m.id)::int as "memoryCount",
+        count(distinct km.id) filter (where km.status = 'answered')::int as "knowMeRoundCount",
+        count(distinct km.id) filter (where km.reward_applied_at is not null)::int as "knowMeHitCount",
         count(distinct go.id)::int as "gardenObjectCount",
         coalesce(max(go.created_at), c.created_at) as "lastGardenMomentAt"
       from couples c
@@ -665,6 +791,7 @@ async function buildGardenProgress(coupleId: string) {
       left join couple_quests cq on cq.couple_id = c.id
       left join love_jar_notes n on n.couple_id = c.id
       left join memory_entries m on m.couple_id = c.id
+      left join know_me_questions km on km.couple_id = c.id
       left join garden_objects go on go.couple_id = c.id
       where c.id = $1
       group by c.id
@@ -679,6 +806,8 @@ async function buildGardenProgress(coupleId: string) {
       loveJarNoteCount: 0,
       drawnLoveJarNoteCount: 0,
       memoryCount: 0,
+      knowMeRoundCount: 0,
+      knowMeHitCount: 0,
       gardenObjectCount: 0,
       lastGardenMomentAt: null,
     }
@@ -925,7 +1054,8 @@ export function apiRouter(): Router {
       };
 
       if (couple) {
-        const [members, answers, quests, gardenObjects, loveJarNotes, memories, notifications] = await Promise.all([
+        const [members, answers, quests, gardenObjects, loveJarNotes, memories, knowMeQuestions, knowMeGuesses, notifications] =
+          await Promise.all([
           pool.query(
             `
               select p.id, p.email, p.display_name as "displayName", cm.role, cm.joined_at as "joinedAt"
@@ -950,8 +1080,19 @@ export function apiRouter(): Router {
           pool.query('select * from garden_objects where couple_id = $1 order by created_at', [couple.id]),
           pool.query('select * from love_jar_notes where couple_id = $1 order by created_at', [couple.id]),
           pool.query('select * from memory_entries where couple_id = $1 order by date desc, created_at desc', [couple.id]),
-          pool.query('select * from notifications where couple_id = $1 order by created_at desc', [couple.id]),
-        ]);
+            pool.query('select * from know_me_questions where couple_id = $1 order by created_at desc', [couple.id]),
+            pool.query(
+              `
+                select g.*
+                from know_me_guesses g
+                join know_me_questions q on q.id = g.question_id
+                where q.couple_id = $1
+                order by g.created_at desc
+              `,
+              [couple.id],
+            ),
+            pool.query('select * from notifications where couple_id = $1 order by created_at desc', [couple.id]),
+          ]);
 
         payload.data = {
           members: members.rows,
@@ -960,6 +1101,8 @@ export function apiRouter(): Router {
           gardenObjects: gardenObjects.rows,
           loveJarNotes: loveJarNotes.rows,
           memories: memories.rows,
+          knowMeQuestions: knowMeQuestions.rows,
+          knowMeGuesses: knowMeGuesses.rows,
           notifications: notifications.rows,
         };
       }
@@ -1425,6 +1568,178 @@ export function apiRouter(): Router {
 
       const payload = await buildQuestPayload(user.id);
       response.json(payload);
+    } catch (error) {
+      await client.query('rollback');
+      handleError(response, error);
+    } finally {
+      client.release();
+    }
+  });
+
+  router.get('/know-me', requireAuth, async (request, response) => {
+    const user = currentUser(request);
+
+    try {
+      const payload = await buildKnowMePayload(user.id);
+      if (!payload) {
+        response.status(409).json({ error: 'No couple connected' });
+        return;
+      }
+      response.json(payload);
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.post('/know-me', requireAuth, async (request, response) => {
+    const user = currentUser(request);
+    const questionText = normalizeText(request.body.questionText);
+    const options = Array.isArray(request.body.options)
+      ? request.body.options.map((option: unknown) => normalizeText(option)).filter(Boolean)
+      : [];
+    const correctOptionIndex = Number(request.body.correctOptionIndex);
+
+    if (!questionText || options.length < 2 || options.length > 4) {
+      response.status(400).json({ error: 'Question text and 2-4 answer options are required' });
+      return;
+    }
+
+    if (!Number.isInteger(correctOptionIndex) || correctOptionIndex < 0 || correctOptionIndex >= options.length) {
+      response.status(400).json({ error: 'A valid correct option is required' });
+      return;
+    }
+
+    const client = await pool.connect();
+    try {
+      const couple = await getCurrentCouple(user.id);
+      if (!couple) {
+        response.status(409).json({ error: 'No couple connected' });
+        return;
+      }
+
+      await client.query('begin');
+      const questionId = randomUUID();
+      await client.query(
+        `
+          insert into know_me_questions (
+            id, couple_id, author_id, question_text, options, correct_option_index
+          )
+          values ($1, $2, $3, $4, $5, $6)
+        `,
+        [questionId, couple.id, user.id, questionText, JSON.stringify(options), correctOptionIndex],
+      );
+      const memberIds = await getCoupleMemberIds(client, couple.id);
+      await createNotifications(client, {
+        coupleId: couple.id,
+        userIds: memberIds.filter((memberId) => memberId !== user.id),
+        type: 'know_me_question',
+        title: 'Eine Kennst-du-mich-Frage wartet',
+        body: `${user.displayName} hat eine Frage ueber sich gestellt. Was schaetzt du?`,
+        sourceType: 'know_me',
+        sourceId: questionId,
+      });
+      await client.query('commit');
+
+      response.status(201).json(await buildKnowMePayload(user.id));
+    } catch (error) {
+      await client.query('rollback');
+      handleError(response, error);
+    } finally {
+      client.release();
+    }
+  });
+
+  router.post('/know-me/:questionId/guess', requireAuth, async (request, response) => {
+    const user = currentUser(request);
+    const selectedOptionIndex = Number(request.body.selectedOptionIndex);
+
+    if (!Number.isInteger(selectedOptionIndex) || selectedOptionIndex < 0 || selectedOptionIndex > 3) {
+      response.status(400).json({ error: 'A valid selected option is required' });
+      return;
+    }
+
+    const client = await pool.connect();
+    try {
+      const couple = await getCurrentCouple(user.id);
+      if (!couple) {
+        response.status(409).json({ error: 'No couple connected' });
+        return;
+      }
+
+      await client.query('begin');
+      const questionResult = await client.query(
+        `
+          select
+            q.id,
+            q.author_id as "authorId",
+            q.question_text as "questionText",
+            q.options,
+            q.correct_option_index as "correctOptionIndex",
+            q.status,
+            q.reward_applied_at as "rewardAppliedAt",
+            p.display_name as "authorName"
+          from know_me_questions q
+          join profiles p on p.id = q.author_id
+          where q.id = $1 and q.couple_id = $2
+          for update
+        `,
+        [request.params.questionId, couple.id],
+      );
+      const question = questionResult.rows[0];
+      if (!question) {
+        await client.query('rollback');
+        response.status(404).json({ error: 'Know-me question not found' });
+        return;
+      }
+
+      if (question.authorId === user.id) {
+        await client.query('rollback');
+        response.status(403).json({ error: 'Author cannot guess their own question' });
+        return;
+      }
+
+      if (question.status !== 'open') {
+        await client.query('rollback');
+        response.status(409).json({ error: 'Know-me question is already answered' });
+        return;
+      }
+
+      if (selectedOptionIndex >= question.options.length) {
+        await client.query('rollback');
+        response.status(400).json({ error: 'Selected option does not exist' });
+        return;
+      }
+
+      const isCorrect = selectedOptionIndex === question.correctOptionIndex;
+      await client.query(
+        `
+          insert into know_me_guesses (id, question_id, user_id, selected_option_index, is_correct)
+          values ($1, $2, $3, $4, $5)
+        `,
+        [randomUUID(), question.id, user.id, selectedOptionIndex, isCorrect],
+      );
+      await client.query("update know_me_questions set status = 'answered', answered_at = now() where id = $1", [
+        question.id,
+      ]);
+
+      if (isCorrect && !question.rewardAppliedAt) {
+        await createKnowMeFlower(client, couple.id, question.id);
+      }
+
+      await createNotifications(client, {
+        coupleId: couple.id,
+        userIds: [question.authorId],
+        type: 'know_me_answered',
+        title: isCorrect ? 'Treffer im Kennst-du-mich-Spiel' : 'Eine Antwort ist da',
+        body: isCorrect
+          ? `${user.displayName} hat dich richtig eingeschaetzt. Eine besondere Blume ist gewachsen.`
+          : `${user.displayName} hat geraten. Nicht getroffen, aber ein neuer Gespraechsanlass.`,
+        sourceType: 'know_me',
+        sourceId: question.id,
+      });
+
+      await client.query('commit');
+      response.json(await buildKnowMePayload(user.id));
     } catch (error) {
       await client.query('rollback');
       handleError(response, error);

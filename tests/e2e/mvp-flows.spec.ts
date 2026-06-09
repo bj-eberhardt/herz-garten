@@ -127,6 +127,69 @@ test('love jar note can be drawn once per day and shows empty state for new coup
   await contextB.close();
 });
 
+test('know me game notifies partner and rewards correct guesses', async ({ browser, request }) => {
+  const { contextA, contextB, pageA, pageB } = await setupPages(browser, request, 'knowme');
+
+  await pageA.goto('/know-me');
+  await pageA.getByTestId('know-me-question-input').fill('Was ist mein heimlicher Lieblingssnack?');
+  await pageA.getByTestId('know-me-option-0').fill('Salzbrezeln');
+  await pageA.getByTestId('know-me-option-1').fill('Schokolade');
+  await pageA.getByTestId('know-me-option-2').fill('Apfel');
+  await pageA.getByTestId('know-me-correct-select').selectOption('1');
+  await pageA.getByTestId('know-me-create-submit').click();
+  await expect(pageA.getByTestId('know-me-own-card').first()).toContainText('Lieblingssnack');
+
+  await openNotifications(pageB);
+  await expect(pageB.getByTestId('notification-item').first()).toContainText('Kennst-du-mich');
+  await pageB.getByTestId('notification-item').first().click();
+  await expect(pageB).toHaveURL(/\/know-me$/);
+
+  await pageB
+    .getByTestId('know-me-open-card')
+    .first()
+    .getByTestId('know-me-answer-option')
+    .filter({ hasText: 'Schokolade' })
+    .click();
+  await pageB.getByTestId('know-me-guess-submit').click();
+  await expect(pageB.getByTestId('know-me-history-card').first()).toContainText('Treffer');
+  await expect(pageB.getByTestId('know-me-history-card').first()).toContainText('Schokolade');
+
+  await pageB.getByTestId('nav-garden').click();
+  await pageB.getByTestId('garden-object').first().click();
+  await expect(pageB.getByTestId('garden-detail')).toContainText('Wie gut kennst du mich?');
+  await expect(pageB.getByTestId('garden-detail-celebration')).toContainText('besondere Blume');
+
+  await contextA.close();
+  await contextB.close();
+});
+
+test('know me wrong guess is resolved without garden reward', async ({ browser, request }) => {
+  const { contextA, contextB, pageA, pageB } = await setupPages(browser, request, 'knowme-wrong');
+
+  await pageA.goto('/know-me');
+  await pageA.getByTestId('know-me-question-input').fill('Welcher Ort gibt mir Ruhe?');
+  await pageA.getByTestId('know-me-option-0').fill('Wald');
+  await pageA.getByTestId('know-me-option-1').fill('Bahnhof');
+  await pageA.getByTestId('know-me-correct-select').selectOption('0');
+  await pageA.getByTestId('know-me-create-submit').click();
+
+  await pageB.goto('/know-me');
+  await pageB
+    .getByTestId('know-me-open-card')
+    .first()
+    .getByTestId('know-me-answer-option')
+    .filter({ hasText: 'Bahnhof' })
+    .click();
+  await pageB.getByTestId('know-me-guess-submit').click();
+  await expect(pageB.getByTestId('know-me-history-card').first()).toContainText('Nicht getroffen');
+
+  await pageB.getByTestId('nav-garden').click();
+  await expect(pageB.getByTestId('garden-object')).toHaveCount(0);
+
+  await contextA.close();
+  await contextB.close();
+});
+
 test('memory creates timeline entry notification and garden detail', async ({ browser, request }) => {
   const { contextA, contextB, pageA, pageB } = await setupPages(browser, request, 'memory');
 

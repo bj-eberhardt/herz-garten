@@ -3,6 +3,7 @@ import GardenView from '@/views/GardenView.vue';
 import TodayView from '@/views/TodayView.vue';
 import QuestsView from '@/views/QuestsView.vue';
 import LoveJarView from '@/views/LoveJarView.vue';
+import KnowMeView from '@/views/KnowMeView.vue';
 import MemoriesView from '@/views/MemoriesView.vue';
 import SettingsView from '@/views/SettingsView.vue';
 import NotificationsView from '@/views/NotificationsView.vue';
@@ -17,6 +18,7 @@ const router = createRouter({
     { path: '/garden', name: 'garden', component: GardenView },
     { path: '/today', name: 'today', component: TodayView },
     { path: '/quests', name: 'quests', component: QuestsView },
+    { path: '/know-me', name: 'knowMe', component: KnowMeView },
     { path: '/love-jar', name: 'loveJar', component: LoveJarView },
     { path: '/memories', name: 'memories', component: MemoriesView },
     { path: '/notifications', name: 'notifications', component: NotificationsView },

@@ -55,6 +55,14 @@ Die Tests laufen gegen `http://localhost:5173` und `http://localhost:3000`. Dock
 - Partner B zieht den Zettel und sieht den Text.
 - Ein zweiter Ziehversuch am selben Tag ist gesperrt.
 
+### Wie gut kennst du mich?
+
+- Partner A erstellt eine eigene Multiple-Choice-Frage mit richtiger Antwort.
+- Partner B bekommt eine Notification und landet im Spiel.
+- Richtige Antwort erzeugt Verlaufseintrag und Gartenbelohnung.
+- Falsche Antwort wird liebevoll aufgeloest, erzeugt aber kein Gartenobjekt.
+- Gartenobjekt-Detail zeigt Frage, richtige Antwort und geratene Antwort.
+
 ### Erinnerungen und Garten
 
 - Partner A erstellt eine Erinnerung mit Titel, Beschreibung, Datum und Kategorie.

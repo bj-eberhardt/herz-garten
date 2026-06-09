@@ -13,6 +13,7 @@ const detailTitle = computed(() => {
   if (source.type === 'quest') return String(source.title);
   if (source.type === 'love_jar') return 'Love-Jar-Zettel';
   if (source.type === 'memory') return String(source.title);
+  if (source.type === 'know_me') return 'Wie gut kennst du mich?';
   return object.label;
 });
 
@@ -28,7 +29,9 @@ const detailDate = computed(() => {
           ? source.drawnAt ?? source.createdAt
           : source?.type === 'memory'
             ? source.date
-            : object?.createdAt;
+            : source?.type === 'know_me'
+              ? source.guessCreatedAt ?? source.answeredAt ?? source.createdAt
+              : object?.createdAt;
 
   return typeof rawDate === 'string'
     ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'long' }).format(new Date(rawDate))
@@ -43,6 +46,7 @@ const celebrationText = computed(() => {
   if (source.type === 'quest') return `Dieses Objekt feiert eure abgeschlossene Quest: ${source.title}.`;
   if (source.type === 'love_jar') return 'Dieses Licht erinnert an einen kleinen Zettel, der in euren Love Jar gelegt wurde.';
   if (source.type === 'memory') return `Dieser Stein bewahrt eure Erinnerung: ${source.title}.`;
+  if (source.type === 'know_me') return 'Diese besondere Blume ist gewachsen, weil ihr euch richtig eingeschaetzt habt.';
   return object.label;
 });
 
@@ -55,6 +59,11 @@ const progressItems = computed(() => [
     detail: `${gardenStore.progress.loveJarNoteCount} Zettel im Glas`,
   },
   { label: 'Erinnerungen', value: gardenStore.progress.memoryCount, detail: 'in der Timeline' },
+  {
+    label: 'Kennst du mich',
+    value: gardenStore.progress.knowMeHitCount,
+    detail: `${gardenStore.progress.knowMeRoundCount} gespielte Fragen`,
+  },
   { label: 'Gartenobjekte', value: gardenStore.progress.gardenObjectCount, detail: 'sichtbare Momente' },
 ]);
 
@@ -137,6 +146,30 @@ onMounted(() => {
           {{ gardenStore.selectedDetail.source.date }} - {{ gardenStore.selectedDetail.source.category }} -
           {{ gardenStore.selectedDetail.source.authorName }}
         </p>
+      </template>
+
+      <template v-else-if="gardenStore.selectedDetail.source?.type === 'know_me'">
+        <p class="detail-label">Richtig eingeschaetzt wurde</p>
+        <p>{{ gardenStore.selectedDetail.source.questionText }}</p>
+        <div class="answers">
+          <p>
+            <strong>Richtig:</strong>
+            {{
+              (gardenStore.selectedDetail.source.options as string[])[
+                gardenStore.selectedDetail.source.correctOptionIndex as number
+              ]
+            }}
+          </p>
+          <p>
+            <strong>Geraten:</strong>
+            {{
+              (gardenStore.selectedDetail.source.options as string[])[
+                gardenStore.selectedDetail.source.selectedOptionIndex as number
+              ]
+            }}
+          </p>
+        </div>
+        <p class="success-note">Ihr kennt euch ein Stueck besser. +12 Herzpunkte</p>
       </template>
 
       <p v-else class="muted">Fuer dieses Objekt sind noch keine Details hinterlegt.</p>
