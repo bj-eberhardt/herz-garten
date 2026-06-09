@@ -24,6 +24,7 @@ const iconMap = {
 <template>
   <button
     class="garden-object"
+    data-testid="garden-object"
     :style="{ left: `${object.positionX}%`, top: `${object.positionY}%` }"
     :title="object.label"
     @click="$emit('select')"

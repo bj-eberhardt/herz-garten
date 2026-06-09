@@ -31,13 +31,13 @@ onMounted(() => {
     <p v-if="gardenStore.loading" class="muted">Garten wird geladen...</p>
     <GardenCanvas :objects="gardenStore.objects" @select="gardenStore.loadObjectDetail" />
 
-    <section v-if="gardenStore.selectedDetail" class="panel detail-panel">
+    <section v-if="gardenStore.selectedDetail" class="panel detail-panel" data-testid="garden-detail">
       <div class="detail-header">
         <div>
           <p class="eyebrow">{{ gardenStore.selectedDetail.object.sourceType }}</p>
           <h2>{{ detailTitle }}</h2>
         </div>
-        <button class="secondary-button inline-button" type="button" @click="gardenStore.clearDetail">Schliessen</button>
+        <button class="secondary-button inline-button" type="button" data-testid="garden-detail-close" @click="gardenStore.clearDetail">Schliessen</button>
       </div>
 
       <template v-if="gardenStore.selectedDetail.source?.type === 'question'">

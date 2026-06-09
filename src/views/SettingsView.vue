@@ -70,10 +70,10 @@ async function deleteAccount() {
       <p v-if="error" class="form-error">{{ error }}</p>
 
       <div class="settings-actions">
-        <button class="secondary-button" type="button" @click="exportData">Daten exportieren</button>
-        <button class="secondary-button" type="button" @click="authStore.logout()">Ausloggen</button>
-        <button class="secondary-button" type="button" @click="leaveCouple">Paarraum verlassen</button>
-        <button class="danger-button" type="button" @click="deleteAccount">Konto loeschen</button>
+        <button class="secondary-button" type="button" data-testid="settings-export" @click="exportData">Daten exportieren</button>
+        <button class="secondary-button" type="button" data-testid="settings-logout" @click="authStore.logout()">Ausloggen</button>
+        <button class="secondary-button" type="button" data-testid="settings-leave-couple" @click="leaveCouple">Paarraum verlassen</button>
+        <button class="danger-button" type="button" data-testid="settings-delete-account" @click="deleteAccount">Konto loeschen</button>
       </div>
     </section>
   </div>

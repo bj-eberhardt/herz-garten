@@ -32,7 +32,7 @@ const completedQuests = computed(() =>
     <p v-if="questStore.error" class="form-error">{{ questStore.error }}</p>
     <p v-if="questStore.loading" class="muted">Quests werden geladen...</p>
 
-    <section v-if="activeQuests.length" class="quest-section">
+    <section v-if="activeQuests.length" class="quest-section" data-testid="quests-active-section">
       <div class="section-heading">
         <p class="eyebrow">Aktiv</p>
         <h2>Bereit zum Abschliessen</h2>
@@ -50,7 +50,7 @@ const completedQuests = computed(() =>
       </div>
     </section>
 
-    <section class="quest-section">
+    <section class="quest-section" data-testid="quests-open-section">
       <div class="section-heading">
         <p class="eyebrow">Offen</p>
         <h2>Neue Vorschlaege</h2>
@@ -68,7 +68,7 @@ const completedQuests = computed(() =>
       </div>
     </section>
 
-    <section v-if="completedQuests.length" class="quest-section">
+    <section v-if="completedQuests.length" class="quest-section" data-testid="quests-completed-section">
       <div class="section-heading">
         <p class="eyebrow">Abgeschlossen</p>
         <h2>Erledigte Quests</h2>

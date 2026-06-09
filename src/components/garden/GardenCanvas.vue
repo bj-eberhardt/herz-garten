@@ -12,7 +12,7 @@ defineEmits<{
 </script>
 
 <template>
-  <section class="garden-canvas" aria-label="Herzgarten">
+  <section class="garden-canvas" aria-label="Herzgarten" data-testid="garden-canvas">
     <div class="garden-sky"></div>
     <div class="garden-ground"></div>
     <GardenObjectMarker

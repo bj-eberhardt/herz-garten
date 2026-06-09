@@ -15,7 +15,7 @@ defineEmits<{
 </script>
 
 <template>
-  <article class="quest-card" :class="[`quest-card--${variant ?? 'default'}`]">
+  <article class="quest-card" :class="[`quest-card--${variant ?? 'default'}`]" data-testid="quest-card">
     <div>
       <p class="eyebrow">{{ quest.category }} - {{ quest.effortLevel }}</p>
       <h2>{{ quest.title }}</h2>
@@ -31,7 +31,7 @@ defineEmits<{
     <p v-else-if="quest.coupleQuest?.status === 'completed'" class="quest-status-note">
       Diese Quest hat bereits Gartenpunkte erzeugt.
     </p>
-    <button class="secondary-button" type="button" :disabled="disabled" @click="$emit('action', quest)">
+    <button class="secondary-button" type="button" :disabled="disabled" data-testid="quest-action" @click="$emit('action', quest)">
       <CheckCircle2 :size="18" aria-hidden="true" />
       {{ buttonLabel }}
     </button>

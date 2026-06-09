@@ -22,16 +22,16 @@ watch(() => authStore.couple?.id, loadNotificationsIfReady);
 <template>
   <div class="app-shell">
     <header class="topbar">
-      <RouterLink to="/today" class="brand" aria-label="Herzgarten Start">
+      <RouterLink to="/today" class="brand" aria-label="Herzgarten Start" data-testid="nav-brand">
         <span class="brand-mark">H</span>
         <span>Herzgarten</span>
       </RouterLink>
-      <RouterLink to="/onboarding" class="invite-code">
+      <RouterLink to="/onboarding" class="invite-code" data-testid="header-couple-link">
         {{ authStore.couple?.inviteCode ?? (authStore.isAuthenticated ? 'Partnercode eingeben' : 'Paarraum') }}
       </RouterLink>
-      <RouterLink v-if="authStore.hasCouple" to="/notifications" class="notification-link" aria-label="Benachrichtigungen">
+      <RouterLink v-if="authStore.hasCouple" to="/notifications" class="notification-link" aria-label="Benachrichtigungen" data-testid="nav-notifications">
         <Bell :size="18" aria-hidden="true" />
-        <span v-if="notificationStore.unreadCount > 0" class="notification-badge">
+        <span v-if="notificationStore.unreadCount > 0" class="notification-badge" data-testid="notification-badge">
           {{ notificationStore.unreadCount }}
         </span>
       </RouterLink>

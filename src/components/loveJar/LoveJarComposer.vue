@@ -16,7 +16,7 @@ async function submitNote() {
 </script>
 
 <template>
-  <form class="panel composer" @submit.prevent="submitNote">
+  <form class="panel composer" data-testid="love-jar-form" @submit.prevent="submitNote">
     <div>
       <p class="eyebrow">Zettel schreiben</p>
       <h2>Was passt gut ins Glas?</h2>
@@ -26,7 +26,7 @@ async function submitNote() {
     </div>
 
     <label for="love-jar-category">Kategorie</label>
-    <select id="love-jar-category" v-model="category">
+    <select id="love-jar-category" v-model="category" data-testid="love-jar-category">
       <option value="compliment">Kompliment</option>
       <option value="memory">Erinnerung</option>
       <option value="voucher">Gutschein</option>
@@ -35,8 +35,8 @@ async function submitNote() {
     </select>
 
     <label for="love-jar-note">Neuer Zettel</label>
-    <textarea id="love-jar-note" v-model="note" rows="4" placeholder="Heute moechte ich dir sagen ..." />
-    <button class="primary-button" type="submit" :disabled="loveJarStore.loading">
+    <textarea id="love-jar-note" v-model="note" rows="4" placeholder="Heute moechte ich dir sagen ..." data-testid="love-jar-note-input" />
+    <button class="primary-button" type="submit" :disabled="loveJarStore.loading" data-testid="love-jar-save">
       <Plus :size="18" aria-hidden="true" />
       {{ loveJarStore.loading ? 'Speichert...' : 'In das Glas legen' }}
     </button>

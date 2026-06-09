@@ -2,18 +2,18 @@
 import { CalendarHeart, Flower2, GlassWater, HeartHandshake, Images, Settings } from '@lucide/vue';
 
 const items = [
-  { to: '/garden', label: 'Garten', icon: Flower2 },
-  { to: '/today', label: 'Heute', icon: CalendarHeart },
-  { to: '/quests', label: 'Quests', icon: HeartHandshake },
-  { to: '/love-jar', label: 'Love Jar', icon: GlassWater },
-  { to: '/memories', label: 'Momente', icon: Images },
-  { to: '/settings', label: 'Profil', icon: Settings },
+  { to: '/garden', label: 'Garten', icon: Flower2, testId: 'nav-garden' },
+  { to: '/today', label: 'Heute', icon: CalendarHeart, testId: 'nav-today' },
+  { to: '/quests', label: 'Quests', icon: HeartHandshake, testId: 'nav-quests' },
+  { to: '/love-jar', label: 'Love Jar', icon: GlassWater, testId: 'nav-love-jar' },
+  { to: '/memories', label: 'Momente', icon: Images, testId: 'nav-memories' },
+  { to: '/settings', label: 'Profil', icon: Settings, testId: 'nav-settings' },
 ];
 </script>
 
 <template>
   <nav class="bottom-nav" aria-label="Hauptnavigation">
-    <RouterLink v-for="item in items" :key="item.to" :to="item.to" class="nav-item">
+    <RouterLink v-for="item in items" :key="item.to" :to="item.to" class="nav-item" :data-testid="item.testId">
       <component :is="item.icon" :size="20" aria-hidden="true" />
       <span>{{ item.label }}</span>
     </RouterLink>

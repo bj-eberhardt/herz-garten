@@ -36,18 +36,18 @@ onMounted(() => {
       <h1>Bewahrt die Momente, aus denen euer Garten waechst.</h1>
     </section>
 
-    <form class="panel composer" @submit.prevent="submitMemory">
+    <form class="panel composer" data-testid="memory-form" @submit.prevent="submitMemory">
       <label for="memory-title">Neue Erinnerung</label>
-      <input id="memory-title" v-model="title" placeholder="Titel der Erinnerung" />
+      <input id="memory-title" v-model="title" placeholder="Titel der Erinnerung" data-testid="memory-title" />
 
       <label for="memory-description">Beschreibung</label>
-      <textarea id="memory-description" v-model="description" rows="3" placeholder="Was moechtest du festhalten?" />
+      <textarea id="memory-description" v-model="description" rows="3" placeholder="Was moechtest du festhalten?" data-testid="memory-description" />
 
       <label for="memory-date">Datum</label>
-      <input id="memory-date" v-model="date" type="date" />
+      <input id="memory-date" v-model="date" type="date" data-testid="memory-date" />
 
       <label for="memory-category">Kategorie</label>
-      <select id="memory-category" v-model="category">
+      <select id="memory-category" v-model="category" data-testid="memory-category">
         <option value="everyday">Alltag</option>
         <option value="date">Date</option>
         <option value="travel">Reise</option>
@@ -58,13 +58,13 @@ onMounted(() => {
 
       <p v-if="memoryStore.error" class="form-error">{{ memoryStore.error }}</p>
 
-      <button class="primary-button" type="submit" :disabled="memoryStore.loading">
+      <button class="primary-button" type="submit" :disabled="memoryStore.loading" data-testid="memory-save">
         <Plus :size="18" aria-hidden="true" />
         {{ memoryStore.loading ? 'Speichert...' : 'Speichern' }}
       </button>
     </form>
 
-    <p v-if="!memoryStore.loading && memoryStore.memories.length === 0" class="muted">Noch keine Erinnerungen.</p>
+    <p v-if="!memoryStore.loading && memoryStore.memories.length === 0" class="muted" data-testid="memory-empty">Noch keine Erinnerungen.</p>
     <MemoryTimeline :memories="memoryStore.memories" />
   </div>
 </template>

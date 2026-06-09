@@ -49,7 +49,7 @@ const drawHint = computed(() => {
         <div>
           <p class="eyebrow">Heute ziehen</p>
           <h2>Ein Zettel pro Tag</h2>
-          <p class="muted">{{ drawHint }}</p>
+      <p class="muted" data-testid="love-jar-draw-hint">{{ drawHint }}</p>
         </div>
         <span class="draw-counter">
           <LockKeyhole :size="16" aria-hidden="true" />
@@ -60,6 +60,7 @@ const drawHint = computed(() => {
       <button
         class="secondary-button"
         type="button"
+        data-testid="love-jar-draw"
         :disabled="loveJarStore.loading || !loveJarStore.drawStatus.canDrawToday"
         @click="loveJarStore.drawNote"
       >
@@ -67,16 +68,16 @@ const drawHint = computed(() => {
         {{ loveJarStore.loading ? 'Zieht...' : 'Zettel ziehen' }}
       </button>
 
-      <p v-if="loveJarStore.error" class="form-error">{{ loveJarStore.error }}</p>
-      <p v-if="!loveJarStore.loading && loveJarStore.notes.length === 0" class="empty-state">
+      <p v-if="loveJarStore.error" class="form-error" data-testid="love-jar-error">{{ loveJarStore.error }}</p>
+      <p v-if="!loveJarStore.loading && loveJarStore.notes.length === 0" class="empty-state" data-testid="love-jar-empty">
         Noch keine Zettel im Glas. Fangt mit einem Kompliment, einem Danke oder einem kleinen Gutschein an.
       </p>
-      <p v-else-if="!loveJarStore.loading && !loveJarStore.drawStatus.canDrawToday && !loveJarStore.drawStatus.drawnToday" class="empty-state">
+      <p v-else-if="!loveJarStore.loading && !loveJarStore.drawStatus.canDrawToday && !loveJarStore.drawStatus.drawnToday" class="empty-state" data-testid="love-jar-empty">
         Es ist gerade nichts ziehbar. Schreibt neue Zettel, damit morgen wieder etwas im Glas wartet.
       </p>
 
       <div class="note-list">
-        <article v-for="note in loveJarStore.notes" :key="note.id" class="note-card" :class="{ drawn: note.isDrawn }">
+        <article v-for="note in loveJarStore.notes" :key="note.id" class="note-card" :class="{ drawn: note.isDrawn }" data-testid="love-jar-note">
           <p class="eyebrow">{{ note.category }} - {{ note.authorName }}</p>
           <p>{{ note.isDrawn ? note.text : 'Ein ungelesener Zettel wartet.' }}</p>
         </article>

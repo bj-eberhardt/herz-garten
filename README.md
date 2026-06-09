@@ -71,6 +71,41 @@ Migration manuell im Backend-Container ausfuehren:
 docker compose exec backend npm run db:migrate
 ```
 
+## E2E-Tests mit Playwright
+
+Einmalig installieren:
+
+```bash
+npm install
+npx playwright install
+```
+
+Headless ausfuehren:
+
+```bash
+npm run test:e2e
+```
+
+Mit sichtbarem Browser:
+
+```bash
+npm run test:e2e:headed
+```
+
+Playwright UI-Modus:
+
+```bash
+npm run test:e2e:ui
+```
+
+Letzten HTML-Report anzeigen:
+
+```bash
+npm run test:e2e:report
+```
+
+Die Tests starten das Docker-Setup automatisch ueber `docker compose up --build` oder nutzen bereits laufende Container weiter. Testdaten werden mit eindeutigen E-Mail-Adressen erzeugt; die Datenbank muss fuer normale Testlaeufe nicht geloescht werden.
+
 ## Lokale Entwicklung ohne Docker
 
 Frontend:

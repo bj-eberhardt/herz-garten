@@ -36,6 +36,7 @@ async function openNotification(notification: NotificationItem) {
         class="secondary-button inline-button"
         type="button"
         :disabled="notificationStore.loading || notificationStore.unreadCount === 0"
+        data-testid="notifications-read-all"
         @click="notificationStore.markAllRead"
       >
         <CheckCheck :size="18" aria-hidden="true" />
@@ -46,7 +47,7 @@ async function openNotification(notification: NotificationItem) {
     <p v-if="notificationStore.error" class="form-error">{{ notificationStore.error }}</p>
     <p v-if="notificationStore.loading" class="muted">Benachrichtigungen werden geladen...</p>
 
-    <section v-if="!notificationStore.loading && notificationStore.notifications.length === 0" class="empty-state">
+    <section v-if="!notificationStore.loading && notificationStore.notifications.length === 0" class="empty-state" data-testid="notifications-empty">
       Noch keine Hinweise. Sobald im Paarraum etwas auf dich wartet, erscheint es hier.
     </section>
 
@@ -57,6 +58,7 @@ async function openNotification(notification: NotificationItem) {
         class="notification-item"
         :class="{ unread: !notification.readAt }"
         type="button"
+        data-testid="notification-item"
         @click="openNotification(notification)"
       >
         <Bell :size="18" aria-hidden="true" />
