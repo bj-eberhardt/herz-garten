@@ -6,15 +6,20 @@ import { useLoveJarStore } from '@/stores/loveJarStore';
 
 const loveJarStore = useLoveJarStore();
 const note = ref(loveJarTemplates[0]);
+
+async function submitNote() {
+  await loveJarStore.addNote(note.value);
+  note.value = '';
+}
 </script>
 
 <template>
-  <form class="panel composer" @submit.prevent="loveJarStore.addNote(note)">
+  <form class="panel composer" @submit.prevent="submitNote">
     <label for="love-jar-note">Neuer Zettel</label>
     <textarea id="love-jar-note" v-model="note" rows="4" />
-    <button class="primary-button" type="submit">
+    <button class="primary-button" type="submit" :disabled="loveJarStore.loading">
       <Plus :size="18" aria-hidden="true" />
-      In das Glas legen
+      {{ loveJarStore.loading ? 'Speichert...' : 'In das Glas legen' }}
     </button>
   </form>
 </template>

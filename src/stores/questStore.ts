@@ -1,27 +1,95 @@
 import { defineStore } from 'pinia';
-import { quests } from '@/content/quests';
+import { apiRequest } from '@/services/api';
+import type { Couple, Quest } from '@/types/domain';
+import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
 import { useGardenStore } from './gardenStore';
 
+export interface QuestProgress {
+  id: string;
+  status: 'available' | 'accepted' | 'completed';
+  completedByUserIds: string[];
+  completedAt?: string;
+  rewardAppliedAt?: string;
+}
+
+export type QuestWithProgress = Quest & {
+  coupleQuest: QuestProgress | null;
+};
+
 export const useQuestStore = defineStore('quests', {
   state: () => ({
-    quests,
-    completedQuestIds: [] as string[],
+    quests: [] as QuestWithProgress[],
+    loading: false,
+    error: '',
   }),
   actions: {
-    completeQuest(questId: string) {
-      if (this.completedQuestIds.includes(questId)) return;
-      const quest = this.quests.find((item) => item.id === questId);
-      if (!quest) return;
+    applyQuestPayload(payload: { couple: Couple; quests: QuestWithProgress[] }) {
+      this.quests = payload.quests;
+      useCoupleStore().setCouple(payload.couple);
+      useAuthStore().couple = payload.couple;
+    },
+    async loadQuests() {
+      this.loading = true;
+      this.error = '';
+      try {
+        const payload = await apiRequest<{ couple: Couple; quests: QuestWithProgress[] }>('/api/quests');
+        this.applyQuestPayload(payload);
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Quests konnten nicht geladen werden';
+      } finally {
+        this.loading = false;
+      }
+    },
+    async acceptQuest(questId: string) {
+      await this.sendQuestAction(`/api/quests/${questId}/accept`);
+    },
+    async completeQuest(questId: string) {
+      await this.sendQuestAction(`/api/quests/${questId}/complete`);
+      await useGardenStore().loadGarden();
+    },
+    async sendQuestAction(path: string) {
+      this.loading = true;
+      this.error = '';
+      try {
+        const payload = await apiRequest<{ couple: Couple; quests: QuestWithProgress[] }>(path, {
+          method: 'POST',
+        });
+        this.applyQuestPayload(payload);
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Quest konnte nicht aktualisiert werden';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+    statusFor(quest: QuestWithProgress) {
+      return quest.coupleQuest?.status ?? 'available';
+    },
+    completedByCurrentUser(quest: QuestWithProgress, currentUserId?: string) {
+      return Boolean(currentUserId && quest.coupleQuest?.completedByUserIds.includes(currentUserId));
+    },
+    buttonLabel(quest: QuestWithProgress, currentUserId?: string) {
+      const status = this.statusFor(quest);
+      if (status === 'completed') return 'Abgeschlossen';
+      if (this.completedByCurrentUser(quest, currentUserId)) return 'Wartet auf Partner';
+      if (status === 'accepted') return 'Abschluss bestaetigen';
+      return 'Annehmen';
+    },
+    buttonDisabled(quest: QuestWithProgress, currentUserId?: string) {
+      return this.statusFor(quest) === 'completed' || this.completedByCurrentUser(quest, currentUserId) || this.loading;
+    },
+    async primaryAction(quest: QuestWithProgress) {
+      const status = this.statusFor(quest);
 
-      this.completedQuestIds.push(questId);
-      useCoupleStore().addHeartPoints(quest.rewardPoints);
-      useGardenStore().addObject({
-        type: quest.category === 'date' ? 'decoration' : 'light',
-        sourceType: 'quest',
-        sourceId: quest.id,
-        label: quest.title,
-      });
+      if (status === 'available') {
+        await this.acceptQuest(quest.id);
+        return;
+      }
+
+      if (status === 'accepted') {
+        await this.completeQuest(quest.id);
+      }
     },
   },
 });

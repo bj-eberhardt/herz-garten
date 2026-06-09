@@ -21,7 +21,8 @@ body {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
@@ -217,7 +218,8 @@ h2 {
 }
 
 textarea,
-input {
+input,
+select {
   background: #fffaf6;
   border: 1px solid #e2c9ba;
   border-radius: 8px;
@@ -253,6 +255,21 @@ textarea {
 .secondary-button {
   background: #eef5df;
   color: #4f6e3d;
+}
+
+.danger-button {
+  align-items: center;
+  background: #fff1ef;
+  border: 1px solid #efb4aa;
+  border-radius: 8px;
+  color: #9f3f35;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 14px;
 }
 
 .secondary-button:disabled {
@@ -319,6 +336,18 @@ textarea {
   margin-bottom: 0;
 }
 
+.detail-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.detail-header {
+  align-items: start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
 .auth-panel,
 .couple-actions,
 .join-form {
@@ -364,8 +393,25 @@ textarea {
   padding: 12px 14px;
 }
 
+.success-note {
+  background: #edf8e7;
+  border: 1px solid #bad7a5;
+  border-radius: 8px;
+  color: #4f6e3d;
+  font-weight: 700;
+  margin-bottom: 0;
+  padding: 12px 14px;
+}
+
 .muted {
   color: #806456;
+}
+
+.couple-code,
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .bottom-nav {

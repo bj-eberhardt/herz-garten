@@ -5,12 +5,21 @@ import GardenObjectMarker from './GardenObjectMarker.vue';
 defineProps<{
   objects: GardenObject[];
 }>();
+
+defineEmits<{
+  select: [objectId: string];
+}>();
 </script>
 
 <template>
   <section class="garden-canvas" aria-label="Herzgarten">
     <div class="garden-sky"></div>
     <div class="garden-ground"></div>
-    <GardenObjectMarker v-for="object in objects" :key="object.id" :object="object" />
+    <GardenObjectMarker
+      v-for="object in objects"
+      :key="object.id"
+      :object="object"
+      @select="$emit('select', object.id)"
+    />
   </section>
 </template>

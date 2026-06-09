@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { apiRequest, clearToken, getToken, setToken } from '@/services/api';
-import type { Couple } from '@/types/domain';
+import type { ContentPreference, Couple, RelationshipType } from '@/types/domain';
 
 interface AuthUser {
   id: string;
@@ -72,13 +72,13 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false;
       }
     },
-    async createCouple() {
+    async createCouple(options: {
+      relationshipType: RelationshipType;
+      contentPreference: ContentPreference;
+    }) {
       const result = await apiRequest<{ couple: Couple & { memberCount: number } }>('/api/couples', {
         method: 'POST',
-        body: JSON.stringify({
-          relationshipType: 'mixed',
-          contentPreference: 'balanced',
-        }),
+        body: JSON.stringify(options),
       });
       this.couple = result.couple;
     },
@@ -94,6 +94,22 @@ export const useAuthStore = defineStore('auth', {
       this.token = null;
       this.user = null;
       this.couple = null;
+    },
+    async leaveCouple() {
+      const result = await apiRequest<{ user: AuthUser; couple: null }>('/api/couples/leave', {
+        method: 'POST',
+      });
+      this.user = result.user;
+      this.couple = result.couple;
+    },
+    async exportData() {
+      return apiRequest<Record<string, unknown>>('/api/me/export');
+    },
+    async deleteAccount() {
+      await apiRequest<void>('/api/me', {
+        method: 'DELETE',
+      });
+      this.logout();
     },
   },
 });

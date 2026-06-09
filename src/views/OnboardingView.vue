@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { LogIn, Sprout, UserPlus } from '@lucide/vue';
+import { Clipboard, LogIn, Sprout, UserPlus } from '@lucide/vue';
+import type { ContentPreference, RelationshipType } from '@/types/domain';
 import { useAuthStore } from '@/stores/authStore';
 
 const router = useRouter();
@@ -12,7 +13,10 @@ const displayName = ref('');
 const email = ref('');
 const password = ref('');
 const inviteCode = ref('');
+const relationshipType = ref<RelationshipType>('mixed');
+const contentPreference = ref<ContentPreference>('balanced');
 const formError = ref('');
+const copied = ref(false);
 
 async function submitAuth() {
   formError.value = '';
@@ -30,7 +34,10 @@ async function submitAuth() {
 async function createCouple() {
   formError.value = '';
   try {
-    await authStore.createCouple();
+    await authStore.createCouple({
+      relationshipType: relationshipType.value,
+      contentPreference: contentPreference.value,
+    });
     await router.push('/today');
   } catch (error) {
     formError.value = error instanceof Error ? error.message : 'Paarraum konnte nicht erstellt werden';
@@ -46,6 +53,15 @@ async function joinCouple() {
     formError.value = error instanceof Error ? error.message : 'Paar-Code konnte nicht genutzt werden';
   }
 }
+
+async function copyInviteCode() {
+  if (!authStore.couple?.inviteCode) return;
+  await navigator.clipboard.writeText(authStore.couple.inviteCode);
+  copied.value = true;
+  window.setTimeout(() => {
+    copied.value = false;
+  }, 1500);
+}
 </script>
 
 <template>
@@ -53,7 +69,7 @@ async function joinCouple() {
     <section class="hero-panel">
       <p class="eyebrow">Onboarding</p>
       <h1>Willkommen in eurem Herzgarten.</h1>
-      <p>Erstellt ein Konto und verbindet euch ueber einen Paar-Code.</p>
+      <p>Erstellt ein Konto, waehlt euren Stil und verbindet euch ueber einen Paar-Code.</p>
     </section>
 
     <section v-if="!authStore.isAuthenticated" class="panel auth-panel">
@@ -89,17 +105,38 @@ async function joinCouple() {
     <section v-else class="panel auth-panel">
       <p class="eyebrow">Paarraum</p>
       <h2>Hallo {{ authStore.user?.displayName }}</h2>
-      <p v-if="authStore.couple">
-        Euer Paar-Code ist <strong>{{ authStore.couple.inviteCode }}</strong>.
-      </p>
-      <div v-else class="couple-actions">
-        <button class="primary-button" type="button" @click="createCouple">
-          <Sprout :size="18" aria-hidden="true" />
-          Garten anlegen
+      <div v-if="authStore.couple" class="couple-code">
+        <p>Euer Paar-Code ist <strong>{{ authStore.couple.inviteCode }}</strong>.</p>
+        <button class="secondary-button inline-button" type="button" @click="copyInviteCode">
+          <Clipboard :size="18" aria-hidden="true" />
+          {{ copied ? 'Kopiert' : 'Code kopieren' }}
         </button>
+      </div>
+      <div v-else class="couple-actions">
+        <form class="join-form" @submit.prevent="createCouple">
+          <label for="relationship-type">Beziehungsmodus</label>
+          <select id="relationship-type" v-model="relationshipType">
+            <option value="mixed">Gemischt</option>
+            <option value="local">Zusammen vor Ort</option>
+            <option value="long_distance">Fernbeziehung</option>
+          </select>
+
+          <label for="content-preference">Content-Stil</label>
+          <select id="content-preference" v-model="contentPreference">
+            <option value="balanced">Ausgewogen</option>
+            <option value="romantic">Romantisch</option>
+            <option value="playful">Verspielt</option>
+            <option value="deep">Tiefgruendig</option>
+          </select>
+
+          <button class="primary-button" type="submit">
+            <Sprout :size="18" aria-hidden="true" />
+            Garten anlegen
+          </button>
+        </form>
 
         <form class="join-form" @submit.prevent="joinCouple">
-          <label for="invite-code">Partnercode eingeben</label>
+          <label for="invite-code">Oder Partnercode eingeben</label>
           <input id="invite-code" v-model="inviteCode" placeholder="HERZ-4821" />
           <button class="secondary-button" type="submit">Beitreten</button>
         </form>

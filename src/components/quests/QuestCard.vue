@@ -1,21 +1,22 @@
 <script setup lang="ts">
 import { CheckCircle2, Clock3, Sprout } from '@lucide/vue';
-import type { Quest } from '@/types/domain';
+import type { QuestWithProgress } from '@/stores/questStore';
 
 defineProps<{
-  quest: Quest;
-  completed: boolean;
+  quest: QuestWithProgress;
+  buttonLabel: string;
+  disabled: boolean;
 }>();
 
 defineEmits<{
-  complete: [questId: string];
+  action: [quest: QuestWithProgress];
 }>();
 </script>
 
 <template>
   <article class="quest-card">
     <div>
-      <p class="eyebrow">{{ quest.category }} · {{ quest.effortLevel }}</p>
+      <p class="eyebrow">{{ quest.category }} - {{ quest.effortLevel }}</p>
       <h2>{{ quest.title }}</h2>
       <p>{{ quest.description }}</p>
     </div>
@@ -23,9 +24,12 @@ defineEmits<{
       <span><Clock3 :size="16" />{{ quest.estimatedMinutes }} min</span>
       <span><Sprout :size="16" />{{ quest.rewardPoints }} Punkte</span>
     </div>
-    <button class="secondary-button" type="button" :disabled="completed" @click="$emit('complete', quest.id)">
+    <p v-if="quest.coupleQuest?.status === 'accepted'" class="muted">
+      {{ quest.requiresBothPartners ? 'Beide Partner bestaetigen den Abschluss.' : 'Bereit zum Abschliessen.' }}
+    </p>
+    <button class="secondary-button" type="button" :disabled="disabled" @click="$emit('action', quest)">
       <CheckCircle2 :size="18" aria-hidden="true" />
-      {{ completed ? 'Abgeschlossen' : 'Abschliessen' }}
+      {{ buttonLabel }}
     </button>
   </article>
 </template>

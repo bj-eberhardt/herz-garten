@@ -23,6 +23,10 @@ const fallbackPositions = [
 export const useGardenStore = defineStore('garden', {
   state: () => ({
     objects: [] as GardenObject[],
+    selectedDetail: null as null | {
+      object: GardenObject;
+      source: Record<string, unknown> | null;
+    },
     loading: false,
     error: '',
   }),
@@ -40,6 +44,30 @@ export const useGardenStore = defineStore('garden', {
       } finally {
         this.loading = false;
       }
+    },
+    async loadObjectDetail(objectId: string) {
+      this.loading = true;
+      this.error = '';
+      try {
+        const payload = await apiRequest<{
+          couple: Couple;
+          object: GardenObject;
+          source: Record<string, unknown> | null;
+        }>(`/api/garden/objects/${objectId}`);
+        this.selectedDetail = {
+          object: payload.object,
+          source: payload.source,
+        };
+        useCoupleStore().setCouple(payload.couple);
+        useAuthStore().couple = payload.couple;
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Gartenobjekt konnte nicht geladen werden';
+      } finally {
+        this.loading = false;
+      }
+    },
+    clearDetail() {
+      this.selectedDetail = null;
     },
     addObject(input: GardenObjectInput) {
       const couple = useCoupleStore().couple;

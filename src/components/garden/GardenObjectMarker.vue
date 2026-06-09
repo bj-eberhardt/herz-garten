@@ -6,6 +6,10 @@ defineProps<{
   object: GardenObject;
 }>();
 
+defineEmits<{
+  select: [];
+}>();
+
 const iconMap = {
   bench: Landmark,
   decoration: Sprout,
@@ -22,6 +26,7 @@ const iconMap = {
     class="garden-object"
     :style="{ left: `${object.positionX}%`, top: `${object.positionY}%` }"
     :title="object.label"
+    @click="$emit('select')"
   >
     <component :is="iconMap[object.type]" :size="24" aria-hidden="true" />
   </button>
