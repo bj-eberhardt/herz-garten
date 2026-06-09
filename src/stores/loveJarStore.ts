@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { apiRequest } from '@/services/api';
+import { ApiError, apiRequest } from '@/services/api';
 import type { Couple, LoveJarCategory, LoveJarNote } from '@/types/domain';
 import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
@@ -10,15 +10,38 @@ export type LoveJarNoteView = Omit<LoveJarNote, 'text'> & {
   authorName?: string;
 };
 
+export interface LoveJarDrawStatus {
+  drawnToday: boolean;
+  canDrawToday: boolean;
+  partnerUnreadCount: number;
+  ownUnreadCount: number;
+}
+
+interface LoveJarPayload {
+  couple: Couple;
+  notes: LoveJarNoteView[];
+  drawStatus: LoveJarDrawStatus;
+}
+
 export const useLoveJarStore = defineStore('loveJar', {
   state: () => ({
     notes: [] as LoveJarNoteView[],
+    drawStatus: {
+      drawnToday: false,
+      canDrawToday: false,
+      partnerUnreadCount: 0,
+      ownUnreadCount: 0,
+    } as LoveJarDrawStatus,
     loading: false,
     error: '',
   }),
+  getters: {
+    unreadCount: (state) => state.drawStatus.partnerUnreadCount + state.drawStatus.ownUnreadCount,
+  },
   actions: {
-    applyLoveJarPayload(payload: { couple: Couple; notes: LoveJarNoteView[] }) {
+    applyLoveJarPayload(payload: LoveJarPayload) {
       this.notes = payload.notes;
+      this.drawStatus = payload.drawStatus;
       useCoupleStore().setCouple(payload.couple);
       useAuthStore().couple = payload.couple;
     },
@@ -26,7 +49,7 @@ export const useLoveJarStore = defineStore('loveJar', {
       this.loading = true;
       this.error = '';
       try {
-        const payload = await apiRequest<{ couple: Couple; notes: LoveJarNoteView[] }>('/api/love-jar');
+        const payload = await apiRequest<LoveJarPayload>('/api/love-jar');
         this.applyLoveJarPayload(payload);
       } catch (error) {
         this.error = error instanceof Error ? error.message : 'Love Jar konnte nicht geladen werden';
@@ -39,7 +62,7 @@ export const useLoveJarStore = defineStore('loveJar', {
       this.loading = true;
       this.error = '';
       try {
-        const payload = await apiRequest<{ couple: Couple; notes: LoveJarNoteView[] }>('/api/love-jar', {
+        const payload = await apiRequest<LoveJarPayload>('/api/love-jar', {
           method: 'POST',
           body: JSON.stringify({
             text: text.trim(),
@@ -59,12 +82,20 @@ export const useLoveJarStore = defineStore('loveJar', {
       this.loading = true;
       this.error = '';
       try {
-        const payload = await apiRequest<{ couple: Couple; notes: LoveJarNoteView[] }>('/api/love-jar/draw', {
+        const payload = await apiRequest<LoveJarPayload>('/api/love-jar/draw', {
           method: 'POST',
         });
         this.applyLoveJarPayload(payload);
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Kein ungelesener Partner-Zettel verfuegbar';
+        if (error instanceof ApiError && error.status === 409) {
+          this.error = 'Du hast heute schon einen Zettel gezogen. Morgen wartet wieder einer auf dich.';
+          return;
+        }
+        if (error instanceof ApiError && error.status === 404) {
+          this.error = 'Gerade ist kein ungelesener Zettel im Glas. Schreibt euch neue kleine Botschaften.';
+          return;
+        }
+        this.error = error instanceof Error ? error.message : 'Zettel konnte nicht gezogen werden';
       } finally {
         this.loading = false;
       }

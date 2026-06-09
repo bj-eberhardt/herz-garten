@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { Clipboard, LogIn, Sprout, UserPlus } from '@lucide/vue';
+import { Clipboard, KeyRound, LogIn, Sprout, UserPlus } from '@lucide/vue';
 import type { ContentPreference, RelationshipType } from '@/types/domain';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -69,7 +69,9 @@ async function copyInviteCode() {
     <section class="hero-panel">
       <p class="eyebrow">Onboarding</p>
       <h1>Willkommen in eurem Herzgarten.</h1>
-      <p>Erstellt ein Konto, waehlt euren Stil und verbindet euch ueber einen Paar-Code.</p>
+      <p v-if="!authStore.isAuthenticated">Erstellt ein Konto oder loggt euch ein. Danach koennt ihr einen vorhandenen Partnercode eingeben oder einen neuen Paarraum anlegen.</p>
+      <p v-else-if="!authStore.hasCouple">Dein Konto ist bereit. Verbinde dich jetzt nachtraeglich mit dem Partnercode oder lege euren gemeinsamen Garten an.</p>
+      <p v-else>Teilt euren Paar-Code, damit dein Partner jederzeit nachtraeglich beitreten kann.</p>
     </section>
 
     <section v-if="!authStore.isAuthenticated" class="panel auth-panel">
@@ -106,13 +108,32 @@ async function copyInviteCode() {
       <p class="eyebrow">Paarraum</p>
       <h2>Hallo {{ authStore.user?.displayName }}</h2>
       <div v-if="authStore.couple" class="couple-code">
-        <p>Euer Paar-Code ist <strong>{{ authStore.couple.inviteCode }}</strong>.</p>
+        <p>Euer Paar-Code ist <strong>{{ authStore.couple.inviteCode }}</strong>. Dein Partner kann ihn auch spaeter nach dem Login eingeben.</p>
         <button class="secondary-button inline-button" type="button" @click="copyInviteCode">
           <Clipboard :size="18" aria-hidden="true" />
           {{ copied ? 'Kopiert' : 'Code kopieren' }}
         </button>
       </div>
       <div v-else class="couple-actions">
+        <div class="next-step-note">
+          <KeyRound :size="20" aria-hidden="true" />
+          <div>
+            <strong>Partnercode nachtraeglich eingeben</strong>
+            <p>Wenn dein Partner den Garten schon angelegt hat, trage hier den Code ein. Danach landet ihr beide im selben Paarraum.</p>
+          </div>
+        </div>
+
+        <form class="join-form highlighted-form" @submit.prevent="joinCouple">
+          <label for="invite-code">Partnercode</label>
+          <input id="invite-code" v-model="inviteCode" placeholder="HERZ-4821" autocomplete="off" />
+          <button class="primary-button" type="submit" :disabled="!inviteCode.trim()">
+            <KeyRound :size="18" aria-hidden="true" />
+            Mit Partner verbinden
+          </button>
+        </form>
+
+        <div class="section-divider"><span>oder neuen Paarraum erstellen</span></div>
+
         <form class="join-form" @submit.prevent="createCouple">
           <label for="relationship-type">Beziehungsmodus</label>
           <select id="relationship-type" v-model="relationshipType">
@@ -133,12 +154,6 @@ async function copyInviteCode() {
             <Sprout :size="18" aria-hidden="true" />
             Garten anlegen
           </button>
-        </form>
-
-        <form class="join-form" @submit.prevent="joinCouple">
-          <label for="invite-code">Oder Partnercode eingeben</label>
-          <input id="invite-code" v-model="inviteCode" placeholder="HERZ-4821" />
-          <button class="secondary-button" type="submit">Beitreten</button>
         </form>
       </div>
       <p v-if="formError" class="form-error">{{ formError }}</p>

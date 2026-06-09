@@ -313,6 +313,39 @@ textarea {
   padding: 18px;
 }
 
+.quest-card--active {
+  border-color: #ef7d70;
+  box-shadow: 0 18px 45px rgba(159, 76, 67, 0.14);
+}
+
+.quest-card--completed {
+  opacity: 0.78;
+}
+
+.quest-section,
+.section-heading {
+  display: grid;
+  gap: 12px;
+}
+
+.section-heading h2 {
+  margin-bottom: 0;
+}
+
+.compact-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.quest-status-note {
+  background: #fff8f2;
+  border: 1px solid #efd7ca;
+  border-radius: 8px;
+  color: #806456;
+  font-weight: 700;
+  margin-bottom: 0;
+  padding: 10px 12px;
+}
+
 .timeline-item {
   padding: 18px;
 }
@@ -325,6 +358,49 @@ textarea {
 
 .note-card.drawn {
   background: #fff4cc;
+}
+
+.feature-explainer,
+.draw-header,
+.draw-counter {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+}
+
+.feature-explainer p,
+.draw-header p {
+  margin-bottom: 0;
+}
+
+.draw-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.draw-header {
+  justify-content: space-between;
+}
+
+.draw-counter {
+  align-items: center;
+  background: #eef5df;
+  border-radius: 999px;
+  color: #4f6e3d;
+  flex: 0 0 auto;
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+
+.empty-state {
+  background: #fff8f2;
+  border: 1px dashed #d3b69b;
+  border-radius: 8px;
+  color: #806456;
+  font-weight: 700;
+  margin-bottom: 0;
+  padding: 14px;
 }
 
 .settings-list {
@@ -353,6 +429,46 @@ textarea {
 .join-form {
   display: grid;
   gap: 16px;
+}
+
+.next-step-note {
+  align-items: flex-start;
+  background: #fff8f2;
+  border: 1px solid #efd7ca;
+  border-radius: 8px;
+  color: #5f463b;
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+}
+
+.next-step-note p {
+  margin-bottom: 0;
+}
+
+.highlighted-form {
+  background: #fffaf6;
+  border: 1px solid #efb4aa;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.section-divider {
+  align-items: center;
+  color: #8e5d4f;
+  display: grid;
+  font-size: 0.82rem;
+  font-weight: 800;
+  gap: 10px;
+  grid-template-columns: 1fr auto 1fr;
+  text-transform: uppercase;
+}
+
+.section-divider::before,
+.section-divider::after {
+  background: #efd7ca;
+  content: "";
+  height: 1px;
 }
 
 .segmented-control {

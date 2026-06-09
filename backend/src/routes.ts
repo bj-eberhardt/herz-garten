@@ -519,10 +519,34 @@ async function buildLoveJarPayload(userId: string) {
     `,
     [couple.id],
   );
+  const statusResult = await pool.query(
+    `
+      select
+        exists (
+          select 1
+          from love_jar_draws
+          where couple_id = $1
+            and user_id = $2
+            and drawn_date = current_date
+        ) as "drawnToday",
+        count(*) filter (where author_id <> $2 and is_drawn = false)::int as "partnerUnreadCount",
+        count(*) filter (where author_id = $2 and is_drawn = false)::int as "ownUnreadCount"
+      from love_jar_notes
+      where couple_id = $1
+    `,
+    [couple.id, userId],
+  );
+  const status = statusResult.rows[0];
 
   return {
     couple,
     notes: result.rows.map((note) => mapLoveJarNote(note, Boolean(note.isDrawn))),
+    drawStatus: {
+      drawnToday: Boolean(status.drawnToday),
+      canDrawToday: !status.drawnToday && (status.partnerUnreadCount > 0 || status.ownUnreadCount > 0),
+      partnerUnreadCount: status.partnerUnreadCount,
+      ownUnreadCount: status.ownUnreadCount,
+    },
   };
 }
 
@@ -1191,6 +1215,7 @@ export function apiRouter(): Router {
 
   router.post('/love-jar/draw', requireAuth, async (request, response) => {
     const user = currentUser(request);
+    const client = await pool.connect();
 
     try {
       const couple = await getCurrentCouple(user.id);
@@ -1199,7 +1224,27 @@ export function apiRouter(): Router {
         return;
       }
 
-      const noteResult = await pool.query(
+      await client.query('begin');
+
+      const alreadyDrawnResult = await client.query(
+        `
+          select 1
+          from love_jar_draws
+          where couple_id = $1
+            and user_id = $2
+            and drawn_date = current_date
+          for update
+        `,
+        [couple.id, user.id],
+      );
+
+      if ((alreadyDrawnResult.rowCount ?? 0) > 0) {
+        await client.query('rollback');
+        response.status(409).json({ error: 'You already drew a Love Jar note today' });
+        return;
+      }
+
+      const noteResult = await client.query(
         `
           update love_jar_notes
           set is_drawn = true,
@@ -1208,10 +1253,12 @@ export function apiRouter(): Router {
             select id
             from love_jar_notes
             where couple_id = $1
-              and author_id <> $2
               and is_drawn = false
-            order by random()
+            order by
+              case when author_id <> $2 then 0 else 1 end,
+              random()
             limit 1
+            for update skip locked
           )
           returning id
         `,
@@ -1219,14 +1266,27 @@ export function apiRouter(): Router {
       );
 
       if (!noteResult.rows[0]) {
-        response.status(404).json({ error: 'No unread partner note available' });
+        await client.query('rollback');
+        response.status(404).json({ error: 'No unread Love Jar note available' });
         return;
       }
+
+      await client.query(
+        `
+          insert into love_jar_draws (id, couple_id, user_id, note_id, drawn_date)
+          values ($1, $2, $3, $4, current_date)
+        `,
+        [randomUUID(), couple.id, user.id, noteResult.rows[0].id],
+      );
+      await client.query('commit');
 
       const payload = await buildLoveJarPayload(user.id);
       response.json(payload);
     } catch (error) {
+      await client.query('rollback');
       handleError(response, error);
+    } finally {
+      client.release();
     }
   });
 

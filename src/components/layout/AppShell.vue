@@ -14,7 +14,7 @@ const authStore = useAuthStore();
         <span>Herzgarten</span>
       </RouterLink>
       <RouterLink to="/onboarding" class="invite-code">
-        {{ authStore.couple?.inviteCode ?? 'Paarraum' }}
+        {{ authStore.couple?.inviteCode ?? (authStore.isAuthenticated ? 'Partnercode eingeben' : 'Paarraum') }}
       </RouterLink>
     </header>
 
