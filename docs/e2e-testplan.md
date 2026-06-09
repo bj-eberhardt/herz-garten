@@ -57,6 +57,9 @@ Die Tests laufen gegen `http://localhost:5173` und `http://localhost:3000`. Dock
 
 ### Wie gut kennst du mich?
 
+- Partner A sucht im Fragenkatalog per Autocomplete und waehlt einen Vorschlag aus.
+- Bereits von Partner A verwendete Katalogfragen verschwinden fuer Partner A aus der Vorschlagsliste.
+- Dieselbe Katalogfrage bleibt fuer Partner B weiterhin vorschlagbar.
 - Partner A erstellt eine eigene Multiple-Choice-Frage mit richtiger Antwort.
 - Partner B bekommt eine Notification und landet im Spiel.
 - Richtige Antwort erzeugt Verlaufseintrag und Gartenbelohnung.

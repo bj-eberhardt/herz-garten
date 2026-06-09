@@ -163,6 +163,41 @@ test('know me game notifies partner and rewards correct guesses', async ({ brows
   await contextB.close();
 });
 
+test('know me catalog suggestions can be selected and are hidden per author after use', async ({ browser, request }) => {
+  const { contextA, contextB, pageA, pageB } = await setupPages(browser, request, 'knowme-catalog');
+  const catalogQuestion = 'Was waere mein perfekter Sonntag?';
+
+  await pageA.goto('/know-me');
+  await pageA.getByTestId('know-me-question-input').fill('Sonntag');
+  await expect(pageA.getByTestId('know-me-catalog-suggestions')).toBeVisible();
+  await pageA.getByTestId('know-me-catalog-suggestion').filter({ hasText: catalogQuestion }).click();
+  await expect(pageA.getByTestId('know-me-question-input')).toHaveValue(catalogQuestion);
+  await expect(pageA.getByTestId('know-me-question-source')).toContainText('Katalog');
+
+  await pageA.getByTestId('know-me-option-0').fill('Lange schlafen und Kaffee');
+  await pageA.getByTestId('know-me-option-1').fill('Um sechs Uhr joggen');
+  await pageA.getByTestId('know-me-correct-select').selectOption('0');
+  await pageA.getByTestId('know-me-create-submit').click();
+  await expect(pageA.getByTestId('know-me-own-card').first()).toContainText(catalogQuestion);
+  await pageA.getByTestId('know-me-question-input').fill('Sonntag');
+  await expect(pageA.getByTestId('know-me-catalog-suggestions')).not.toContainText(catalogQuestion);
+
+  await pageB.goto('/know-me');
+  await pageB.getByTestId('know-me-question-input').fill('Sonntag');
+  await expect(pageB.getByTestId('know-me-catalog-suggestions')).toContainText(catalogQuestion);
+  await pageB
+    .getByTestId('know-me-open-card')
+    .first()
+    .getByTestId('know-me-answer-option')
+    .filter({ hasText: 'Lange schlafen und Kaffee' })
+    .click();
+  await pageB.getByTestId('know-me-guess-submit').click();
+  await expect(pageB.getByTestId('know-me-history-card').first()).toContainText('Treffer');
+
+  await contextA.close();
+  await contextB.close();
+});
+
 test('know me wrong guess is resolved without garden reward', async ({ browser, request }) => {
   const { contextA, contextB, pageA, pageB } = await setupPages(browser, request, 'knowme-wrong');
 

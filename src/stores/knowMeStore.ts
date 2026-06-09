@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { apiRequest } from '@/services/api';
-import type { Couple, KnowMeRound } from '@/types/domain';
+import type { Couple, KnowMeCatalogQuestion, KnowMeRound } from '@/types/domain';
 import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
 import { useGardenStore } from './gardenStore';
@@ -9,11 +9,13 @@ import { useNotificationStore } from './notificationStore';
 interface KnowMePayload {
   couple: Couple;
   rounds: KnowMeRound[];
+  catalogQuestions: KnowMeCatalogQuestion[];
 }
 
 export const useKnowMeStore = defineStore('knowMe', {
   state: () => ({
     rounds: [] as KnowMeRound[],
+    catalogQuestions: [] as KnowMeCatalogQuestion[],
     loading: false,
     error: '',
   }),
@@ -31,6 +33,7 @@ export const useKnowMeStore = defineStore('knowMe', {
   actions: {
     applyPayload(payload: KnowMePayload) {
       this.rounds = payload.rounds;
+      this.catalogQuestions = payload.catalogQuestions;
       useCoupleStore().setCouple(payload.couple);
       useAuthStore().couple = payload.couple;
     },
@@ -45,7 +48,12 @@ export const useKnowMeStore = defineStore('knowMe', {
         this.loading = false;
       }
     },
-    async createRound(input: { questionText: string; options: string[]; correctOptionIndex: number }) {
+    async createRound(input: {
+      questionText: string;
+      options: string[];
+      correctOptionIndex: number;
+      catalogQuestionId?: string | null;
+    }) {
       this.loading = true;
       this.error = '';
       try {

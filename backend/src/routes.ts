@@ -423,6 +423,7 @@ function mapKnowMeRound(row: Record<string, unknown>) {
     coupleId: row.coupleId,
     authorId: row.authorId,
     authorName: row.authorName,
+    catalogQuestionId: row.catalogQuestionId,
     questionText: row.questionText,
     options: row.options,
     correctOptionIndex: row.correctOptionIndex,
@@ -440,6 +441,14 @@ function mapKnowMeRound(row: Record<string, unknown>) {
           createdAt: row.guessCreatedAt,
         }
       : null,
+  };
+}
+
+function mapKnowMeCatalogQuestion(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    questionText: row.questionText,
+    category: row.category,
   };
 }
 
@@ -534,6 +543,7 @@ async function buildKnowMePayload(userId: string) {
         q.couple_id as "coupleId",
         q.author_id as "authorId",
         author.display_name as "authorName",
+        q.catalog_question_id as "catalogQuestionId",
         q.question_text as "questionText",
         q.options,
         q.correct_option_index as "correctOptionIndex",
@@ -557,9 +567,30 @@ async function buildKnowMePayload(userId: string) {
     [couple.id],
   );
 
+  const catalogResult = await pool.query(
+    `
+      select
+        c.id,
+        c.question_text as "questionText",
+        c.category
+      from know_me_catalog_questions c
+      where c.active = true
+        and not exists (
+          select 1
+          from know_me_questions q
+          where q.couple_id = $1
+            and q.author_id = $2
+            and q.catalog_question_id = c.id
+        )
+      order by c.sort_order, c.question_text
+    `,
+    [couple.id, userId],
+  );
+
   return {
     couple,
     rounds: result.rows.map(mapKnowMeRound),
+    catalogQuestions: catalogResult.rows.map(mapKnowMeCatalogQuestion),
   };
 }
 
@@ -1593,13 +1624,19 @@ export function apiRouter(): Router {
 
   router.post('/know-me', requireAuth, async (request, response) => {
     const user = currentUser(request);
-    const questionText = normalizeText(request.body.questionText);
+    const freeQuestionText = normalizeText(request.body.questionText);
+    const catalogQuestionId = normalizeText(request.body.catalogQuestionId) || null;
     const options = Array.isArray(request.body.options)
       ? request.body.options.map((option: unknown) => normalizeText(option)).filter(Boolean)
       : [];
     const correctOptionIndex = Number(request.body.correctOptionIndex);
 
-    if (!questionText || options.length < 2 || options.length > 4) {
+    if (catalogQuestionId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(catalogQuestionId)) {
+      response.status(400).json({ error: 'Invalid catalog question id' });
+      return;
+    }
+
+    if ((!catalogQuestionId && !freeQuestionText) || options.length < 2 || options.length > 4) {
       response.status(400).json({ error: 'Question text and 2-4 answer options are required' });
       return;
     }
@@ -1618,15 +1655,52 @@ export function apiRouter(): Router {
       }
 
       await client.query('begin');
+      let questionText = freeQuestionText;
+      if (catalogQuestionId) {
+        const catalogResult = await client.query(
+          `
+            select question_text as "questionText"
+            from know_me_catalog_questions
+            where id = $1 and active = true
+          `,
+          [catalogQuestionId],
+        );
+        const catalogQuestion = catalogResult.rows[0];
+        if (!catalogQuestion) {
+          await client.query('rollback');
+          response.status(400).json({ error: 'Catalog question not found' });
+          return;
+        }
+
+        const alreadyUsedResult = await client.query(
+          `
+            select 1
+            from know_me_questions
+            where couple_id = $1
+              and author_id = $2
+              and catalog_question_id = $3
+            limit 1
+          `,
+          [couple.id, user.id, catalogQuestionId],
+        );
+        if ((alreadyUsedResult.rowCount ?? 0) > 0) {
+          await client.query('rollback');
+          response.status(409).json({ error: 'Catalog question was already used by this author' });
+          return;
+        }
+
+        questionText = catalogQuestion.questionText;
+      }
+
       const questionId = randomUUID();
       await client.query(
         `
           insert into know_me_questions (
-            id, couple_id, author_id, question_text, options, correct_option_index
+            id, couple_id, author_id, catalog_question_id, question_text, options, correct_option_index
           )
-          values ($1, $2, $3, $4, $5, $6)
+          values ($1, $2, $3, $4, $5, $6, $7)
         `,
-        [questionId, couple.id, user.id, questionText, JSON.stringify(options), correctOptionIndex],
+        [questionId, couple.id, user.id, catalogQuestionId, questionText, JSON.stringify(options), correctOptionIndex],
       );
       const memberIds = await getCoupleMemberIds(client, couple.id);
       await createNotifications(client, {

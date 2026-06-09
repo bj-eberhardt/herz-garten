@@ -6,11 +6,31 @@ import type { KnowMeRound } from '@/types/domain';
 
 const knowMeStore = useKnowMeStore();
 const questionText = ref('');
+const selectedCatalogQuestionId = ref<string | null>(null);
+const isCatalogOpen = ref(false);
 const options = ref(['', '', '', '']);
 const correctOptionIndex = ref(0);
 const selectedGuesses = ref<Record<string, number>>({});
 
 const filledOptions = computed(() => options.value.map((option) => option.trim()).filter(Boolean));
+const selectedCatalogQuestion = computed(() =>
+  knowMeStore.catalogQuestions.find((question) => question.id === selectedCatalogQuestionId.value),
+);
+const filteredCatalogQuestions = computed(() => {
+  const search = questionText.value.trim().toLowerCase();
+  const questions = knowMeStore.catalogQuestions.filter((question) => {
+    if (!search) return true;
+    return (
+      question.questionText.toLowerCase().includes(search) ||
+      question.category.toLowerCase().includes(search)
+    );
+  });
+  return questions.slice(0, 6);
+});
+const questionSourceLabel = computed(() =>
+  selectedCatalogQuestion.value ? 'Vorschlag aus dem Katalog' : 'Eigene Frage',
+);
+const showCatalogDropdown = computed(() => isCatalogOpen.value && questionText.value.trim().length > 0);
 const canCreate = computed(
   () =>
     questionText.value.trim().length > 0 &&
@@ -23,14 +43,45 @@ function optionLabel(round: KnowMeRound, index?: number | null) {
   return typeof index === 'number' ? round.options[index] : '';
 }
 
+function selectCatalogQuestion(question: { id: string; questionText: string }) {
+  selectedCatalogQuestionId.value = question.id;
+  questionText.value = question.questionText;
+  isCatalogOpen.value = false;
+}
+
+function handleQuestionInput() {
+  isCatalogOpen.value = true;
+  if (selectedCatalogQuestion.value && questionText.value !== selectedCatalogQuestion.value.questionText) {
+    selectedCatalogQuestionId.value = null;
+  }
+}
+
+function openCatalog() {
+  isCatalogOpen.value = true;
+}
+
+function closeCatalogSoon() {
+  window.setTimeout(() => {
+    isCatalogOpen.value = false;
+  }, 120);
+}
+
+function selectFirstCatalogQuestion() {
+  if (!showCatalogDropdown.value || !filteredCatalogQuestions.value.length) return;
+  selectCatalogQuestion(filteredCatalogQuestions.value[0]);
+}
+
 async function submitRound() {
   if (!canCreate.value) return;
   await knowMeStore.createRound({
     questionText: questionText.value.trim(),
     options: filledOptions.value,
     correctOptionIndex: correctOptionIndex.value,
+    catalogQuestionId: selectedCatalogQuestionId.value,
   });
   questionText.value = '';
+  selectedCatalogQuestionId.value = null;
+  isCatalogOpen.value = false;
   options.value = ['', '', '', ''];
   correctOptionIndex.value = 0;
 }
@@ -65,13 +116,49 @@ onMounted(() => {
         <h2>Erzaehl etwas ueber dich, das dein Partner einschaetzen darf.</h2>
       </div>
 
-      <label for="know-me-question">Deine Frage</label>
-      <input
-        id="know-me-question"
-        v-model="questionText"
-        data-testid="know-me-question-input"
-        placeholder="Was waere mein perfekter Sonntag?"
-      />
+      <div class="catalog-combobox">
+        <label for="know-me-question">Deine Frage</label>
+        <input
+          id="know-me-question"
+          v-model="questionText"
+          data-testid="know-me-question-input"
+          placeholder="Was waere mein perfekter Sonntag?"
+          autocomplete="off"
+          role="combobox"
+          aria-autocomplete="list"
+          :aria-expanded="showCatalogDropdown"
+          aria-controls="know-me-catalog-listbox"
+          @focus="openCatalog"
+          @blur="closeCatalogSoon"
+          @input="handleQuestionInput"
+          @keydown.esc.prevent="isCatalogOpen = false"
+          @keydown.enter.prevent="selectFirstCatalogQuestion"
+        />
+        <div
+          v-if="showCatalogDropdown"
+          id="know-me-catalog-listbox"
+          class="catalog-suggestions"
+          role="listbox"
+          data-testid="know-me-catalog-suggestions"
+        >
+          <button
+            v-for="question in filteredCatalogQuestions"
+            :key="question.id"
+            class="catalog-suggestion"
+            type="button"
+            role="option"
+            data-testid="know-me-catalog-suggestion"
+            @mousedown.prevent="selectCatalogQuestion(question)"
+          >
+            <span>{{ question.questionText }}</span>
+            <small>{{ question.category }}</small>
+          </button>
+          <p v-if="!filteredCatalogQuestions.length" class="catalog-empty" data-testid="know-me-catalog-empty">
+            Du hast alle passenden Vorschlaege schon gestellt. Du kannst jederzeit eine eigene Frage schreiben.
+          </p>
+        </div>
+      </div>
+      <p class="question-source" data-testid="know-me-question-source">{{ questionSourceLabel }}</p>
 
       <div class="option-grid">
         <label v-for="(_, index) in options" :key="index" :for="`know-me-option-${index}`">

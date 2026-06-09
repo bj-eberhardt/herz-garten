@@ -135,11 +135,18 @@ export interface KnowMeGuess {
   createdAt: string;
 }
 
+export interface KnowMeCatalogQuestion {
+  id: string;
+  questionText: string;
+  category: string;
+}
+
 export interface KnowMeRound {
   id: string;
   coupleId: string;
   authorId: string;
   authorName?: string;
+  catalogQuestionId?: string | null;
   questionText: string;
   options: string[];
   correctOptionIndex: number;
