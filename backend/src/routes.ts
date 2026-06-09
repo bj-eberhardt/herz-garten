@@ -649,6 +649,42 @@ async function buildGardenObjectDetail(userId: string, objectId: string) {
   };
 }
 
+async function buildGardenProgress(coupleId: string) {
+  const result = await pool.query(
+    `
+      select
+        count(distinct dqi.id) filter (where dqi.reward_applied_at is not null)::int as "answeredQuestionCount",
+        count(distinct cq.id) filter (where cq.status = 'completed')::int as "completedQuestCount",
+        count(distinct n.id)::int as "loveJarNoteCount",
+        count(distinct n.id) filter (where n.is_drawn = true)::int as "drawnLoveJarNoteCount",
+        count(distinct m.id)::int as "memoryCount",
+        count(distinct go.id)::int as "gardenObjectCount",
+        coalesce(max(go.created_at), c.created_at) as "lastGardenMomentAt"
+      from couples c
+      left join daily_question_instances dqi on dqi.couple_id = c.id
+      left join couple_quests cq on cq.couple_id = c.id
+      left join love_jar_notes n on n.couple_id = c.id
+      left join memory_entries m on m.couple_id = c.id
+      left join garden_objects go on go.couple_id = c.id
+      where c.id = $1
+      group by c.id
+    `,
+    [coupleId],
+  );
+
+  return (
+    result.rows[0] ?? {
+      answeredQuestionCount: 0,
+      completedQuestCount: 0,
+      loveJarNoteCount: 0,
+      drawnLoveJarNoteCount: 0,
+      memoryCount: 0,
+      gardenObjectCount: 0,
+      lastGardenMomentAt: null,
+    }
+  );
+}
+
 async function buildLoveJarPayload(userId: string) {
   const couple = await getCurrentCouple(userId);
   if (!couple) {
@@ -1661,6 +1697,7 @@ export function apiRouter(): Router {
       response.json({
         couple,
         objects: objectsResult.rows.map(mapGardenObject),
+        progress: await buildGardenProgress(couple.id),
       });
     } catch (error) {
       handleError(response, error);

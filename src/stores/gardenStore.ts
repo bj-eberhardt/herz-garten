@@ -20,9 +20,28 @@ const fallbackPositions = [
   [64, 24],
 ];
 
+export interface GardenProgress {
+  answeredQuestionCount: number;
+  completedQuestCount: number;
+  loveJarNoteCount: number;
+  drawnLoveJarNoteCount: number;
+  memoryCount: number;
+  gardenObjectCount: number;
+  lastGardenMomentAt?: string | null;
+}
+
 export const useGardenStore = defineStore('garden', {
   state: () => ({
     objects: [] as GardenObject[],
+    progress: {
+      answeredQuestionCount: 0,
+      completedQuestCount: 0,
+      loveJarNoteCount: 0,
+      drawnLoveJarNoteCount: 0,
+      memoryCount: 0,
+      gardenObjectCount: 0,
+      lastGardenMomentAt: null,
+    } as GardenProgress,
     selectedDetail: null as null | {
       object: GardenObject;
       source: Record<string, unknown> | null;
@@ -35,8 +54,11 @@ export const useGardenStore = defineStore('garden', {
       this.loading = true;
       this.error = '';
       try {
-        const payload = await apiRequest<{ couple: Couple; objects: GardenObject[] }>('/api/garden');
+        const payload = await apiRequest<{ couple: Couple; objects: GardenObject[]; progress: GardenProgress }>(
+          '/api/garden',
+        );
         this.objects = payload.objects;
+        this.progress = payload.progress;
         useCoupleStore().setCouple(payload.couple);
         useAuthStore().couple = payload.couple;
       } catch (error) {

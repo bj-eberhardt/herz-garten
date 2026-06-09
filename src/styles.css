@@ -199,6 +199,42 @@ h2 {
   position: relative;
 }
 
+.garden-progress {
+  display: grid;
+  gap: 16px;
+}
+
+.progress-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+}
+
+.progress-tile {
+  background: #fff8f2;
+  border: 1px solid #efd7ca;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  min-height: 112px;
+  padding: 14px;
+}
+
+.progress-tile strong {
+  color: #9f4c43;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.progress-tile span {
+  font-weight: 900;
+}
+
+.progress-tile small {
+  color: #806456;
+  line-height: 1.35;
+}
+
 .garden-sky,
 .garden-ground {
   inset: 0;
@@ -460,6 +496,33 @@ textarea {
   gap: 16px;
 }
 
+.celebration-panel {
+  background:
+    linear-gradient(135deg, rgba(255, 244, 204, 0.92), rgba(252, 226, 216, 0.88)),
+    #fff8f2;
+  border: 1px solid #efc37a;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+}
+
+.celebration-panel span,
+.detail-label {
+  color: #9f4c43;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  margin-bottom: 0;
+  text-transform: uppercase;
+}
+
+.celebration-panel p {
+  font-size: 1.08rem;
+  font-weight: 800;
+  margin-bottom: 0;
+}
+
 .notification-toolbar {
   align-items: center;
   display: flex;
@@ -664,6 +727,10 @@ textarea {
   .garden-canvas {
     aspect-ratio: 4 / 5;
     min-height: 420px;
+  }
+
+  .progress-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .bottom-nav {

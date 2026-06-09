@@ -40,8 +40,12 @@ test('daily question reveal creates notifications and a garden detail', async ({
   await expect(pageA.getByTestId('today-reveal-answers')).toBeVisible();
 
   await pageA.getByTestId('nav-garden').click();
+  await expect(pageA.getByTestId('garden-progress')).toBeVisible();
+  await expect(pageA.getByTestId('garden-progress')).toContainText('Tagesfragen');
   await pageA.getByTestId('garden-object').first().click();
   await expect(pageA.getByTestId('garden-detail')).toContainText('Tagesfrage');
+  await expect(pageA.getByTestId('garden-detail-date')).toBeVisible();
+  await expect(pageA.getByTestId('garden-detail-celebration')).toContainText('gewachsen');
 
   await contextA.close();
   await contextB.close();
@@ -138,8 +142,10 @@ test('memory creates timeline entry notification and garden detail', async ({ br
   await expect(pageB.getByTestId('notification-item').first()).toContainText('Erinnerung');
 
   await pageA.getByTestId('nav-garden').click();
+  await expect(pageA.getByTestId('garden-progress')).toContainText('Erinnerungen');
   await pageA.getByTestId('garden-object').first().click();
   await expect(pageA.getByTestId('garden-detail')).toContainText('Unser E2E Moment');
+  await expect(pageA.getByTestId('garden-detail-celebration')).toContainText('bewahrt');
 
   await contextA.close();
   await contextB.close();
