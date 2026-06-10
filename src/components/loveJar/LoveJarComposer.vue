@@ -1,21 +1,32 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { Plus } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
-import de from '@/i18n/locales/de.json';
 import { useLoveJarStore } from '@/stores/loveJarStore';
 import type { LoveJarCategory } from '@/types/domain';
 
 const loveJarStore = useLoveJarStore();
 const { t } = useI18n();
-const loveJarTemplates = de.content.loveJarTemplates;
-const note = ref(loveJarTemplates[0]);
+const note = ref('');
 const category = ref<LoveJarCategory>('compliment');
+const loveJarTemplates = computed(() => loveJarStore.templates);
 
 async function submitNote() {
   await loveJarStore.addNote(note.value, category.value);
   note.value = '';
 }
+
+onMounted(async () => {
+  await loveJarStore.loadTemplates();
+  note.value = loveJarTemplates.value[0]?.text ?? '';
+});
+
+watch(loveJarTemplates, (templates) => {
+  if (!note.value && templates[0]) {
+    note.value = templates[0].text;
+    category.value = templates[0].category;
+  }
+});
 </script>
 
 <template>
@@ -39,6 +50,17 @@ async function submitNote() {
 
     <label for="love-jar-note">{{ t('loveJar.newNote') }}</label>
     <textarea id="love-jar-note" v-model="note" rows="4" :placeholder="t('loveJar.notePlaceholder')" data-testid="love-jar-note-input" />
+    <div v-if="loveJarTemplates.length" class="template-chip-list">
+      <button
+        v-for="template in loveJarTemplates.slice(0, 6)"
+        :key="template.id"
+        class="template-chip"
+        type="button"
+        @click="note = template.text; category = template.category"
+      >
+        {{ template.text }}
+      </button>
+    </div>
     <button class="primary-button" type="submit" :disabled="loveJarStore.loading" data-testid="love-jar-save">
       <Plus :size="18" aria-hidden="true" />
       {{ loveJarStore.loading ? t('common.saving') : t('loveJar.saveNote') }}

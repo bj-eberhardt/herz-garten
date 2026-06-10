@@ -335,7 +335,7 @@ async function buildQuestPayload(userId: string, filters: QuestFilters = {}, loc
   const validCategories = new Set(['romance', 'date', 'humor', 'memory', 'teamwork', 'long_distance']);
   const validEffortLevels = new Set(['low', 'medium', 'high']);
   const validModes = new Set(['solo', 'together', 'long_distance']);
-  const whereClauses = ['1 = 1'];
+  const whereClauses = ['q.active = true'];
   const params: unknown[] = [couple.id, locale];
 
   if (filters.category && validCategories.has(filters.category)) {
@@ -960,6 +960,25 @@ async function buildLoveJarPayload(userId: string) {
       ownUnreadCount: status.ownUnreadCount,
     },
   };
+}
+
+async function buildLoveJarTemplatePayload(locale = 'de') {
+  const result = await pool.query(
+    `
+      select
+        t.id,
+        coalesce(requested.text, fallback.text, t.text) as text,
+        t.category
+      from love_jar_templates t
+      left join love_jar_template_translations requested on requested.template_id = t.id and requested.locale = $1
+      left join love_jar_template_translations fallback on fallback.template_id = t.id and fallback.locale = 'de'
+      where t.active = true
+      order by t.sort_order, t.text
+    `,
+    [locale],
+  );
+
+  return { templates: result.rows };
 }
 
 async function createLoveJarLight(client: Queryable, coupleId: string, noteId: string) {
@@ -1988,6 +2007,15 @@ export function apiRouter(): Router {
       handleError(response, error);
     } finally {
       client.release();
+    }
+  });
+
+  router.get('/love-jar/templates', requireAuth, async (request, response) => {
+    try {
+      const locale = await resolveLocale(request);
+      response.json(await buildLoveJarTemplatePayload(locale));
+    } catch (error) {
+      handleError(response, error);
     }
   });
 

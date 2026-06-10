@@ -1,0 +1,27 @@
+{
+  "name": "Herzgarten",
+  "short_name": "Herzgarten",
+  "description": "Ein liebevolles Beziehungsspiel, in dem gemeinsame Momente einen digitalen Garten wachsen lassen.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF3EC",
+  "theme_color": "#E84A72",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/maskable-icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

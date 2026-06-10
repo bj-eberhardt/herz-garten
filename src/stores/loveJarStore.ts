@@ -19,6 +19,12 @@ export interface LoveJarDrawStatus {
   ownUnreadCount: number;
 }
 
+export interface LoveJarTemplate {
+  id: string;
+  text: string;
+  category: LoveJarCategory;
+}
+
 interface LoveJarPayload {
   couple: Couple;
   notes: LoveJarNoteView[];
@@ -34,6 +40,7 @@ export const useLoveJarStore = defineStore('loveJar', {
       partnerUnreadCount: 0,
       ownUnreadCount: 0,
     } as LoveJarDrawStatus,
+    templates: [] as LoveJarTemplate[],
     loading: false,
     error: '',
   }),
@@ -46,6 +53,14 @@ export const useLoveJarStore = defineStore('loveJar', {
       this.drawStatus = payload.drawStatus;
       useCoupleStore().setCouple(payload.couple);
       useAuthStore().couple = payload.couple;
+    },
+    async loadTemplates() {
+      try {
+        const payload = await apiRequest<{ templates: LoveJarTemplate[] }>('/api/love-jar/templates');
+        this.templates = payload.templates;
+      } catch (error) {
+        this.error = localizeApiError(error, 'errors.fallback.loveJarLoad');
+      }
     },
     async loadNotes() {
       this.loading = true;

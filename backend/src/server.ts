@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { config } from './config.js';
 import { checkDatabase, pool } from './db.js';
+import { adminRouter } from './adminRoutes.js';
 import { apiRouter } from './routes.js';
 
 const app = express();
@@ -31,6 +32,7 @@ app.get('/health', async (_request, response) => {
   }
 });
 
+app.use('/api/admin', adminRouter());
 app.use('/api', apiRouter());
 
 const server = app.listen(config.port, () => {

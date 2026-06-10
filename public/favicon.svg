@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Herzgarten Icon</title>
+  <desc id="desc">Ein Herz als Blüte auf einem kleinen Gartenstiel.</desc>
+  <circle cx="256" cy="256" r="236" fill="#FFE1D6"/>
+  <ellipse cx="256" cy="388" rx="142" ry="45" fill="#A97850"/>
+  <ellipse cx="256" cy="376" rx="108" ry="28" fill="#B98760"/>
+  <rect x="240" y="226" width="32" height="160" rx="16" fill="#8B5E3C"/>
+  <path d="M252 292 C188 275 128 226 103 174 C168 166 222 188 256 258 Z" fill="#78B779"/>
+  <path d="M260 286 C324 269 384 220 409 168 C344 160 290 182 256 252 Z" fill="#4F8F58"/>
+  <path d="M256 336 C196 286 118 230 118 150 C118 97 158 64 204 64 C232 64 250 78 256 91 C262 78 280 64 308 64 C354 64 394 97 394 150 C394 230 316 286 256 336 Z" fill="#E84A72"/>
+  <path d="M166 212 C196 252 226 292 256 336 C286 292 316 252 346 212 C322 244 288 280 256 307 C224 280 190 244 166 212 Z" fill="#C93B5E" opacity="0.35"/>
+  <circle cx="205" cy="124" r="18" fill="#FFD0DC" opacity="0.85"/>
+  <path d="M355 99 L366 123 L392 126 L373 144 L378 170 L355 157 L332 170 L337 144 L318 126 L344 123 Z" fill="#F4B95A"/>
+</svg>

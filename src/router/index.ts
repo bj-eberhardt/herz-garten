@@ -9,6 +9,15 @@ import SettingsView from '@/views/SettingsView.vue';
 import NotificationsView from '@/views/NotificationsView.vue';
 import OnboardingView from '@/views/OnboardingView.vue';
 import { useAuthStore } from '@/stores/authStore';
+import AdminShell from '@/components/admin/AdminShell.vue';
+import AdminAuditLogView from '@/views/admin/AdminAuditLogView.vue';
+import AdminContentView from '@/views/admin/AdminContentView.vue';
+import AdminCoupleDetailView from '@/views/admin/AdminCoupleDetailView.vue';
+import AdminCouplesView from '@/views/admin/AdminCouplesView.vue';
+import AdminDashboardView from '@/views/admin/AdminDashboardView.vue';
+import AdminLoginView from '@/views/admin/AdminLoginView.vue';
+import AdminUsersView from '@/views/admin/AdminUsersView.vue';
+import { useAdminStore } from '@/stores/adminStore';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -23,12 +32,40 @@ const router = createRouter({
     { path: '/memories', name: 'memories', component: MemoriesView },
     { path: '/notifications', name: 'notifications', component: NotificationsView },
     { path: '/settings', name: 'settings', component: SettingsView },
+    { path: '/admin/login', name: 'adminLogin', component: AdminLoginView },
+    {
+      path: '/admin',
+      component: AdminShell,
+      children: [
+        { path: '', name: 'adminDashboard', component: AdminDashboardView },
+        { path: 'users', name: 'adminUsers', component: AdminUsersView },
+        { path: 'couples', name: 'adminCouples', component: AdminCouplesView },
+        { path: 'couples/:id', name: 'adminCoupleDetail', component: AdminCoupleDetailView },
+        { path: 'content', name: 'adminContent', component: AdminContentView },
+        { path: 'audit-log', name: 'adminAuditLog', component: AdminAuditLogView },
+      ],
+    },
   ],
 });
 
 const allowedWithoutCouple = new Set(['/onboarding', '/notifications']);
 
 router.beforeEach(async (to) => {
+  if (to.path.startsWith('/admin')) {
+    const adminStore = useAdminStore();
+    await adminStore.bootstrap();
+
+    if (to.path !== '/admin/login' && !adminStore.isAuthenticated) {
+      return '/admin/login';
+    }
+
+    if (to.path === '/admin/login' && adminStore.isAuthenticated) {
+      return '/admin';
+    }
+
+    return true;
+  }
+
   const authStore = useAuthStore();
   await authStore.bootstrap();
 
