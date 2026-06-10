@@ -8,6 +8,7 @@ import {
   type QuestsPayload,
   type TodayPayload,
 } from '../helpers/apiAssertions';
+import { moveDailyQuestionInstanceToYesterday } from '../helpers/db';
 import { testRunId, testUser } from '../helpers/testUsers';
 
 test.describe('daily question api', () => {
@@ -42,6 +43,44 @@ test.describe('daily question api', () => {
     expect(afterSecondAnswer.answers.map((answer) => answer.answerText)).toEqual(
       expect.arrayContaining(['First API answer', 'Second API answer']),
     );
+  });
+
+  test('replays an unanswered daily question on a later day', async ({ request }) => {
+    const runId = testRunId();
+    const { partnerA, partnerB } = await setupCoupleByApi(
+      request,
+      testUser('api-today-replay-a', runId),
+      testUser('api-today-replay-b', runId),
+    );
+
+    const firstDay = await expectJson<TodayPayload>(await apiGetRaw(request, '/api/today', partnerA.token));
+    expectTodayPayload(firstDay);
+
+    moveDailyQuestionInstanceToYesterday(firstDay.instance.id);
+
+    const secondDay = await expectJson<TodayPayload>(await apiGetRaw(request, '/api/today', partnerB.token));
+    expectTodayPayload(secondDay);
+    expect(secondDay.question.id).toBe(firstDay.question.id);
+  });
+
+  test('does not repeat a daily question after one partner answered it', async ({ request }) => {
+    const runId = testRunId();
+    const { partnerA, partnerB } = await setupCoupleByApi(
+      request,
+      testUser('api-today-no-repeat-a', runId),
+      testUser('api-today-no-repeat-b', runId),
+    );
+
+    const firstDay = await expectJson<TodayPayload>(
+      await apiPostRaw(request, '/api/today/answer', { answerText: 'One answer is enough to consume it' }, partnerA.token),
+    );
+    expectTodayPayload(firstDay);
+
+    moveDailyQuestionInstanceToYesterday(firstDay.instance.id);
+
+    const secondDay = await expectJson<TodayPayload>(await apiGetRaw(request, '/api/today', partnerB.token));
+    expectTodayPayload(secondDay);
+    expect(secondDay.question.id).not.toBe(firstDay.question.id);
   });
 
   test('rejects missing answer and no-couple access', async ({ request }) => {

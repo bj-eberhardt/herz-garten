@@ -164,13 +164,40 @@ async function getOrCreateTodayInstance(client: Queryable, coupleId: string) {
         select relationship_type, content_preference
         from couples
         where id = $1
+      ),
+      unanswered_previous_questions as (
+        select distinct i.question_id
+        from daily_question_instances i
+        where i.couple_id = $1
+          and i.date <> $2::date
+          and not exists (
+            select 1
+            from daily_question_answers a
+            where a.couple_id = i.couple_id
+              and a.question_id = i.question_id
+          )
       )
       select q.id
       from daily_questions q
       cross join couple_context c
+      left join unanswered_previous_questions upq on upq.question_id = q.id
       where q.active = true
         and (c.relationship_type = 'long_distance' or q.long_distance_suitable = true)
+        and not exists (
+          select 1
+          from daily_question_instances used
+          where used.couple_id = $1
+            and used.question_id = q.id
+            and used.date <> $2::date
+            and exists (
+              select 1
+              from daily_question_answers answer
+              where answer.couple_id = used.couple_id
+                and answer.question_id = used.question_id
+            )
+        )
       order by
+        case when upq.question_id is not null then 0 else 1 end,
         case
           when c.content_preference = 'romantic' and q.category in ('romance', 'gratitude', 'connection') then 0
           when c.content_preference = 'playful' and q.category in ('humor', 'date', 'ritual') then 0
@@ -282,10 +309,12 @@ async function buildTodayPayload(userId: string, locale = 'de') {
         a.created_at as "createdAt"
       from daily_question_answers a
       join profiles p on p.id = a.user_id
-      where a.couple_id = $1 and a.question_id = $2
+      where a.couple_id = $1
+        and a.question_id = $2
+        and a.created_at::date = $3::date
       order by a.created_at
     `,
-    [couple.id, instance.questionId],
+    [couple.id, instance.questionId, instance.date],
   );
   const answers = answersResult.rows;
   const answeredByCurrentUser = answers.some((answer) => answer.userId === userId);
@@ -1542,10 +1571,12 @@ export function apiRouter(): Router {
             a.created_at as "createdAt"
           from daily_question_answers a
           join profiles p on p.id = a.user_id
-          where a.couple_id = $1 and a.question_id = $2
+          where a.couple_id = $1
+            and a.question_id = $2
+            and a.created_at::date = $3::date
           order by a.created_at
         `,
-        [couple.id, instance.questionId],
+        [couple.id, instance.questionId, instance.date],
       );
 
       if (answersResult.rows.length >= 2 && !instance.rewardAppliedAt) {
