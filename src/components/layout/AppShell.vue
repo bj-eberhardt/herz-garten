@@ -12,7 +12,7 @@ const notificationStore = useNotificationStore();
 const { t } = useI18n();
 
 function loadNotificationsIfReady() {
-  if (authStore.isAuthenticated && authStore.hasCouple) {
+  if (authStore.isAuthenticated) {
     notificationStore.loadNotifications();
   }
 }
@@ -31,7 +31,7 @@ watch(() => authStore.couple?.id, loadNotificationsIfReady);
       <RouterLink to="/onboarding" class="invite-code" data-testid="header-couple-link">
         {{ authStore.couple?.inviteCode ?? (authStore.isAuthenticated ? t('nav.partnerCode') : t('nav.coupleRoom')) }}
       </RouterLink>
-      <RouterLink v-if="authStore.hasCouple" to="/notifications" class="notification-link" :aria-label="t('nav.notifications')" data-testid="nav-notifications">
+      <RouterLink v-if="authStore.isAuthenticated" to="/notifications" class="notification-link" :aria-label="t('nav.notifications')" data-testid="nav-notifications">
         <Bell :size="18" aria-hidden="true" />
         <span v-if="notificationStore.unreadCount > 0" class="notification-badge" data-testid="notification-badge">
           {{ notificationStore.unreadCount }}

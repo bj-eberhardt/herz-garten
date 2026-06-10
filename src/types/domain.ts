@@ -117,7 +117,7 @@ export interface MemoryEntry {
 
 export interface NotificationItem {
   id: string;
-  coupleId: string;
+  coupleId: string | null;
   userId: string;
   type: NotificationType;
   title: string;

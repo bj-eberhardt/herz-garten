@@ -4,10 +4,12 @@ import { useRouter } from 'vue-router';
 import { Bell, CheckCheck } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import { useNotificationStore } from '@/stores/notificationStore';
+import { useAuthStore } from '@/stores/authStore';
 import type { NotificationItem } from '@/types/domain';
 
 const router = useRouter();
 const notificationStore = useNotificationStore();
+const authStore = useAuthStore();
 const { t } = useI18n();
 
 onMounted(() => {
@@ -17,6 +19,9 @@ onMounted(() => {
 async function openNotification(notification: NotificationItem) {
   if (!notification.readAt) {
     await notificationStore.markRead(notification.id);
+  }
+  if (notification.sourceType === 'account_deletion') {
+    await authStore.refreshMe();
   }
   await router.push(notificationStore.targetRoute(notification));
 }

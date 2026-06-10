@@ -28,6 +28,12 @@ async function apiPostRaw(request: APIRequestContext, path: string, body: unknow
   });
 }
 
+async function apiGetRaw(request: APIRequestContext, path: string, token: string, headers: Record<string, string> = {}) {
+  return request.get(`http://localhost:3000${path}`, {
+    headers: { Authorization: `Bearer ${token}`, ...headers },
+  });
+}
+
 test('daily question reveal creates notifications and a garden detail', async ({ browser, request }) => {
   const { contextA, contextB, pageA, pageB } = await setupPages(browser, request, 'daily');
 
@@ -99,6 +105,7 @@ test('quest filters narrow visible quest suggestions', async ({ browser, request
 
   await pageA.getByTestId('quest-filter-category').selectOption('long_distance');
   await expect(pageA.getByTestId('quest-card').first()).toBeVisible();
+  await expect.poll(() => pageA.getByTestId('quest-card').count()).toBeLessThan(initialCount);
   const filteredCount = await pageA.getByTestId('quest-card').count();
   expect(filteredCount).toBeLessThan(initialCount);
   await expect(pageA.getByTestId('quest-card').first()).toContainText(/Aktueller|Fern|Song|Sprachnachricht|Wiedersehen/);
@@ -328,6 +335,8 @@ test('settings expose export logout and leave couple flows', async ({ browser, r
   const { contextA, contextB, pageA } = await setupPages(browser, request, 'settings');
 
   await pageA.goto('/settings');
+  await expect(pageA.getByTestId('privacy-details')).toContainText('Datenschutz auf einen Blick');
+  await expect(pageA.getByTestId('privacy-details')).toContainText('Konto loeschen');
   const downloadPromise = pageA.waitForEvent('download');
   await pageA.getByTestId('settings-export').click();
   await downloadPromise;
@@ -338,6 +347,151 @@ test('settings expose export logout and leave couple flows', async ({ browser, r
 
   await contextA.close();
   await contextB.close();
+});
+
+test('settings allow deleting the account and remove login access', async ({ browser, request }) => {
+  const runId = testRunId();
+  const userA = testUser('delete-a', runId);
+  const userB = testUser('delete-b', runId);
+  const { partnerA, partnerB } = await setupCoupleByApi(request, userA, userB);
+  const contextA = await browser.newContext();
+  const contextB = await browser.newContext();
+  const pageA = await contextA.newPage();
+  const pageB = await contextB.newPage();
+  await authenticatePage(contextA, pageA, partnerA.token);
+  await authenticatePage(contextB, pageB, partnerB.token);
+
+  await pageA.goto('/settings');
+  pageA.once('dialog', (dialog) => dialog.accept());
+  await pageA.getByTestId('settings-delete-account').click();
+  await expect(pageA).toHaveURL(/\/onboarding$/);
+  await expect(pageA.getByTestId('auth-form')).toBeVisible();
+  await expect(pageA.evaluate(() => window.localStorage.getItem('herzgarten_token'))).resolves.toBeNull();
+
+  const loginResponse = await request.post('http://localhost:3000/api/auth/login', {
+    data: { email: userA.email, password: userA.password },
+  });
+  expect(loginResponse.status()).toBe(401);
+  const loginPayload = await loginResponse.json();
+  expect(loginPayload).toEqual(expect.objectContaining({ errorKey: 'auth.invalidCredentials' }));
+
+  const partnerResponse = await apiGetRaw(request, '/api/me', partnerB.token);
+  expect(partnerResponse.ok()).toBeTruthy();
+  const partnerPayload = await partnerResponse.json();
+  expect(partnerPayload.couple).toBeNull();
+
+  await pageB.goto('/notifications');
+  await expect(pageB.getByTestId('notification-item').first()).toContainText('Paarung wurde getrennt');
+  await expect(pageB.getByTestId('notification-item').first()).toContainText('neu paaren');
+  await pageB.getByTestId('notification-item').first().click();
+  await expect(pageB).toHaveURL(/\/onboarding$/);
+  await expect(pageB.getByTestId('join-couple-form')).toBeVisible();
+
+  await contextA.close();
+  await contextB.close();
+});
+
+test('api content i18n resolves query parameter and accept-language with fallbacks', async ({ request }) => {
+  const runId = testRunId();
+  const userA = testUser('api-i18n-a', runId);
+  const userB = testUser('api-i18n-b', runId);
+  const { partnerA } = await setupCoupleByApi(request, userA, userB);
+
+  const englishQuests = await apiGet<{ quests: Array<{ title: string; description: string }>; locale: string }>(
+    request,
+    '/api/quests?lang=en',
+    partnerA.token,
+  );
+  expect(englishQuests.locale).toBe('en');
+  expect(englishQuests.quests.some((quest) => quest.title === 'Three Compliments')).toBeTruthy();
+
+  const germanQuests = await apiGet<{ quests: Array<{ title: string }>; locale: string }>(
+    request,
+    '/api/quests?lang=de',
+    partnerA.token,
+  );
+  expect(germanQuests.locale).toBe('de');
+  expect(germanQuests.quests.some((quest) => quest.title === 'Drei Komplimente')).toBeTruthy();
+
+  const headerResponse = await apiGetRaw(request, '/api/quests', partnerA.token, { 'Accept-Language': 'en-US,en;q=0.8' });
+  expect(headerResponse.ok()).toBeTruthy();
+  const headerPayload = await headerResponse.json();
+  expect(headerPayload.locale).toBe('en');
+  expect(headerPayload.quests.some((quest: { title: string }) => quest.title === 'Three Compliments')).toBeTruthy();
+
+  const overrideResponse = await apiGetRaw(request, '/api/quests?lang=de', partnerA.token, {
+    'Accept-Language': 'en',
+  });
+  expect(overrideResponse.ok()).toBeTruthy();
+  const overridePayload = await overrideResponse.json();
+  expect(overridePayload.locale).toBe('de');
+  expect(overridePayload.quests.some((quest: { title: string }) => quest.title === 'Drei Komplimente')).toBeTruthy();
+
+  const invalidResponse = await apiGetRaw(request, '/api/quests?lang=fr', partnerA.token);
+  expect(invalidResponse.ok()).toBeTruthy();
+  const invalidPayload = await invalidResponse.json();
+  expect(invalidPayload.locale).toBe('de');
+  expect(invalidPayload.quests.some((quest: { title: string }) => quest.title === 'Drei Komplimente')).toBeTruthy();
+
+  const knowMe = await apiGet<{ catalogQuestions: Array<{ questionText: string; category: string }>; locale: string }>(
+    request,
+    '/api/know-me?lang=en',
+    partnerA.token,
+  );
+  expect(knowMe.locale).toBe('en');
+  expect(knowMe.catalogQuestions).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ questionText: 'What would my perfect Sunday look like?', category: 'Everyday life' }),
+    ]),
+  );
+});
+
+test('api data isolation blocks foreign garden objects know-me rounds and exports', async ({ request }) => {
+  const runId = testRunId();
+  const userA1 = testUser('isolation-a1', runId);
+  const userA2 = testUser('isolation-a2', runId);
+  const userB1 = testUser('isolation-b1', runId);
+  const userB2 = testUser('isolation-b2', runId);
+  const coupleA = await setupCoupleByApi(request, userA1, userA2);
+  const coupleB = await setupCoupleByApi(request, userB1, userB2);
+
+  await apiPost(request, '/api/memories', {
+    title: 'Isolation Secret',
+    description: 'Darf nur Paar A sehen.',
+    date: '2026-06-09',
+    category: 'everyday',
+  }, coupleA.partnerA.token);
+  const gardenA = await apiGet<{ objects: Array<{ id: string }> }>(request, '/api/garden', coupleA.partnerA.token);
+  const foreignGardenObjectId = gardenA.objects[0].id;
+  const foreignGardenResponse = await apiGetRaw(
+    request,
+    `/api/garden/objects/${foreignGardenObjectId}`,
+    coupleB.partnerA.token,
+  );
+  expect(foreignGardenResponse.status()).toBe(404);
+  expect(await foreignGardenResponse.json()).toEqual(expect.objectContaining({ errorKey: 'garden.objectNotFound' }));
+
+  const knowMeA = await apiPost<{ rounds: Array<{ id: string; questionText: string }> }>(
+    request,
+    '/api/know-me',
+    {
+      questionText: 'Was darf Paar B nicht raten?',
+      options: ['Antwort A', 'Antwort B'],
+      correctOptionIndex: 0,
+    },
+    coupleA.partnerA.token,
+  );
+  const foreignGuessResponse = await apiPostRaw(
+    request,
+    `/api/know-me/${knowMeA.rounds[0].id}/guess`,
+    { selectedOptionIndex: 0 },
+    coupleB.partnerA.token,
+  );
+  expect(foreignGuessResponse.status()).toBe(404);
+  expect(await foreignGuessResponse.json()).toEqual(expect.objectContaining({ errorKey: 'knowMe.questionNotFound' }));
+
+  const exportB = await apiGet<Record<string, unknown>>(request, '/api/me/export?lang=en', coupleB.partnerA.token);
+  expect(JSON.stringify(exportB)).not.toContain('Isolation Secret');
 });
 
 test('settings allow leaving the couple room', async ({ browser, request }) => {

@@ -9,6 +9,7 @@ interface NotificationPayload {
 }
 
 function routeForNotification(notification: NotificationItem) {
+  if (notification.sourceType === 'account_deletion') return '/onboarding';
   if (notification.sourceType === 'today') return '/today';
   if (notification.sourceType === 'quest') return '/quests';
   if (notification.sourceType === 'love_jar') return '/love-jar';

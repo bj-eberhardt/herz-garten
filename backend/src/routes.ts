@@ -31,6 +31,42 @@ function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function normalizeLocale(value: unknown) {
+  if (typeof value !== 'string') return '';
+  const locale = value.trim().toLowerCase().split(';')[0]?.split(',')[0]?.replace('_', '-') ?? '';
+  return locale.split('-')[0] ?? '';
+}
+
+function parseAcceptLanguage(headerValue: string | undefined) {
+  if (!headerValue) return '';
+  const candidates = headerValue
+    .split(',')
+    .map((part) => {
+      const [tag, ...params] = part.trim().split(';');
+      const qParam = params.find((param) => param.trim().startsWith('q='));
+      const q = qParam ? Number(qParam.trim().slice(2)) : 1;
+      return { locale: normalizeLocale(tag), q: Number.isFinite(q) ? q : 0 };
+    })
+    .filter((candidate) => candidate.locale)
+    .sort((left, right) => right.q - left.q);
+
+  return candidates[0]?.locale ?? '';
+}
+
+async function resolveLocale(request: Request) {
+  const requestedLocale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
+  const result = await pool.query<{ locale: string; isDefault: boolean }>(
+    `
+      select locale, is_default as "isDefault"
+      from supported_locales
+      where active = true
+    `,
+  );
+  const supported = result.rows;
+  const defaultLocale = supported.find((locale) => locale.isDefault)?.locale ?? 'de';
+  return supported.some((locale) => locale.locale === requestedLocale) ? requestedLocale : defaultLocale;
+}
+
 function publicUser(row: { id: string; email: string; displayName: string }) {
   return {
     id: row.id,
@@ -83,11 +119,12 @@ async function createNotifications(
       | 'love_jar_note'
       | 'memory_created'
       | 'know_me_question'
-      | 'know_me_answered';
+      | 'know_me_answered'
+      | 'couple_disconnected';
     title: string;
     body: string;
     sourceType: string;
-    sourceId?: string;
+    sourceId?: string | null;
     titleKey?: string;
     bodyKey?: string;
     params?: Record<string, unknown>;
@@ -209,7 +246,7 @@ function mapQuest(row: Record<string, unknown>) {
   };
 }
 
-async function buildTodayPayload(userId: string) {
+async function buildTodayPayload(userId: string, locale = 'de') {
   const couple = await getCurrentCouple(userId);
   if (!couple) {
     return null;
@@ -219,16 +256,18 @@ async function buildTodayPayload(userId: string) {
   const questionResult = await pool.query(
     `
       select
-        id,
-        text,
-        category,
-        depth_level as "depthLevel",
-        long_distance_suitable as "longDistanceSuitable",
-        active
-      from daily_questions
-      where id = $1
+        q.id,
+        coalesce(requested.text, fallback.text, q.text) as text,
+        q.category,
+        q.depth_level as "depthLevel",
+        q.long_distance_suitable as "longDistanceSuitable",
+        q.active
+      from daily_questions q
+      left join daily_question_translations requested on requested.question_id = q.id and requested.locale = $2
+      left join daily_question_translations fallback on fallback.question_id = q.id and fallback.locale = 'de'
+      where q.id = $1
     `,
-    [instance.questionId],
+    [instance.questionId, locale],
   );
   const answersResult = await pool.query(
     `
@@ -253,6 +292,7 @@ async function buildTodayPayload(userId: string) {
 
   return {
     couple,
+    locale,
     question: questionResult.rows[0],
     instance,
     answeredByCurrentUser,
@@ -286,7 +326,7 @@ function normalizeQuestFilters(query: Request['query']): QuestFilters {
   };
 }
 
-async function buildQuestPayload(userId: string, filters: QuestFilters = {}) {
+async function buildQuestPayload(userId: string, filters: QuestFilters = {}, locale = 'de') {
   const couple = await getCurrentCouple(userId);
   if (!couple) {
     return null;
@@ -296,7 +336,7 @@ async function buildQuestPayload(userId: string, filters: QuestFilters = {}) {
   const validEffortLevels = new Set(['low', 'medium', 'high']);
   const validModes = new Set(['solo', 'together', 'long_distance']);
   const whereClauses = ['1 = 1'];
-  const params: unknown[] = [couple.id];
+  const params: unknown[] = [couple.id, locale];
 
   if (filters.category && validCategories.has(filters.category)) {
     params.push(filters.category);
@@ -323,8 +363,8 @@ async function buildQuestPayload(userId: string, filters: QuestFilters = {}) {
     `
       select
         q.id,
-        q.title,
-        q.description,
+        coalesce(requested.title, fallback.title, q.title) as title,
+        coalesce(requested.description, fallback.description, q.description) as description,
         q.category,
         q.estimated_minutes as "estimatedMinutes",
         q.effort_level as "effortLevel",
@@ -338,14 +378,17 @@ async function buildQuestPayload(userId: string, filters: QuestFilters = {}) {
         cq.reward_applied_at as "rewardAppliedAt"
       from quests q
       left join couple_quests cq on cq.quest_id = q.id and cq.couple_id = $1
+      left join quest_translations requested on requested.quest_id = q.id and requested.locale = $2
+      left join quest_translations fallback on fallback.quest_id = q.id and fallback.locale = 'de'
       where ${whereClauses.join(' and ')}
-      order by q.title
+      order by coalesce(requested.title, fallback.title, q.title)
     `,
     params,
   );
 
   return {
     couple,
+    locale,
     quests: result.rows.map(mapQuest),
     filters,
   };
@@ -543,7 +586,7 @@ async function buildMemoryPayload(userId: string) {
   };
 }
 
-async function buildKnowMePayload(userId: string) {
+async function buildKnowMePayload(userId: string, locale = 'de') {
   const couple = await getCurrentCouple(userId);
   if (!couple) {
     return null;
@@ -584,9 +627,13 @@ async function buildKnowMePayload(userId: string) {
     `
       select
         c.id,
-        c.question_text as "questionText",
-        c.category
+        coalesce(requested.question_text, fallback.question_text, c.question_text) as "questionText",
+        coalesce(requested.category_label, fallback.category_label, c.category) as category
       from know_me_catalog_questions c
+      left join know_me_catalog_question_translations requested
+        on requested.catalog_question_id = c.id and requested.locale = $3
+      left join know_me_catalog_question_translations fallback
+        on fallback.catalog_question_id = c.id and fallback.locale = 'de'
       where c.active = true
         and not exists (
           select 1
@@ -595,13 +642,14 @@ async function buildKnowMePayload(userId: string) {
             and q.author_id = $2
             and q.catalog_question_id = c.id
         )
-      order by c.sort_order, c.question_text
+      order by c.sort_order, coalesce(requested.question_text, fallback.question_text, c.question_text)
     `,
-    [couple.id, userId],
+    [couple.id, userId, locale],
   );
 
   return {
     couple,
+    locale,
     rounds: result.rows.map(mapKnowMeRound),
     catalogQuestions: catalogResult.rows.map(mapKnowMeCatalogQuestion),
   };
@@ -1085,9 +1133,11 @@ export function apiRouter(): Router {
     const user = currentUser(request);
 
     try {
+      const locale = await resolveLocale(request);
       const couple = await getCurrentCouple(user.id);
       const payload: Record<string, unknown> = {
         exportedAt: new Date().toISOString(),
+        locale,
         user,
         couple,
       };
@@ -1107,15 +1157,35 @@ export function apiRouter(): Router {
           ),
           pool.query(
             `
-              select a.*, q.text as question
+              select a.*, coalesce(requested.text, fallback.text, q.text) as question
               from daily_question_answers a
               join daily_questions q on q.id = a.question_id
+              left join daily_question_translations requested
+                on requested.question_id = q.id and requested.locale = $2
+              left join daily_question_translations fallback
+                on fallback.question_id = q.id and fallback.locale = 'de'
               where a.couple_id = $1
               order by a.created_at
             `,
-            [couple.id],
+            [couple.id, locale],
           ),
-          pool.query('select * from couple_quests where couple_id = $1 order by completed_at nulls last', [couple.id]),
+          pool.query(
+            `
+              select
+                cq.*,
+                coalesce(requested.title, fallback.title, q.title) as title,
+                coalesce(requested.description, fallback.description, q.description) as description
+              from couple_quests cq
+              join quests q on q.id = cq.quest_id
+              left join quest_translations requested
+                on requested.quest_id = q.id and requested.locale = $2
+              left join quest_translations fallback
+                on fallback.quest_id = q.id and fallback.locale = 'de'
+              where cq.couple_id = $1
+              order by cq.completed_at nulls last
+            `,
+            [couple.id, locale],
+          ),
           pool.query('select * from garden_objects where couple_id = $1 order by created_at', [couple.id]),
           pool.query('select * from love_jar_notes where couple_id = $1 order by created_at', [couple.id]),
           pool.query('select * from memory_entries where couple_id = $1 order by date desc, created_at desc', [couple.id]),
@@ -1159,6 +1229,68 @@ export function apiRouter(): Router {
     try {
       await client.query('begin');
       const memberships = await client.query('select couple_id from couple_members where user_id = $1', [user.id]);
+      for (const membership of memberships.rows) {
+        const partnerResult = await client.query(
+          `
+            select p.id
+            from couple_members cm
+            join profiles p on p.id = cm.user_id
+            where cm.couple_id = $1 and cm.user_id <> $2
+          `,
+          [membership.couple_id, user.id],
+        );
+        await createNotifications(client, {
+          coupleId: membership.couple_id,
+          userIds: partnerResult.rows.map((row: { id: string }) => row.id),
+          type: 'couple_disconnected',
+          title: 'Paarung wurde getrennt',
+          body: `${user.displayName} hat das Konto geloescht. Eure Paarung wurde deshalb getrennt. Du kannst dich jetzt neu paaren.`,
+          titleKey: 'notifications.titles.coupleDisconnected',
+          bodyKey: 'notifications.bodies.coupleDisconnected',
+          params: { name: user.displayName },
+          sourceType: 'account_deletion',
+          sourceId: null,
+        });
+        await client.query('delete from couple_members where couple_id = $1', [membership.couple_id]);
+      }
+      await client.query(
+        `
+          delete from garden_objects
+          where source_type = 'question'
+            and source_id in (
+              select i.id
+              from daily_question_instances i
+              join daily_question_answers a
+                on a.couple_id = i.couple_id and a.question_id = i.question_id
+              where a.user_id = $1
+            )
+        `,
+        [user.id],
+      );
+      await client.query(
+        `
+          delete from garden_objects
+          where source_type = 'love_jar'
+            and source_id in (select id from love_jar_notes where author_id = $1)
+        `,
+        [user.id],
+      );
+      await client.query(
+        `
+          delete from garden_objects
+          where source_type = 'memory'
+            and source_id in (select id from memory_entries where author_id = $1)
+        `,
+        [user.id],
+      );
+      await client.query(
+        `
+          delete from garden_objects
+          where source_type = 'know_me'
+            and source_id in (select id from know_me_questions where author_id = $1)
+        `,
+        [user.id],
+      );
       await client.query('delete from profiles where id = $1', [user.id]);
       for (const membership of memberships.rows) {
         await client.query(
@@ -1313,7 +1445,8 @@ export function apiRouter(): Router {
     const user = currentUser(request);
 
     try {
-      const payload = await buildTodayPayload(user.id);
+      const locale = await resolveLocale(request);
+      const payload = await buildTodayPayload(user.id, locale);
       if (!payload) {
         sendApiError(response, 409, 'couple.notConnected');
         return;
@@ -1335,6 +1468,7 @@ export function apiRouter(): Router {
 
     const client = await pool.connect();
     try {
+      const locale = await resolveLocale(request);
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
         sendApiError(response, 409, 'couple.notConnected');
@@ -1436,7 +1570,7 @@ export function apiRouter(): Router {
 
       await client.query('commit');
 
-      const payload = await buildTodayPayload(user.id);
+      const payload = await buildTodayPayload(user.id, locale);
       response.json(payload);
     } catch (error) {
       await client.query('rollback');
@@ -1450,7 +1584,8 @@ export function apiRouter(): Router {
     const user = currentUser(request);
 
     try {
-      const payload = await buildQuestPayload(user.id, normalizeQuestFilters(request.query));
+      const locale = await resolveLocale(request);
+      const payload = await buildQuestPayload(user.id, normalizeQuestFilters(request.query), locale);
       if (!payload) {
         sendApiError(response, 409, 'couple.notConnected');
         return;
@@ -1465,6 +1600,7 @@ export function apiRouter(): Router {
     const user = currentUser(request);
 
     try {
+      const locale = await resolveLocale(request);
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
         sendApiError(response, 409, 'couple.notConnected');
@@ -1490,7 +1626,7 @@ export function apiRouter(): Router {
         [randomUUID(), couple.id, request.params.questId],
       );
 
-      const payload = await buildQuestPayload(user.id);
+      const payload = await buildQuestPayload(user.id, {}, locale);
       response.json(payload);
     } catch (error) {
       handleError(response, error);
@@ -1502,6 +1638,7 @@ export function apiRouter(): Router {
     const client = await pool.connect();
 
     try {
+      const locale = await resolveLocale(request);
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
         sendApiError(response, 409, 'couple.notConnected');
@@ -1616,7 +1753,7 @@ export function apiRouter(): Router {
 
       await client.query('commit');
 
-      const payload = await buildQuestPayload(user.id);
+      const payload = await buildQuestPayload(user.id, {}, locale);
       response.json(payload);
     } catch (error) {
       await client.query('rollback');
@@ -1630,7 +1767,8 @@ export function apiRouter(): Router {
     const user = currentUser(request);
 
     try {
-      const payload = await buildKnowMePayload(user.id);
+      const locale = await resolveLocale(request);
+      const payload = await buildKnowMePayload(user.id, locale);
       if (!payload) {
         sendApiError(response, 409, 'couple.notConnected');
         return;
@@ -1667,6 +1805,7 @@ export function apiRouter(): Router {
 
     const client = await pool.connect();
     try {
+      const locale = await resolveLocale(request);
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
         sendApiError(response, 409, 'couple.notConnected');
@@ -1678,11 +1817,15 @@ export function apiRouter(): Router {
       if (catalogQuestionId) {
         const catalogResult = await client.query(
           `
-            select question_text as "questionText"
-            from know_me_catalog_questions
-            where id = $1 and active = true
+            select coalesce(requested.question_text, fallback.question_text, c.question_text) as "questionText"
+            from know_me_catalog_questions c
+            left join know_me_catalog_question_translations requested
+              on requested.catalog_question_id = c.id and requested.locale = $2
+            left join know_me_catalog_question_translations fallback
+              on fallback.catalog_question_id = c.id and fallback.locale = 'de'
+            where c.id = $1 and c.active = true
           `,
-          [catalogQuestionId],
+          [catalogQuestionId, locale],
         );
         const catalogQuestion = catalogResult.rows[0];
         if (!catalogQuestion) {
@@ -1736,7 +1879,7 @@ export function apiRouter(): Router {
       });
       await client.query('commit');
 
-      response.status(201).json(await buildKnowMePayload(user.id));
+      response.status(201).json(await buildKnowMePayload(user.id, locale));
     } catch (error) {
       await client.query('rollback');
       handleError(response, error);
@@ -1756,6 +1899,7 @@ export function apiRouter(): Router {
 
     const client = await pool.connect();
     try {
+      const locale = await resolveLocale(request);
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
         sendApiError(response, 409, 'couple.notConnected');
@@ -1838,7 +1982,7 @@ export function apiRouter(): Router {
       });
 
       await client.query('commit');
-      response.json(await buildKnowMePayload(user.id));
+      response.json(await buildKnowMePayload(user.id, locale));
     } catch (error) {
       await client.query('rollback');
       handleError(response, error);

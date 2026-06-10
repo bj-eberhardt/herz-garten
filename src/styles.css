@@ -491,6 +491,33 @@ textarea {
   margin-bottom: 0;
 }
 
+.privacy-details {
+  display: grid;
+  gap: 18px;
+}
+
+.privacy-details p {
+  margin-bottom: 0;
+}
+
+.privacy-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.privacy-grid article {
+  border-left: 3px solid #7c8f68;
+  display: grid;
+  gap: 6px;
+  padding-left: 12px;
+}
+
+.privacy-grid h2 {
+  font-size: 1rem;
+  margin-bottom: 0;
+}
+
 .detail-panel {
   display: grid;
   gap: 16px;

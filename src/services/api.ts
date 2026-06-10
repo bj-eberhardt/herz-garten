@@ -1,3 +1,5 @@
+import { i18n } from '@/i18n';
+
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 export class ApiError extends Error {
@@ -33,6 +35,11 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   }
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (!headers.has('Accept-Language')) {
+    const localeState = i18n.global.locale as unknown as { value?: string } | string;
+    const locale = typeof localeState === 'string' ? localeState : (localeState.value ?? 'de');
+    headers.set('Accept-Language', `${locale}, de;q=0.9`);
   }
 
   const response = await fetch(`${API_URL}${path}`, {

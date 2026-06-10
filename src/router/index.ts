@@ -26,6 +26,8 @@ const router = createRouter({
   ],
 });
 
+const allowedWithoutCouple = new Set(['/onboarding', '/notifications']);
+
 router.beforeEach(async (to) => {
   const authStore = useAuthStore();
   await authStore.bootstrap();
@@ -34,7 +36,7 @@ router.beforeEach(async (to) => {
     return '/onboarding';
   }
 
-  if (to.path !== '/onboarding' && !authStore.hasCouple) {
+  if (!allowedWithoutCouple.has(to.path) && !authStore.hasCouple) {
     return '/onboarding';
   }
 

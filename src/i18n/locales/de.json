@@ -269,7 +269,8 @@
       "memoryCreated": "Neue Erinnerung",
       "knowMeQuestion": "Eine Kennst-du-mich-Frage wartet",
       "knowMeAnsweredHit": "Treffer im Kennst-du-mich-Spiel",
-      "knowMeAnsweredMiss": "Eine Antwort ist da"
+      "knowMeAnsweredMiss": "Eine Antwort ist da",
+      "coupleDisconnected": "Paarung wurde getrennt"
     },
     "bodies": {
       "dailyAnswerWaiting": "{name} hat die Tagesfrage beantwortet. Jetzt fehlst noch du.",
@@ -280,7 +281,8 @@
       "memoryCreated": "{name} hat \"{title}\" in eure Timeline gelegt.",
       "knowMeQuestion": "{name} hat eine Frage ueber sich gestellt. Was schaetzt du?",
       "knowMeAnsweredHit": "{name} hat dich richtig eingeschaetzt. Eine besondere Blume ist gewachsen.",
-      "knowMeAnsweredMiss": "{name} hat geraten. Nicht getroffen, aber ein neuer Gespraechsanlass."
+      "knowMeAnsweredMiss": "{name} hat geraten. Nicht getroffen, aber ein neuer Gespraechsanlass.",
+      "coupleDisconnected": "{name} hat das Konto geloescht. Eure Paarung wurde deshalb getrennt. Du kannst dich jetzt neu paaren."
     }
   },
   "settings": {
@@ -292,6 +294,16 @@
     "relationshipMode": "Beziehungsmodus:",
     "contentStyle": "Content-Stil:",
     "privacyNote": "Keine oeffentlichen Profile. Kein Beziehungsscore.",
+    "privacyTitle": "Datenschutz auf einen Blick",
+    "privacyIntro": "Herzgarten zeigt nur Inhalte innerhalb deines aktuellen Paarraums. Export, Paarraum verlassen und Kontoloeschung betreffen genau diesen geschuetzten Bereich.",
+    "privacyPrivateTitle": "Was bleibt privat?",
+    "privacyPrivateText": "Dein Konto, deine E-Mail-Adresse und deine persoenlichen Aktionen sind nicht oeffentlich sichtbar. Es gibt keine Profile ausserhalb eures Paarraums.",
+    "privacyPartnerTitle": "Was sieht dein Partner?",
+    "privacyPartnerText": "Dein Partner sieht geteilte Antworten, Quests, Erinnerungen, Love-Jar-Eintraege und Spielantworten, sobald sie fuer euren Paarraum freigegeben sind.",
+    "privacyLeaveTitle": "Was passiert beim Paarraum verlassen?",
+    "privacyLeaveText": "Dein Konto bleibt bestehen, aber die Verbindung zum aktuellen Paarraum wird entfernt. Du kannst danach einen neuen Paarraum erstellen oder einem anderen beitreten.",
+    "privacyDeleteTitle": "Was passiert beim Konto loeschen?",
+    "privacyDeleteText": "Dein Konto wird dauerhaft entfernt. Eigene personenbezogene Inhalte und daraus entstandene Gartenobjekte werden bereinigt; leere Paarraeume werden geloescht.",
     "exportCreated": "Export wurde erstellt.",
     "confirmLeave": "Paarraum wirklich verlassen?",
     "confirmDelete": "Konto wirklich dauerhaft loeschen?",
