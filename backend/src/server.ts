@@ -14,6 +14,11 @@ app.use(
 );
 app.use(express.json());
 
+app.use('/api', (_request, response, next) => {
+  response.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
 app.get('/health', async (_request, response) => {
   try {
     const databaseTime = await checkDatabase();

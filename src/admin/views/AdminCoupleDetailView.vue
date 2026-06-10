@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { adminApiRequest } from '@/services/adminApi';
+import { adminApiRequest } from '@/admin/services/adminApi';
 
 interface CoupleDetail {
   id: string;

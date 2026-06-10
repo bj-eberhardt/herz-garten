@@ -20,7 +20,7 @@ const { t } = useI18n();
 <template>
   <article class="quest-card" :class="[`quest-card--${variant ?? 'default'}`]" data-testid="quest-card">
     <div>
-      <p class="eyebrow">{{ t(`quests.filters.${quest.category}`) }} - {{ t(`quests.filters.${quest.effortLevel}`) }}</p>
+      <p class="eyebrow">{{ quest.categoryLabel ?? t(`quests.filters.${quest.category}`) }} - {{ t(`quests.filters.${quest.effortLevel}`) }}</p>
       <h2>{{ quest.titleKey ? t(quest.titleKey) : quest.title }}</h2>
       <p>{{ quest.descriptionKey ? t(quest.descriptionKey) : quest.description }}</p>
     </div>

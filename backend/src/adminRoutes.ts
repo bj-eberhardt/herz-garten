@@ -8,12 +8,32 @@ import { handleError, sendApiError } from './errors.js';
 
 type ContentType = 'daily-questions' | 'quests' | 'know-me-catalog' | 'love-jar-templates';
 
-const questCategories = new Set(['romance', 'date', 'humor', 'memory', 'teamwork', 'long_distance']);
 const effortLevels = new Set(['low', 'medium', 'high']);
-const loveJarCategories = new Set(['compliment', 'memory', 'voucher', 'wish', 'surprise']);
 
 function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeLocale(value: unknown) {
+  if (typeof value !== 'string') return '';
+  const locale = value.trim().toLowerCase().split(';')[0]?.split(',')[0]?.replace('_', '-') ?? '';
+  return locale.split('-')[0] ?? '';
+}
+
+function parseAcceptLanguage(headerValue: string | undefined) {
+  if (!headerValue) return '';
+  const candidates = headerValue
+    .split(',')
+    .map((part) => {
+      const [tag, ...params] = part.trim().split(';');
+      const qParam = params.find((param) => param.trim().startsWith('q='));
+      const q = qParam ? Number(qParam.trim().slice(2)) : 1;
+      return { locale: normalizeLocale(tag), q: Number.isFinite(q) ? q : 0 };
+    })
+    .filter((candidate) => candidate.locale)
+    .sort((left, right) => right.q - left.q);
+
+  return candidates[0]?.locale ?? '';
 }
 
 function normalizeBoolean(value: unknown, fallback = true) {
@@ -76,6 +96,116 @@ async function supportedLocales() {
     `,
   );
   return result.rows;
+}
+
+async function categoryExists(contentType: ContentType, value: string) {
+  const result = await pool.query(
+    'select 1 from content_categories where content_type = $1 and value = $2 limit 1',
+    [contentType, value],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+async function categoryUsage(contentType: ContentType, value: string) {
+  const table =
+    contentType === 'daily-questions'
+      ? 'daily_questions'
+      : contentType === 'quests'
+        ? 'quests'
+        : contentType === 'know-me-catalog'
+          ? 'know_me_catalog_questions'
+          : 'love_jar_templates';
+  const result = await pool.query(`select count(*)::int as count from ${table} where category = $1`, [value]);
+  return result.rows[0]?.count ?? 0;
+}
+
+async function listCategories(type?: ContentType, locale = 'de') {
+  const params: unknown[] = [];
+  const where = type ? 'where c.content_type = $1' : '';
+  if (type) params.push(type);
+  params.push(locale);
+  const result = await pool.query(
+    `
+      select
+        c.id,
+        c.content_type as "contentType",
+        c.value,
+        coalesce(requested.label, fallback.label, c.label) as label,
+        c.label as "defaultLabel",
+        c.active,
+        c.sort_order as "sortOrder",
+        c.created_at as "createdAt",
+        c.updated_at as "updatedAt",
+        coalesce(json_object_agg(t.locale, json_build_object('label', t.label)) filter (where t.locale is not null), '{}'::json) as translations
+      from content_categories c
+      left join content_category_translations t on t.category_id = c.id
+      left join content_category_translations requested on requested.category_id = c.id and requested.locale = $${params.length}
+      left join content_category_translations fallback on fallback.category_id = c.id and fallback.locale = 'de'
+      ${where}
+      group by c.id, requested.label, fallback.label
+      order by c.content_type, c.active desc, c.sort_order, c.label
+    `,
+    params,
+  );
+
+  const items = [];
+  for (const row of result.rows) {
+    items.push({
+      ...row,
+      usageCount: await categoryUsage(row.contentType, row.value),
+    });
+  }
+  return items;
+}
+
+async function saveCategory(body: Record<string, unknown>, id: string = randomUUID()) {
+  const contentType = normalizeText(body.contentType);
+  const value = normalizeText(body.value).toLowerCase().replaceAll(' ', '_');
+  const label = normalizeText(body.label);
+  if (!isContentType(contentType) || !/^[a-z0-9_-]+$/.test(value) || !label) {
+    throw new Error('invalid category');
+  }
+
+  await pool.query(
+    `
+      insert into content_categories (id, content_type, value, label, active, sort_order, updated_at)
+      values ($1, $2, $3, $4, $5, $6, now())
+      on conflict (id) do update set
+        label = excluded.label,
+        active = excluded.active,
+        sort_order = excluded.sort_order,
+        updated_at = now()
+    `,
+    [id, contentType, value, label, normalizeBoolean(body.active), normalizeInteger(body.sortOrder, 0)],
+  );
+
+  const translations = translationsFromBody(body.translations);
+  for (const [locale, translation] of Object.entries(translations)) {
+    const translatedLabel = normalizeText(translation.label);
+    if (!translatedLabel) continue;
+    await pool.query(
+      `
+        insert into content_category_translations (category_id, locale, label)
+        values ($1, $2, $3)
+        on conflict (category_id, locale) do update set label = excluded.label
+      `,
+      [id, locale, translatedLabel],
+    );
+  }
+
+  return id;
+}
+
+async function deleteCategory(id: string) {
+  const categoryResult = await pool.query('select content_type as "contentType", value from content_categories where id = $1', [
+    id,
+  ]);
+  const category = categoryResult.rows[0];
+  if (!category) return { deleted: false, reason: 'not_found' };
+  const usageCount = await categoryUsage(category.contentType, category.value);
+  if (usageCount > 0) return { deleted: false, reason: 'in_use', usageCount };
+  await pool.query('delete from content_categories where id = $1', [id]);
+  return { deleted: true, reason: null };
 }
 
 async function buildOverview() {
@@ -285,7 +415,20 @@ async function getCoupleDetail(id: string) {
 
 async function listDailyQuestions(request: Request) {
   const active = normalizeText(request.query.active);
-  const where = active === 'true' ? 'where q.active = true' : active === 'false' ? 'where q.active = false' : '';
+  const search = normalizeText(request.query.search);
+  const category = normalizeText(request.query.category);
+  const params: unknown[] = [];
+  const where: string[] = [];
+  if (active === 'true') where.push('q.active = true');
+  if (active === 'false') where.push('q.active = false');
+  if (category) {
+    params.push(category);
+    where.push(`q.category = $${params.length}`);
+  }
+  if (search) {
+    params.push(`%${search.toLowerCase()}%`);
+    where.push(`lower(q.text) like $${params.length}`);
+  }
   const result = await pool.query(
     `
       select
@@ -298,10 +441,11 @@ async function listDailyQuestions(request: Request) {
         coalesce(json_object_agg(t.locale, json_build_object('text', t.text)) filter (where t.locale is not null), '{}'::json) as translations
       from daily_questions q
       left join daily_question_translations t on t.question_id = q.id
-      ${where}
+      ${where.length ? `where ${where.join(' and ')}` : ''}
       group by q.id
       order by q.active desc, q.category, q.text
     `,
+    params,
   );
   return result.rows;
 }
@@ -310,7 +454,9 @@ async function saveDailyQuestion(body: Record<string, unknown>, id: string = ran
   const text = normalizeText(body.text);
   const category = normalizeText(body.category);
   const depthLevel = normalizeInteger(body.depthLevel, 1);
-  if (!text || !category || depthLevel < 1 || depthLevel > 4) throw new Error('invalid daily question');
+  if (!text || !category || depthLevel < 1 || depthLevel > 4 || !(await categoryExists('daily-questions', category))) {
+    throw new Error('invalid daily question');
+  }
 
   await pool.query(
     `
@@ -345,7 +491,20 @@ async function saveDailyQuestion(body: Record<string, unknown>, id: string = ran
 
 async function listQuests(request: Request) {
   const active = normalizeText(request.query.active);
-  const where = active === 'true' ? 'where q.active = true' : active === 'false' ? 'where q.active = false' : '';
+  const search = normalizeText(request.query.search);
+  const category = normalizeText(request.query.category);
+  const params: unknown[] = [];
+  const where: string[] = [];
+  if (active === 'true') where.push('q.active = true');
+  if (active === 'false') where.push('q.active = false');
+  if (category) {
+    params.push(category);
+    where.push(`q.category = $${params.length}`);
+  }
+  if (search) {
+    params.push(`%${search.toLowerCase()}%`);
+    where.push(`(lower(q.title) like $${params.length} or lower(q.description) like $${params.length})`);
+  }
   const result = await pool.query(
     `
       select
@@ -362,10 +521,11 @@ async function listQuests(request: Request) {
         coalesce(json_object_agg(t.locale, json_build_object('title', t.title, 'description', t.description)) filter (where t.locale is not null), '{}'::json) as translations
       from quests q
       left join quest_translations t on t.quest_id = q.id
-      ${where}
+      ${where.length ? `where ${where.join(' and ')}` : ''}
       group by q.id
       order by coalesce(q.active, true) desc, q.category, q.title
     `,
+    params,
   );
   return result.rows;
 }
@@ -375,7 +535,7 @@ async function saveQuest(body: Record<string, unknown>, id: string = randomUUID(
   const description = normalizeText(body.description);
   const category = normalizeText(body.category);
   const effortLevel = normalizeText(body.effortLevel);
-  if (!title || !description || !questCategories.has(category) || !effortLevels.has(effortLevel)) {
+  if (!title || !description || !(await categoryExists('quests', category)) || !effortLevels.has(effortLevel)) {
     throw new Error('invalid quest');
   }
 
@@ -431,7 +591,20 @@ async function saveQuest(body: Record<string, unknown>, id: string = randomUUID(
 
 async function listKnowMeCatalog(request: Request) {
   const active = normalizeText(request.query.active);
-  const where = active === 'true' ? 'where q.active = true' : active === 'false' ? 'where q.active = false' : '';
+  const search = normalizeText(request.query.search);
+  const category = normalizeText(request.query.category);
+  const params: unknown[] = [];
+  const where: string[] = [];
+  if (active === 'true') where.push('q.active = true');
+  if (active === 'false') where.push('q.active = false');
+  if (category) {
+    params.push(category);
+    where.push(`q.category = $${params.length}`);
+  }
+  if (search) {
+    params.push(`%${search.toLowerCase()}%`);
+    where.push(`lower(q.question_text) like $${params.length}`);
+  }
   const result = await pool.query(
     `
       select
@@ -444,10 +617,11 @@ async function listKnowMeCatalog(request: Request) {
         coalesce(json_object_agg(t.locale, json_build_object('questionText', t.question_text, 'categoryLabel', t.category_label)) filter (where t.locale is not null), '{}'::json) as translations
       from know_me_catalog_questions q
       left join know_me_catalog_question_translations t on t.catalog_question_id = q.id
-      ${where}
+      ${where.length ? `where ${where.join(' and ')}` : ''}
       group by q.id
       order by q.active desc, q.sort_order, q.question_text
     `,
+    params,
   );
   return result.rows;
 }
@@ -455,7 +629,9 @@ async function listKnowMeCatalog(request: Request) {
 async function saveKnowMeCatalog(body: Record<string, unknown>, id: string = randomUUID()) {
   const questionText = normalizeText(body.questionText);
   const category = normalizeText(body.category);
-  if (!questionText || !category) throw new Error('invalid know me question');
+  if (!questionText || !category || !(await categoryExists('know-me-catalog', category))) {
+    throw new Error('invalid know me question');
+  }
 
   await pool.query(
     `
@@ -492,7 +668,20 @@ async function saveKnowMeCatalog(body: Record<string, unknown>, id: string = ran
 
 async function listLoveJarTemplates(request: Request) {
   const active = normalizeText(request.query.active);
-  const where = active === 'true' ? 'where t.active = true' : active === 'false' ? 'where t.active = false' : '';
+  const search = normalizeText(request.query.search);
+  const category = normalizeText(request.query.category);
+  const params: unknown[] = [];
+  const where: string[] = [];
+  if (active === 'true') where.push('t.active = true');
+  if (active === 'false') where.push('t.active = false');
+  if (category) {
+    params.push(category);
+    where.push(`t.category = $${params.length}`);
+  }
+  if (search) {
+    params.push(`%${search.toLowerCase()}%`);
+    where.push(`lower(t.text) like $${params.length}`);
+  }
   const result = await pool.query(
     `
       select
@@ -506,10 +695,11 @@ async function listLoveJarTemplates(request: Request) {
         coalesce(json_object_agg(tr.locale, json_build_object('text', tr.text)) filter (where tr.locale is not null), '{}'::json) as translations
       from love_jar_templates t
       left join love_jar_template_translations tr on tr.template_id = t.id
-      ${where}
+      ${where.length ? `where ${where.join(' and ')}` : ''}
       group by t.id
       order by t.active desc, t.sort_order, t.text
     `,
+    params,
   );
   return result.rows;
 }
@@ -517,7 +707,7 @@ async function listLoveJarTemplates(request: Request) {
 async function saveLoveJarTemplate(body: Record<string, unknown>, id: string = randomUUID()) {
   const text = normalizeText(body.text);
   const category = normalizeText(body.category) || 'compliment';
-  if (!text || !loveJarCategories.has(category)) throw new Error('invalid love jar template');
+  if (!text || !(await categoryExists('love-jar-templates', category))) throw new Error('invalid love jar template');
 
   await pool.query(
     `
@@ -677,6 +867,62 @@ export function adminRouter(): Router {
   router.get('/content/locales', requireAdminAuth, async (_request, response) => {
     try {
       response.json({ locales: await supportedLocales() });
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.get('/categories', requireAdminAuth, async (request, response) => {
+    try {
+      const type = normalizeText(request.query.type);
+      const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
+      if (type && !isContentType(type)) {
+        response.status(404).json({ errorKey: 'content.notFound', error: 'Content-Typ nicht gefunden.' });
+        return;
+      }
+      response.json({ items: await listCategories(type ? (type as ContentType) : undefined, locale) });
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.post('/categories', requireAdminAuth, async (request, response) => {
+    try {
+      const id = await saveCategory(request.body);
+      await audit('create', 'category', id, { contentType: request.body.contentType, value: request.body.value });
+      response.status(201).json({ id, items: await listCategories() });
+    } catch {
+      response.status(400).json({ errorKey: 'admin.categoryInvalid', error: 'Kategorie-Daten sind ungueltig.' });
+    }
+  });
+
+  router.patch('/categories/:id', requireAdminAuth, async (request, response) => {
+    try {
+      const id = await saveCategory(request.body, String(request.params.id));
+      await audit('update', 'category', id, { contentType: request.body.contentType, value: request.body.value });
+      response.json({ id, items: await listCategories() });
+    } catch {
+      response.status(400).json({ errorKey: 'admin.categoryInvalid', error: 'Kategorie-Daten sind ungueltig.' });
+    }
+  });
+
+  router.delete('/categories/:id', requireAdminAuth, async (request, response) => {
+    try {
+      const result = await deleteCategory(String(request.params.id));
+      if (result.reason === 'not_found') {
+        response.status(404).json({ errorKey: 'admin.categoryNotFound', error: 'Kategorie nicht gefunden.' });
+        return;
+      }
+      if (result.reason === 'in_use') {
+        response.status(409).json({
+          errorKey: 'admin.categoryInUse',
+          error: 'Kategorie wird noch verwendet.',
+          usageCount: result.usageCount,
+        });
+        return;
+      }
+      await audit('delete', 'category', String(request.params.id));
+      response.json({ items: await listCategories() });
     } catch (error) {
       handleError(response, error);
     }

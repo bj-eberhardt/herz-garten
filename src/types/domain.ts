@@ -62,6 +62,7 @@ export interface Quest {
   titleKey?: string;
   descriptionKey?: string;
   category: QuestCategory;
+  categoryLabel?: string;
   estimatedMinutes: number;
   effortLevel: EffortLevel;
   rewardPoints: number;

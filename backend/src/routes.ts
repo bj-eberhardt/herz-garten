@@ -229,6 +229,7 @@ function mapQuest(row: Record<string, unknown>) {
     title: row.title,
     description: row.description,
     category: row.category,
+    categoryLabel: row.categoryLabel,
     estimatedMinutes: row.estimatedMinutes,
     effortLevel: row.effortLevel,
     rewardPoints: row.rewardPoints,
@@ -332,13 +333,12 @@ async function buildQuestPayload(userId: string, filters: QuestFilters = {}, loc
     return null;
   }
 
-  const validCategories = new Set(['romance', 'date', 'humor', 'memory', 'teamwork', 'long_distance']);
   const validEffortLevels = new Set(['low', 'medium', 'high']);
   const validModes = new Set(['solo', 'together', 'long_distance']);
   const whereClauses = ['q.active = true'];
   const params: unknown[] = [couple.id, locale];
 
-  if (filters.category && validCategories.has(filters.category)) {
+  if (filters.category) {
     params.push(filters.category);
     whereClauses.push(`q.category = $${params.length}`);
   }
@@ -366,6 +366,7 @@ async function buildQuestPayload(userId: string, filters: QuestFilters = {}, loc
         coalesce(requested.title, fallback.title, q.title) as title,
         coalesce(requested.description, fallback.description, q.description) as description,
         q.category,
+        coalesce(requested_category.label, fallback_category.label, category.label, q.category) as "categoryLabel",
         q.estimated_minutes as "estimatedMinutes",
         q.effort_level as "effortLevel",
         q.reward_points as "rewardPoints",
@@ -380,15 +381,32 @@ async function buildQuestPayload(userId: string, filters: QuestFilters = {}, loc
       left join couple_quests cq on cq.quest_id = q.id and cq.couple_id = $1
       left join quest_translations requested on requested.quest_id = q.id and requested.locale = $2
       left join quest_translations fallback on fallback.quest_id = q.id and fallback.locale = 'de'
+      left join content_categories category on category.content_type = 'quests' and category.value = q.category
+      left join content_category_translations requested_category on requested_category.category_id = category.id and requested_category.locale = $2
+      left join content_category_translations fallback_category on fallback_category.category_id = category.id and fallback_category.locale = 'de'
       where ${whereClauses.join(' and ')}
       order by coalesce(requested.title, fallback.title, q.title)
     `,
     params,
   );
+  const categoryResult = await pool.query(
+    `
+      select
+        c.value,
+        coalesce(requested.label, fallback.label, c.label) as label
+      from content_categories c
+      left join content_category_translations requested on requested.category_id = c.id and requested.locale = $1
+      left join content_category_translations fallback on fallback.category_id = c.id and fallback.locale = 'de'
+      where c.content_type = 'quests' and c.active = true
+      order by c.sort_order, label
+    `,
+    [locale],
+  );
 
   return {
     couple,
     locale,
+    categories: categoryResult.rows,
     quests: result.rows.map(mapQuest),
     filters,
   };

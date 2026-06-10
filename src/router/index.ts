@@ -9,15 +9,16 @@ import SettingsView from '@/views/SettingsView.vue';
 import NotificationsView from '@/views/NotificationsView.vue';
 import OnboardingView from '@/views/OnboardingView.vue';
 import { useAuthStore } from '@/stores/authStore';
-import AdminShell from '@/components/admin/AdminShell.vue';
-import AdminAuditLogView from '@/views/admin/AdminAuditLogView.vue';
-import AdminContentView from '@/views/admin/AdminContentView.vue';
-import AdminCoupleDetailView from '@/views/admin/AdminCoupleDetailView.vue';
-import AdminCouplesView from '@/views/admin/AdminCouplesView.vue';
-import AdminDashboardView from '@/views/admin/AdminDashboardView.vue';
-import AdminLoginView from '@/views/admin/AdminLoginView.vue';
-import AdminUsersView from '@/views/admin/AdminUsersView.vue';
-import { useAdminStore } from '@/stores/adminStore';
+
+const AdminShell = () => import('@/admin/components/AdminShell.vue');
+const AdminAuditLogView = () => import('@/admin/views/AdminAuditLogView.vue');
+const AdminCategoriesView = () => import('@/admin/views/AdminCategoriesView.vue');
+const AdminContentView = () => import('@/admin/views/AdminContentView.vue');
+const AdminCoupleDetailView = () => import('@/admin/views/AdminCoupleDetailView.vue');
+const AdminCouplesView = () => import('@/admin/views/AdminCouplesView.vue');
+const AdminDashboardView = () => import('@/admin/views/AdminDashboardView.vue');
+const AdminLoginView = () => import('@/admin/views/AdminLoginView.vue');
+const AdminUsersView = () => import('@/admin/views/AdminUsersView.vue');
 
 const router = createRouter({
   history: createWebHistory(),
@@ -42,6 +43,7 @@ const router = createRouter({
         { path: 'couples', name: 'adminCouples', component: AdminCouplesView },
         { path: 'couples/:id', name: 'adminCoupleDetail', component: AdminCoupleDetailView },
         { path: 'content', name: 'adminContent', component: AdminContentView },
+        { path: 'categories', name: 'adminCategories', component: AdminCategoriesView },
         { path: 'audit-log', name: 'adminAuditLog', component: AdminAuditLogView },
       ],
     },
@@ -52,6 +54,7 @@ const allowedWithoutCouple = new Set(['/onboarding', '/notifications']);
 
 router.beforeEach(async (to) => {
   if (to.path.startsWith('/admin')) {
+    const { useAdminStore } = await import('@/admin/stores/adminStore');
     const adminStore = useAdminStore();
     await adminStore.bootstrap();
 

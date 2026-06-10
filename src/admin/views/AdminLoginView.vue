@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { LockKeyhole } from '@lucide/vue';
-import { useAdminStore } from '@/stores/adminStore';
+import { useAdminStore } from '@/admin/stores/adminStore';
 
 const adminStore = useAdminStore();
 const router = useRouter();

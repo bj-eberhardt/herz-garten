@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { adminApiRequest } from '@/services/adminApi';
+import { adminApiRequest } from '@/admin/services/adminApi';
 
 interface Overview {
   userCount: number;

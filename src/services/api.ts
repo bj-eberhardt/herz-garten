@@ -45,6 +45,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers,
+    cache: 'no-store',
   });
   const contentType = response.headers.get('content-type');
   const payload = contentType?.includes('application/json') ? await response.json() : undefined;

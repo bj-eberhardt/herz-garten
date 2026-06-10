@@ -20,8 +20,13 @@ export type QuestWithProgress = Quest & {
   coupleQuest: QuestProgress | null;
 };
 
+export interface QuestCategoryOption {
+  value: string;
+  label: string;
+}
+
 export interface QuestFilters {
-  category: Quest['category'] | 'all';
+  category: string;
   effortLevel: Quest['effortLevel'] | 'all';
   maxMinutes: 'all' | '5' | '10' | '15' | '30';
   mode: 'all' | 'solo' | 'together' | 'long_distance';
@@ -37,13 +42,15 @@ const defaultFilters: QuestFilters = {
 export const useQuestStore = defineStore('quests', {
   state: () => ({
     quests: [] as QuestWithProgress[],
+    categories: [] as QuestCategoryOption[],
     filters: { ...defaultFilters },
     loading: false,
     error: '',
   }),
   actions: {
-    applyQuestPayload(payload: { couple: Couple; quests: QuestWithProgress[] }) {
+    applyQuestPayload(payload: { couple: Couple; quests: QuestWithProgress[]; categories?: QuestCategoryOption[] }) {
       this.quests = payload.quests;
+      this.categories = payload.categories ?? [];
       useCoupleStore().setCouple(payload.couple);
       useAuthStore().couple = payload.couple;
     },

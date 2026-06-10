@@ -43,12 +43,9 @@ const completedQuests = computed(() =>
         @change="questStore.loadQuests()"
       >
         <option value="all">{{ t('quests.filters.all') }}</option>
-        <option value="romance">{{ t('quests.filters.romance') }}</option>
-        <option value="date">{{ t('quests.filters.date') }}</option>
-        <option value="humor">{{ t('quests.filters.humor') }}</option>
-        <option value="memory">{{ t('quests.filters.memory') }}</option>
-        <option value="teamwork">{{ t('quests.filters.teamwork') }}</option>
-        <option value="long_distance">{{ t('quests.filters.long_distance') }}</option>
+        <option v-for="category in questStore.categories" :key="category.value" :value="category.value">
+          {{ category.label }}
+        </option>
       </select>
 
       <label for="quest-effort-filter">{{ t('quests.filters.effort') }}</label>

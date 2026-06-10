@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { Download, Search } from '@lucide/vue';
-import { adminApiRequest, adminDownloadUrl, getAdminToken } from '@/services/adminApi';
+import { adminApiRequest, adminDownloadUrl, getAdminToken } from '@/admin/services/adminApi';
 
 interface AdminUser {
   id: string;
@@ -15,6 +16,8 @@ const users = ref<AdminUser[]>([]);
 const total = ref(0);
 const search = ref('');
 const loading = ref(false);
+const route = useRoute();
+const router = useRouter();
 
 async function loadUsers() {
   loading.value = true;
@@ -42,7 +45,15 @@ async function download(format: 'json' | 'csv') {
   URL.revokeObjectURL(url);
 }
 
-onMounted(loadUsers);
+onMounted(() => {
+  const querySearch = typeof route.query.search === 'string' ? route.query.search : '';
+  if (querySearch) search.value = querySearch;
+  loadUsers();
+});
+
+function filterCouples(inviteCode: string) {
+  router.push({ path: '/admin/couples', query: { search: inviteCode } });
+}
 </script>
 
 <template>
@@ -83,9 +94,9 @@ onMounted(loadUsers);
             <td>{{ user.displayName }}</td>
             <td>{{ user.email }}</td>
             <td>
-              <span v-for="couple in user.couples" :key="couple.coupleId" class="admin-chip">
+              <button v-for="couple in user.couples" :key="couple.coupleId" class="admin-chip admin-chip-button" type="button" @click="filterCouples(couple.inviteCode)">
                 {{ couple.inviteCode }} · {{ couple.heartPoints }} Punkte
-              </span>
+              </button>
             </td>
             <td>{{ new Date(user.createdAt).toLocaleDateString('de-DE') }}</td>
           </tr>

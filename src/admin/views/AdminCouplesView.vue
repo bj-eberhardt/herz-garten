@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { Download, Search } from '@lucide/vue';
-import { adminApiRequest, adminDownloadUrl, getAdminToken } from '@/services/adminApi';
+import { adminApiRequest, adminDownloadUrl, getAdminToken } from '@/admin/services/adminApi';
 
 interface AdminCouple {
   id: string;
@@ -23,6 +23,8 @@ const couples = ref<AdminCouple[]>([]);
 const total = ref(0);
 const search = ref('');
 const loading = ref(false);
+const route = useRoute();
+const router = useRouter();
 
 async function loadCouples() {
   loading.value = true;
@@ -50,7 +52,15 @@ async function download(format: 'json' | 'csv') {
   URL.revokeObjectURL(url);
 }
 
-onMounted(loadCouples);
+onMounted(() => {
+  const querySearch = typeof route.query.search === 'string' ? route.query.search : '';
+  if (querySearch) search.value = querySearch;
+  loadCouples();
+});
+
+function filterUsers(value: string) {
+  router.push({ path: '/admin/users', query: { search: value } });
+}
 </script>
 
 <template>
@@ -91,7 +101,9 @@ onMounted(loadCouples);
           <tr v-for="couple in couples" :key="couple.id">
             <td>{{ couple.inviteCode }}</td>
             <td>
-              <span v-for="member in couple.members" :key="member.id" class="admin-chip">{{ member.displayName }}</span>
+              <button v-for="member in couple.members" :key="member.id" class="admin-chip admin-chip-button" type="button" @click="filterUsers(member.email)">
+                {{ member.displayName }}
+              </button>
             </td>
             <td>{{ couple.heartPoints }} · Stage {{ couple.gardenStage }}</td>
             <td>

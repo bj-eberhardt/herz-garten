@@ -18,6 +18,8 @@ test.describe('admin api', () => {
     const me = await apiGet<{ admin: boolean; usesDefaultAdminPassword: boolean }>(request, '/api/admin/auth/me', token);
     expect(me.admin).toBe(true);
     expect(me.usesDefaultAdminPassword).toBe(true);
+    const meRaw = await apiGetRaw(request, '/api/admin/auth/me', token);
+    expect(meRaw.headers()['cache-control']).toContain('no-store');
 
     const invalidLogin = await apiPostRaw(request, '/api/admin/auth/login', { password: 'wrong-password' });
     await expectApiError(invalidLogin, 401, 'auth.invalidCredentials');
@@ -75,13 +77,55 @@ test.describe('admin api', () => {
   test('manages content, writes audit log and serves love jar templates', async ({ request }) => {
     const token = await adminLogin(request);
     const suffix = testRunId();
+    const germanCategories = await expectJson<{ items: Array<{ value: string; label: string }> }>(
+      await apiGetRaw(request, '/api/admin/categories?type=quests', token, { 'Accept-Language': 'de' }),
+    );
+    expect(germanCategories.items.find((category) => category.value === 'romance')?.label).toBe('Romantik');
+    const englishCategories = await expectJson<{ items: Array<{ value: string; label: string }> }>(
+      await apiGetRaw(request, '/api/admin/categories?type=quests', token, { 'Accept-Language': 'en' }),
+    );
+    expect(englishCategories.items.find((category) => category.value === 'romance')?.label).toBe('Romance');
+
+    const categoryResponse = await apiPostRaw(
+      request,
+      '/api/admin/categories',
+      {
+        contentType: 'daily-questions',
+        value: `admin_api_${suffix}`.replaceAll('-', '_'),
+        label: `Admin API ${suffix}`,
+        active: true,
+        sortOrder: 1,
+        translations: { de: { label: `Admin API ${suffix}` }, en: { label: `Admin API EN ${suffix}` } },
+      },
+      token,
+    );
+    const categoryPayload = await expectJson<{ id: string; items: Array<{ id: string; usageCount: number }> }>(
+      categoryResponse,
+      201,
+    );
+    expect(categoryPayload.id).toBeTruthy();
+    const categoryValue = `admin_api_${suffix}`.replaceAll('-', '_');
+
+    const invalidCategory = await apiPostRaw(
+      request,
+      '/api/admin/content/daily-questions',
+      {
+        text: `Invalid category ${suffix}`,
+        category: `missing_${suffix}`,
+        depthLevel: 1,
+        longDistanceSuitable: true,
+        active: true,
+      },
+      token,
+    );
+    expect(invalidCategory.status()).toBe(400);
 
     const createDaily = await apiPostRaw(
       request,
       '/api/admin/content/daily-questions',
       {
         text: `Admin daily ${suffix}`,
-        category: 'admin',
+        category: categoryValue,
         depthLevel: 1,
         longDistanceSuitable: true,
         active: true,
@@ -98,7 +142,7 @@ test.describe('admin api', () => {
     const patchResponse = await request.patch(`${apiBaseURL}/api/admin/content/daily-questions/${dailyPayload.id}`, {
       data: {
         text: `Admin daily ${suffix}`,
-        category: 'admin',
+        category: categoryValue,
         depthLevel: 1,
         longDistanceSuitable: true,
         active: false,
@@ -108,6 +152,29 @@ test.describe('admin api', () => {
     });
     const patchPayload = await expectJson<{ items: Array<{ id: string; active: boolean }> }>(patchResponse);
     expect(patchPayload.items.find((item) => item.id === dailyPayload.id)?.active).toBe(false);
+
+    const deleteUsedCategory = await request.delete(`${apiBaseURL}/api/admin/categories/${categoryPayload.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(deleteUsedCategory.status()).toBe(409);
+
+    const unusedCategory = await apiPostRaw(
+      request,
+      '/api/admin/categories',
+      {
+        contentType: 'daily-questions',
+        value: `unused_${suffix}`.replaceAll('-', '_'),
+        label: `Unused ${suffix}`,
+        active: true,
+        sortOrder: 2,
+      },
+      token,
+    );
+    const unusedPayload = await expectJson<{ id: string }>(unusedCategory, 201);
+    const deleteUnused = await request.delete(`${apiBaseURL}/api/admin/categories/${unusedPayload.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(deleteUnused.ok()).toBe(true);
 
     const loveJarResponse = await apiPostRaw(
       request,
@@ -135,6 +202,11 @@ test.describe('admin api', () => {
 
     const user = testUser('admin-template-user', suffix);
     const auth = await registerByApi(request, user);
+    const englishTemplatesResponse = await apiGetRaw(request, '/api/love-jar/templates', auth.token, {
+      'Accept-Language': 'en',
+    });
+    const englishTemplates = await expectJson<{ templates: Array<{ text: string }> }>(englishTemplatesResponse);
+    expect(englishTemplates.templates.some((template) => template.text === 'What I love about you is ...')).toBe(true);
     const templates = await apiGet<{ templates: Array<{ text: string }> }>(request, '/api/love-jar/templates', auth.token);
     expect(templates.templates.some((template) => template.text === `Admin jar ${suffix}`)).toBe(true);
   });

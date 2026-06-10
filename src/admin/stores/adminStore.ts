@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { adminApiRequest, clearAdminToken, getAdminToken, setAdminToken } from '@/services/adminApi';
+import { adminApiRequest, clearAdminToken, getAdminToken, setAdminToken } from '@/admin/services/adminApi';
 
 interface AdminMePayload {
   admin: boolean;
