@@ -3,6 +3,13 @@ import type { TestUser } from './testUsers';
 
 const apiBaseURL = process.env.E2E_API_URL ?? 'http://localhost:3000';
 
+function authHeaders(token?: string, headers: Record<string, string> = {}) {
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...headers,
+  };
+}
+
 interface AuthResponse {
   token: string;
   user: { id: string; displayName: string; email: string };
@@ -32,6 +39,41 @@ export async function apiGet<T>(request: APIRequestContext, path: string, token?
     throw new Error(`${path} failed with ${response.status()}: ${await response.text()}`);
   }
   return response.json() as Promise<T>;
+}
+
+export async function apiGetRaw(
+  request: APIRequestContext,
+  path: string,
+  token?: string,
+  headers: Record<string, string> = {},
+) {
+  return request.get(`${apiBaseURL}${path}`, {
+    headers: authHeaders(token, headers),
+  });
+}
+
+export async function apiPostRaw(
+  request: APIRequestContext,
+  path: string,
+  body: unknown = {},
+  token?: string,
+  headers: Record<string, string> = {},
+) {
+  return request.post(`${apiBaseURL}${path}`, {
+    data: body,
+    headers: authHeaders(token, headers),
+  });
+}
+
+export async function apiDeleteRaw(
+  request: APIRequestContext,
+  path: string,
+  token?: string,
+  headers: Record<string, string> = {},
+) {
+  return request.delete(`${apiBaseURL}${path}`, {
+    headers: authHeaders(token, headers),
+  });
 }
 
 export async function registerByApi(request: APIRequestContext, user: TestUser) {
