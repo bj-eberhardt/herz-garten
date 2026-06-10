@@ -2,11 +2,13 @@
 import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { Bell, CheckCheck } from '@lucide/vue';
+import { useI18n } from 'vue-i18n';
 import { useNotificationStore } from '@/stores/notificationStore';
 import type { NotificationItem } from '@/types/domain';
 
 const router = useRouter();
 const notificationStore = useNotificationStore();
+const { t } = useI18n();
 
 onMounted(() => {
   notificationStore.loadNotifications();
@@ -18,19 +20,27 @@ async function openNotification(notification: NotificationItem) {
   }
   await router.push(notificationStore.targetRoute(notification));
 }
+
+function notificationTitle(notification: NotificationItem) {
+  return notification.titleKey ? t(notification.titleKey, notification.params ?? {}) : notification.title;
+}
+
+function notificationBody(notification: NotificationItem) {
+  return notification.bodyKey ? t(notification.bodyKey, notification.params ?? {}) : notification.body;
+}
 </script>
 
 <template>
   <div class="view-grid">
     <section>
-      <p class="eyebrow">Benachrichtigungen</p>
-      <h1>Kleine Hinweise aus eurem Herzgarten.</h1>
+      <p class="eyebrow">{{ t('notifications.eyebrow') }}</p>
+      <h1>{{ t('notifications.title') }}</h1>
     </section>
 
     <section class="panel notification-toolbar">
       <div>
-        <h2>{{ notificationStore.unreadCount }} ungelesen</h2>
-        <p class="muted">Hier landen nur sanfte In-App-Hinweise, keine Push-Nachrichten.</p>
+        <h2>{{ t('notifications.unread', notificationStore.unreadCount, { named: { count: notificationStore.unreadCount } }) }}</h2>
+        <p class="muted">{{ t('notifications.hint') }}</p>
       </div>
       <button
         class="secondary-button inline-button"
@@ -40,15 +50,15 @@ async function openNotification(notification: NotificationItem) {
         @click="notificationStore.markAllRead"
       >
         <CheckCheck :size="18" aria-hidden="true" />
-        Alle gelesen
+        {{ t('notifications.readAll') }}
       </button>
     </section>
 
     <p v-if="notificationStore.error" class="form-error">{{ notificationStore.error }}</p>
-    <p v-if="notificationStore.loading" class="muted">Benachrichtigungen werden geladen...</p>
+    <p v-if="notificationStore.loading" class="muted">{{ t('notifications.loading') }}</p>
 
     <section v-if="!notificationStore.loading && notificationStore.notifications.length === 0" class="empty-state" data-testid="notifications-empty">
-      Noch keine Hinweise. Sobald im Paarraum etwas auf dich wartet, erscheint es hier.
+      {{ t('notifications.empty') }}
     </section>
 
     <section v-else class="notification-list">
@@ -63,8 +73,8 @@ async function openNotification(notification: NotificationItem) {
       >
         <Bell :size="18" aria-hidden="true" />
         <span>
-          <strong>{{ notification.title }}</strong>
-          <small>{{ notification.body }}</small>
+          <strong>{{ notificationTitle(notification) }}</strong>
+          <small>{{ notificationBody(notification) }}</small>
         </span>
       </button>
     </section>

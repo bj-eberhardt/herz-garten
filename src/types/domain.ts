@@ -59,6 +59,8 @@ export interface Quest {
   id: string;
   title: string;
   description: string;
+  titleKey?: string;
+  descriptionKey?: string;
   category: QuestCategory;
   estimatedMinutes: number;
   effortLevel: EffortLevel;
@@ -120,6 +122,9 @@ export interface NotificationItem {
   type: NotificationType;
   title: string;
   body: string;
+  titleKey?: string | null;
+  bodyKey?: string | null;
+  params?: Record<string, unknown>;
   sourceType: string;
   sourceId?: string;
   readAt?: string | null;

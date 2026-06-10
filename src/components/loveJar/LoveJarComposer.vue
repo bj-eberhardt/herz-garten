@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Plus } from '@lucide/vue';
-import { loveJarTemplates } from '@/content/loveJarTemplates';
+import { useI18n } from 'vue-i18n';
+import de from '@/i18n/locales/de.json';
 import { useLoveJarStore } from '@/stores/loveJarStore';
 import type { LoveJarCategory } from '@/types/domain';
 
 const loveJarStore = useLoveJarStore();
+const { t } = useI18n();
+const loveJarTemplates = de.content.loveJarTemplates;
 const note = ref(loveJarTemplates[0]);
 const category = ref<LoveJarCategory>('compliment');
 
@@ -18,27 +21,27 @@ async function submitNote() {
 <template>
   <form class="panel composer" data-testid="love-jar-form" @submit.prevent="submitNote">
     <div>
-      <p class="eyebrow">Zettel schreiben</p>
-      <h2>Was passt gut ins Glas?</h2>
+      <p class="eyebrow">{{ t('loveJar.composerEyebrow') }}</p>
+      <h2>{{ t('loveJar.composerTitle') }}</h2>
       <p class="muted">
-        Kleine Saetze reichen: ein Kompliment, ein Dank, eine Erinnerung, ein Wunsch oder ein Gutschein fuer einen Moment zu zweit.
+        {{ t('loveJar.composerHint') }}
       </p>
     </div>
 
-    <label for="love-jar-category">Kategorie</label>
+    <label for="love-jar-category">{{ t('common.category') }}</label>
     <select id="love-jar-category" v-model="category" data-testid="love-jar-category">
-      <option value="compliment">Kompliment</option>
-      <option value="memory">Erinnerung</option>
-      <option value="voucher">Gutschein</option>
-      <option value="wish">Wunsch</option>
-      <option value="surprise">Ueberraschung</option>
+      <option value="compliment">{{ t('loveJar.categories.compliment') }}</option>
+      <option value="memory">{{ t('loveJar.categories.memory') }}</option>
+      <option value="voucher">{{ t('loveJar.categories.voucher') }}</option>
+      <option value="wish">{{ t('loveJar.categories.wish') }}</option>
+      <option value="surprise">{{ t('loveJar.categories.surprise') }}</option>
     </select>
 
-    <label for="love-jar-note">Neuer Zettel</label>
-    <textarea id="love-jar-note" v-model="note" rows="4" placeholder="Heute moechte ich dir sagen ..." data-testid="love-jar-note-input" />
+    <label for="love-jar-note">{{ t('loveJar.newNote') }}</label>
+    <textarea id="love-jar-note" v-model="note" rows="4" :placeholder="t('loveJar.notePlaceholder')" data-testid="love-jar-note-input" />
     <button class="primary-button" type="submit" :disabled="loveJarStore.loading" data-testid="love-jar-save">
       <Plus :size="18" aria-hidden="true" />
-      {{ loveJarStore.loading ? 'Speichert...' : 'In das Glas legen' }}
+      {{ loveJarStore.loading ? t('common.saving') : t('loveJar.saveNote') }}
     </button>
   </form>
 </template>

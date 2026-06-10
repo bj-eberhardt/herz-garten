@@ -21,6 +21,13 @@ async function openNotifications(page: Page) {
   await expect(page.getByTestId('notification-item').first()).toBeVisible();
 }
 
+async function apiPostRaw(request: APIRequestContext, path: string, body: unknown, token: string) {
+  return request.post(`http://localhost:3000${path}`, {
+    data: body,
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 test('daily question reveal creates notifications and a garden detail', async ({ browser, request }) => {
   const { contextA, contextB, pageA, pageB } = await setupPages(browser, request, 'daily');
 
@@ -104,7 +111,7 @@ test('quest filters narrow visible quest suggestions', async ({ browser, request
 });
 
 test('love jar note can be drawn once per day and shows empty state for new couples', async ({ browser, request }) => {
-  const { contextA, contextB, pageA, pageB } = await setupPages(browser, request, 'lovejar');
+  const { contextA, contextB, pageA, pageB, partnerA, partnerB } = await setupPages(browser, request, 'lovejar');
 
   await pageB.goto('/love-jar');
   await expect(pageB.getByTestId('love-jar-empty')).toBeVisible();
@@ -116,12 +123,22 @@ test('love jar note can be drawn once per day and shows empty state for new coup
 
   await openNotifications(pageB);
   await expect(pageB.getByTestId('notification-item').first()).toContainText('Zettel');
+  await expect(pageB.getByTestId('notification-item').first()).toContainText(partnerA.user.displayName);
 
   await pageB.goto('/love-jar');
   await pageB.getByTestId('love-jar-draw').click();
   await expect(pageB.getByTestId('love-jar-note').first()).toContainText('Danke fuer deine Ruhe.');
   await expect(pageB.getByTestId('love-jar-draw')).toBeDisabled();
   await expect(pageB.getByTestId('love-jar-draw-hint')).toContainText('heute schon');
+  const duplicateDraw = await apiPostRaw(request, '/api/love-jar/draw', {}, partnerB.token);
+  expect(duplicateDraw.status()).toBe(409);
+  const duplicateDrawPayload = await duplicateDraw.json();
+  expect(duplicateDrawPayload).toEqual(
+    expect.objectContaining({
+      errorKey: 'loveJar.alreadyDrawnToday',
+      error: expect.stringContaining('heute schon einen Zettel gezogen'),
+    }),
+  );
 
   await contextA.close();
   await contextB.close();
@@ -220,6 +237,35 @@ test('know me wrong guess is resolved without garden reward', async ({ browser, 
 
   await pageB.getByTestId('nav-garden').click();
   await expect(pageB.getByTestId('garden-object')).toHaveCount(0);
+
+  await contextA.close();
+  await contextB.close();
+});
+
+test('know me author cannot guess own question returns localized error key', async ({ browser, request }) => {
+  const { contextA, contextB, partnerA } = await setupPages(browser, request, 'knowme-own-guess');
+  const payload = await apiPost<{ rounds: Array<{ id: string; questionText: string }> }>(
+    request,
+    '/api/know-me',
+    {
+      questionText: 'Was waere mein freier Abend?',
+      options: ['Lesen', 'Tanzen'],
+      correctOptionIndex: 0,
+    },
+    partnerA.token,
+  );
+  const ownQuestion = payload.rounds.find((round) => round.questionText === 'Was waere mein freier Abend?');
+  expect(ownQuestion).toBeTruthy();
+
+  const response = await apiPostRaw(request, `/api/know-me/${ownQuestion!.id}/guess`, { selectedOptionIndex: 0 }, partnerA.token);
+  expect(response.status()).toBe(403);
+  const responsePayload = await response.json();
+  expect(responsePayload).toEqual(
+    expect.objectContaining({
+      errorKey: 'knowMe.authorCannotGuessOwnQuestion',
+      error: expect.stringContaining('selbst erstellt'),
+    }),
+  );
 
   await contextA.close();
   await contextB.close();

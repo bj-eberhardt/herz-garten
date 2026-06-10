@@ -29,6 +29,7 @@ test('wrong invite code shows a clear error', async ({ page }) => {
   await page.getByTestId('invite-code-input').fill('HERZ-0000');
   await page.getByTestId('join-couple-submit').click();
   await expect(page.getByTestId('couple-error')).toBeVisible();
+  await expect(page.getByTestId('couple-error')).toContainText('Diesen Paar-Code konnten wir nicht finden');
 });
 
 test('authenticated user without couple is routed to onboarding', async ({ page }) => {

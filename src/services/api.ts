@@ -4,6 +4,9 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly errorKey?: string,
+    public readonly params?: Record<string, unknown>,
+    public readonly serverMessage?: string,
   ) {
     super(message);
   }
@@ -40,9 +43,11 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   const payload = contentType?.includes('application/json') ? await response.json() : undefined;
 
   if (!response.ok) {
-    throw new ApiError(payload?.error ?? 'API request failed', response.status);
+    const serverMessage = typeof payload?.error === 'string' ? payload.error : undefined;
+    const errorKey = typeof payload?.errorKey === 'string' ? payload.errorKey : undefined;
+    const params = payload?.params && typeof payload.params === 'object' ? payload.params : undefined;
+    throw new ApiError(errorKey ?? serverMessage ?? 'api.requestFailed', response.status, errorKey, params, serverMessage);
   }
 
   return payload as T;
 }
-

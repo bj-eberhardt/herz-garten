@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { apiRequest } from '@/services/api';
+import { localizeApiError } from '@/services/errorMessages';
 import type { NotificationItem } from '@/types/domain';
 
 interface NotificationPayload {
@@ -37,7 +38,7 @@ export const useNotificationStore = defineStore('notifications', {
       try {
         this.applyPayload(await apiRequest<NotificationPayload>('/api/notifications'));
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Benachrichtigungen konnten nicht geladen werden';
+        this.error = localizeApiError(error, 'errors.fallback.notificationsLoad');
       } finally {
         this.loading = false;
       }

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
-import { ApiError, apiRequest } from '@/services/api';
+import { apiRequest } from '@/services/api';
+import { localizeApiError } from '@/services/errorMessages';
 import type { Couple, LoveJarCategory, LoveJarNote } from '@/types/domain';
 import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
@@ -53,7 +54,7 @@ export const useLoveJarStore = defineStore('loveJar', {
         const payload = await apiRequest<LoveJarPayload>('/api/love-jar');
         this.applyLoveJarPayload(payload);
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Love Jar konnte nicht geladen werden';
+        this.error = localizeApiError(error, 'errors.fallback.loveJarLoad');
       } finally {
         this.loading = false;
       }
@@ -74,7 +75,7 @@ export const useLoveJarStore = defineStore('loveJar', {
         await useGardenStore().loadGarden();
         await useNotificationStore().loadNotifications();
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Zettel konnte nicht gespeichert werden';
+        this.error = localizeApiError(error, 'errors.fallback.loveJarSave');
         throw error;
       } finally {
         this.loading = false;
@@ -90,15 +91,7 @@ export const useLoveJarStore = defineStore('loveJar', {
         this.applyLoveJarPayload(payload);
         await useNotificationStore().loadNotifications();
       } catch (error) {
-        if (error instanceof ApiError && error.status === 409) {
-          this.error = 'Du hast heute schon einen Zettel gezogen. Morgen wartet wieder einer auf dich.';
-          return;
-        }
-        if (error instanceof ApiError && error.status === 404) {
-          this.error = 'Gerade ist kein ungelesener Zettel im Glas. Schreibt euch neue kleine Botschaften.';
-          return;
-        }
-        this.error = error instanceof Error ? error.message : 'Zettel konnte nicht gezogen werden';
+        this.error = localizeApiError(error, 'errors.fallback.loveJarDraw');
       } finally {
         this.loading = false;
       }

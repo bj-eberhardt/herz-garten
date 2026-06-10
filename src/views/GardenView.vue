@@ -1,19 +1,21 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import GardenCanvas from '@/components/garden/GardenCanvas.vue';
 import { useGardenStore } from '@/stores/gardenStore';
 
 const gardenStore = useGardenStore();
+const { t, d } = useI18n();
 
 const detailTitle = computed(() => {
   const source = gardenStore.selectedDetail?.source;
   const object = gardenStore.selectedDetail?.object;
-  if (!source || !object) return object?.label ?? 'Gartenmoment';
-  if (source.type === 'question') return 'Tagesfrage';
+  if (!source || !object) return object?.label ?? t('garden.defaultTitle');
+  if (source.type === 'question') return t('garden.dailyQuestion');
   if (source.type === 'quest') return String(source.title);
-  if (source.type === 'love_jar') return 'Love-Jar-Zettel';
+  if (source.type === 'love_jar') return t('garden.loveJarNote');
   if (source.type === 'memory') return String(source.title);
-  if (source.type === 'know_me') return 'Wie gut kennst du mich?';
+  if (source.type === 'know_me') return t('garden.knowMe');
   return object.label;
 });
 
@@ -33,38 +35,36 @@ const detailDate = computed(() => {
               ? source.guessCreatedAt ?? source.answeredAt ?? source.createdAt
               : object?.createdAt;
 
-  return typeof rawDate === 'string'
-    ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'long' }).format(new Date(rawDate))
-    : '';
+  return typeof rawDate === 'string' ? d(new Date(rawDate), 'long') : '';
 });
 
 const celebrationText = computed(() => {
   const source = gardenStore.selectedDetail?.source;
   const object = gardenStore.selectedDetail?.object;
-  if (!source || !object) return 'Dieser Gartenmoment gehoert zu eurer gemeinsamen Geschichte.';
-  if (source.type === 'question') return 'Diese Blume ist gewachsen, weil ihr beide euch Zeit fuer dieselbe Frage genommen habt.';
-  if (source.type === 'quest') return `Dieses Objekt feiert eure abgeschlossene Quest: ${source.title}.`;
-  if (source.type === 'love_jar') return 'Dieses Licht erinnert an einen kleinen Zettel, der in euren Love Jar gelegt wurde.';
-  if (source.type === 'memory') return `Dieser Stein bewahrt eure Erinnerung: ${source.title}.`;
-  if (source.type === 'know_me') return 'Diese besondere Blume ist gewachsen, weil ihr euch richtig eingeschaetzt habt.';
+  if (!source || !object) return t('garden.celebration.default');
+  if (source.type === 'question') return t('garden.celebration.question');
+  if (source.type === 'quest') return t('garden.celebration.quest', { title: source.title });
+  if (source.type === 'love_jar') return t('garden.celebration.loveJar');
+  if (source.type === 'memory') return t('garden.celebration.memory', { title: source.title });
+  if (source.type === 'know_me') return t('garden.celebration.knowMe');
   return object.label;
 });
 
 const progressItems = computed(() => [
-  { label: 'Tagesfragen', value: gardenStore.progress.answeredQuestionCount, detail: 'gemeinsam freigeschaltet' },
-  { label: 'Quests', value: gardenStore.progress.completedQuestCount, detail: 'abgeschlossen' },
+  { label: t('garden.progress.dailyQuestions'), value: gardenStore.progress.answeredQuestionCount, detail: t('garden.progress.dailyQuestionsDetail') },
+  { label: t('garden.progress.quests'), value: gardenStore.progress.completedQuestCount, detail: t('garden.progress.questsDetail') },
   {
-    label: 'Love Jar',
+    label: t('garden.progress.loveJar'),
     value: gardenStore.progress.drawnLoveJarNoteCount,
-    detail: `${gardenStore.progress.loveJarNoteCount} Zettel im Glas`,
+    detail: t('garden.progress.loveJarDetail', { count: gardenStore.progress.loveJarNoteCount }),
   },
-  { label: 'Erinnerungen', value: gardenStore.progress.memoryCount, detail: 'in der Timeline' },
+  { label: t('garden.progress.memories'), value: gardenStore.progress.memoryCount, detail: t('garden.progress.memoriesDetail') },
   {
-    label: 'Kennst du mich',
+    label: t('garden.progress.knowMe'),
     value: gardenStore.progress.knowMeHitCount,
-    detail: `${gardenStore.progress.knowMeRoundCount} gespielte Fragen`,
+    detail: t('garden.progress.knowMeDetail', { count: gardenStore.progress.knowMeRoundCount }),
   },
-  { label: 'Gartenobjekte', value: gardenStore.progress.gardenObjectCount, detail: 'sichtbare Momente' },
+  { label: t('garden.progress.gardenObjects'), value: gardenStore.progress.gardenObjectCount, detail: t('garden.progress.gardenObjectsDetail') },
 ]);
 
 onMounted(() => {
@@ -75,16 +75,16 @@ onMounted(() => {
 <template>
   <div class="view-grid">
     <section>
-      <p class="eyebrow">Herzgarten</p>
-      <h1>Eure gemeinsamen Momente werden sichtbar.</h1>
+      <p class="eyebrow">{{ t('garden.eyebrow') }}</p>
+      <h1>{{ t('garden.title') }}</h1>
     </section>
     <p v-if="gardenStore.error" class="form-error">{{ gardenStore.error }}</p>
-    <p v-if="gardenStore.loading" class="muted">Garten wird geladen...</p>
+    <p v-if="gardenStore.loading" class="muted">{{ t('garden.loading') }}</p>
 
     <section class="garden-progress panel" data-testid="garden-progress">
       <div>
-        <p class="eyebrow">Fortschritt</p>
-        <h2>Euer Garten waechst durch echte Momente.</h2>
+        <p class="eyebrow">{{ t('garden.progressEyebrow') }}</p>
+        <h2>{{ t('garden.progressTitle') }}</h2>
       </div>
       <div class="progress-grid">
         <article v-for="item in progressItems" :key="item.label" class="progress-tile" data-testid="garden-progress-item">
@@ -104,16 +104,16 @@ onMounted(() => {
           <h2>{{ detailTitle }}</h2>
           <p class="muted" data-testid="garden-detail-date">{{ detailDate }}</p>
         </div>
-        <button class="secondary-button inline-button" type="button" data-testid="garden-detail-close" @click="gardenStore.clearDetail">Schliessen</button>
+        <button class="secondary-button inline-button" type="button" data-testid="garden-detail-close" @click="gardenStore.clearDetail">{{ t('common.close') }}</button>
       </div>
 
       <div class="celebration-panel" data-testid="garden-detail-celebration">
-        <span>Gewachsen</span>
+        <span>{{ t('garden.grown') }}</span>
         <p>{{ celebrationText }}</p>
       </div>
 
       <template v-if="gardenStore.selectedDetail.source?.type === 'question'">
-        <p class="detail-label">Erledigt wurde</p>
+        <p class="detail-label">{{ t('garden.doneWas') }}</p>
         <p>{{ gardenStore.selectedDetail.source.question }}</p>
         <div class="answers">
           <p v-for="answer in (gardenStore.selectedDetail.source.answers as any[])" :key="answer.createdAt">
@@ -123,24 +123,21 @@ onMounted(() => {
       </template>
 
       <template v-else-if="gardenStore.selectedDetail.source?.type === 'quest'">
-        <p class="detail-label">Erledigt wurde</p>
+        <p class="detail-label">{{ t('garden.doneWas') }}</p>
         <p>{{ gardenStore.selectedDetail.source.description }}</p>
-        <p class="success-note">Belohnung: {{ gardenStore.selectedDetail.source.rewardPoints }} Herzpunkte</p>
+        <p class="success-note">{{ t('garden.rewardPoints', { count: gardenStore.selectedDetail.source.rewardPoints }) }}</p>
       </template>
 
       <template v-else-if="gardenStore.selectedDetail.source?.type === 'love_jar'">
-        <p class="detail-label">Im Love Jar lag</p>
-        <p>
-          {{
-            gardenStore.selectedDetail.source.text ??
-            'Dieser Love-Jar-Zettel bleibt verborgen, bis er gezogen wurde.'
-          }}
+        <p class="detail-label">{{ t('garden.inLoveJar') }}</p>
+        <p>{{ gardenStore.selectedDetail.source.text ?? t('garden.hiddenLoveJar') }}</p>
+        <p class="muted">
+          {{ t('garden.loveJarMeta', { author: gardenStore.selectedDetail.source.authorName, category: gardenStore.selectedDetail.source.category }) }}
         </p>
-        <p class="muted">Von {{ gardenStore.selectedDetail.source.authorName }} · Kategorie {{ gardenStore.selectedDetail.source.category }}</p>
       </template>
 
       <template v-else-if="gardenStore.selectedDetail.source?.type === 'memory'">
-        <p class="detail-label">Festgehalten wurde</p>
+        <p class="detail-label">{{ t('garden.recordedWas') }}</p>
         <p>{{ gardenStore.selectedDetail.source.description }}</p>
         <p class="muted">
           {{ gardenStore.selectedDetail.source.date }} - {{ gardenStore.selectedDetail.source.category }} -
@@ -149,11 +146,11 @@ onMounted(() => {
       </template>
 
       <template v-else-if="gardenStore.selectedDetail.source?.type === 'know_me'">
-        <p class="detail-label">Richtig eingeschaetzt wurde</p>
+        <p class="detail-label">{{ t('garden.guessedCorrectlyWas') }}</p>
         <p>{{ gardenStore.selectedDetail.source.questionText }}</p>
         <div class="answers">
           <p>
-            <strong>Richtig:</strong>
+            <strong>{{ t('garden.correct') }}</strong>
             {{
               (gardenStore.selectedDetail.source.options as string[])[
                 gardenStore.selectedDetail.source.correctOptionIndex as number
@@ -161,7 +158,7 @@ onMounted(() => {
             }}
           </p>
           <p>
-            <strong>Geraten:</strong>
+            <strong>{{ t('garden.guessed') }}</strong>
             {{
               (gardenStore.selectedDetail.source.options as string[])[
                 gardenStore.selectedDetail.source.selectedOptionIndex as number
@@ -169,10 +166,10 @@ onMounted(() => {
             }}
           </p>
         </div>
-        <p class="success-note">Ihr kennt euch ein Stueck besser. +12 Herzpunkte</p>
+        <p class="success-note">{{ t('garden.knowMeSuccess') }}</p>
       </template>
 
-      <p v-else class="muted">Fuer dieses Objekt sind noch keine Details hinterlegt.</p>
+      <p v-else class="muted">{{ t('garden.noDetails') }}</p>
     </section>
   </div>
 </template>

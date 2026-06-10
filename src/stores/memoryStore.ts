@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { apiRequest } from '@/services/api';
+import { localizeApiError } from '@/services/errorMessages';
 import type { Couple, MemoryCategory, MemoryEntry } from '@/types/domain';
 import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
@@ -29,7 +30,7 @@ export const useMemoryStore = defineStore('memories', {
         const payload = await apiRequest<{ couple: Couple; memories: MemoryEntryView[] }>('/api/memories');
         this.applyMemoryPayload(payload);
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Erinnerungen konnten nicht geladen werden';
+        this.error = localizeApiError(error, 'errors.fallback.memoriesLoad');
       } finally {
         this.loading = false;
       }
@@ -57,7 +58,7 @@ export const useMemoryStore = defineStore('memories', {
         await useGardenStore().loadGarden();
         await useNotificationStore().loadNotifications();
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Erinnerung konnte nicht gespeichert werden';
+        this.error = localizeApiError(error, 'errors.fallback.memorySave');
         throw error;
       } finally {
         this.loading = false;

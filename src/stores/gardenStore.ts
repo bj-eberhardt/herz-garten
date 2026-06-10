@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { apiRequest } from '@/services/api';
+import { localizeApiError } from '@/services/errorMessages';
 import type { Couple, GardenObject, GardenObjectType, GardenSourceType } from '@/types/domain';
 import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
@@ -66,7 +67,7 @@ export const useGardenStore = defineStore('garden', {
         useCoupleStore().setCouple(payload.couple);
         useAuthStore().couple = payload.couple;
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Garten konnte nicht geladen werden';
+        this.error = localizeApiError(error, 'errors.fallback.gardenLoad');
       } finally {
         this.loading = false;
       }
@@ -87,7 +88,7 @@ export const useGardenStore = defineStore('garden', {
         useCoupleStore().setCouple(payload.couple);
         useAuthStore().couple = payload.couple;
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Gartenobjekt konnte nicht geladen werden';
+        this.error = localizeApiError(error, 'errors.fallback.gardenObject');
       } finally {
         this.loading = false;
       }

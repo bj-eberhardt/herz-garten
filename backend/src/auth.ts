@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from './config.js';
 import { pool } from './db.js';
+import { sendApiError } from './errors.js';
 
 export interface AuthUser {
   id: string;
@@ -33,7 +34,7 @@ export async function requireAuth(request: Request, response: Response, next: Ne
   const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : undefined;
 
   if (!token) {
-    response.status(401).json({ error: 'Missing bearer token' });
+    sendApiError(response, 401, 'auth.missingToken');
     return;
   }
 
@@ -50,14 +51,14 @@ export async function requireAuth(request: Request, response: Response, next: Ne
 
     const user = result.rows[0];
     if (!user) {
-      response.status(401).json({ error: 'Invalid bearer token' });
+      sendApiError(response, 401, 'auth.invalidToken');
       return;
     }
 
     request.user = user;
     next();
   } catch {
-    response.status(401).json({ error: 'Invalid bearer token' });
+    sendApiError(response, 401, 'auth.invalidToken');
   }
 }
 
@@ -68,4 +69,3 @@ export function currentUser(request: Request) {
 
   return request.user;
 }
-

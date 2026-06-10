@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { apiRequest } from '@/services/api';
+import { localizeApiError } from '@/services/errorMessages';
 import type { Couple, KnowMeCatalogQuestion, KnowMeRound } from '@/types/domain';
 import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
@@ -43,7 +44,7 @@ export const useKnowMeStore = defineStore('knowMe', {
       try {
         this.applyPayload(await apiRequest<KnowMePayload>('/api/know-me'));
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Spiel konnte nicht geladen werden';
+        this.error = localizeApiError(error, 'errors.fallback.knowMeLoad');
       } finally {
         this.loading = false;
       }
@@ -65,7 +66,7 @@ export const useKnowMeStore = defineStore('knowMe', {
         );
         await useNotificationStore().loadNotifications();
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Frage konnte nicht erstellt werden';
+        this.error = localizeApiError(error, 'errors.fallback.knowMeCreate');
         throw error;
       } finally {
         this.loading = false;
@@ -84,7 +85,7 @@ export const useKnowMeStore = defineStore('knowMe', {
         await useGardenStore().loadGarden();
         await useNotificationStore().loadNotifications();
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Antwort konnte nicht gespeichert werden';
+        this.error = localizeApiError(error, 'errors.fallback.knowMeGuess');
         throw error;
       } finally {
         this.loading = false;

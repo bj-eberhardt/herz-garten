@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { GardenObject } from '@/types/domain';
+import { i18n } from '@/i18n';
 import GardenObjectMarker from './GardenObjectMarker.vue';
 
 defineProps<{
@@ -12,7 +13,7 @@ defineEmits<{
 </script>
 
 <template>
-  <section class="garden-canvas" aria-label="Herzgarten" data-testid="garden-canvas">
+  <section class="garden-canvas" :aria-label="i18n.global.t('garden.canvasLabel')" data-testid="garden-canvas">
     <div class="garden-sky"></div>
     <div class="garden-ground"></div>
     <GardenObjectMarker

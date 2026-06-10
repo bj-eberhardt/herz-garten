@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { apiRequest } from '@/services/api';
+import { localizeApiError } from '@/services/errorMessages';
 import type { Couple, DailyQuestion, DailyQuestionAnswer } from '@/types/domain';
 import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
@@ -51,7 +52,7 @@ export const useDailyQuestionStore = defineStore('dailyQuestion', {
         }>('/api/today');
         this.applyToday(payload);
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Tagesfrage konnte nicht geladen werden';
+        this.error = localizeApiError(error, 'errors.fallback.todayLoad');
       } finally {
         this.loading = false;
       }
@@ -74,7 +75,7 @@ export const useDailyQuestionStore = defineStore('dailyQuestion', {
         this.applyToday(payload);
         await useNotificationStore().loadNotifications();
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Antwort konnte nicht gespeichert werden';
+        this.error = localizeApiError(error, 'errors.fallback.todayAnswer');
         throw error;
       } finally {
         this.loading = false;

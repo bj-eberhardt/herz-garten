@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
 import { Gift, HeartHandshake, LockKeyhole } from '@lucide/vue';
+import { useI18n } from 'vue-i18n';
 import LoveJarComposer from '@/components/loveJar/LoveJarComposer.vue';
 import { useLoveJarStore } from '@/stores/loveJarStore';
 
 const loveJarStore = useLoveJarStore();
+const { t } = useI18n();
 
 onMounted(() => {
   loveJarStore.loadNotes();
@@ -12,32 +14,33 @@ onMounted(() => {
 
 const drawHint = computed(() => {
   if (loveJarStore.drawStatus.drawnToday) {
-    return 'Du hast heute schon einen Zettel gezogen. Morgen ist wieder ein neuer Moment dran.';
+    return t('loveJar.drawHints.drawnToday');
   }
   if (loveJarStore.drawStatus.partnerUnreadCount > 0) {
-    return `${loveJarStore.drawStatus.partnerUnreadCount} Partner-Zettel wartet. Eigene Zettel bleiben zurueckgestellt.`;
+    return t('loveJar.drawHints.partnerUnread', loveJarStore.drawStatus.partnerUnreadCount, {
+      named: { count: loveJarStore.drawStatus.partnerUnreadCount },
+    });
   }
   if (loveJarStore.drawStatus.ownUnreadCount > 0) {
-    return 'Es warten nur eigene Zettel. Du kannst einen als Rueckblick ziehen oder erst neue Partnerzettel sammeln.';
+    return t('loveJar.drawHints.ownUnread');
   }
-  return 'Gerade ist kein ungelesener Zettel im Glas. Schreibt euch neue kleine Botschaften.';
+  return t('loveJar.drawHints.none');
 });
 </script>
 
 <template>
   <div class="view-grid">
     <section>
-      <p class="eyebrow">Love Jar</p>
-      <h1>Ein Glas voller kleiner Zettel.</h1>
+      <p class="eyebrow">{{ t('loveJar.eyebrow') }}</p>
+      <h1>{{ t('loveJar.title') }}</h1>
     </section>
 
     <section class="panel feature-explainer">
       <HeartHandshake :size="24" aria-hidden="true" />
       <div>
-        <h2>Wie funktioniert das?</h2>
+        <h2>{{ t('loveJar.howTitle') }}</h2>
         <p>
-          Ihr legt kurze Botschaften ins Glas. Ziehen ist bewusst langsam: Jede Person kann pro Tag nur einen Zettel ziehen.
-          Partnerzettel haben Vorrang, damit der Moment sich wie eine kleine Nachricht vom anderen anfuehlt.
+          {{ t('loveJar.howText') }}
         </p>
       </div>
     </section>
@@ -47,13 +50,13 @@ const drawHint = computed(() => {
     <section class="panel draw-panel">
       <div class="draw-header">
         <div>
-          <p class="eyebrow">Heute ziehen</p>
-          <h2>Ein Zettel pro Tag</h2>
+          <p class="eyebrow">{{ t('loveJar.drawEyebrow') }}</p>
+          <h2>{{ t('loveJar.drawTitle') }}</h2>
       <p class="muted" data-testid="love-jar-draw-hint">{{ drawHint }}</p>
         </div>
         <span class="draw-counter">
           <LockKeyhole :size="16" aria-hidden="true" />
-          {{ loveJarStore.unreadCount }} ungelesen
+          {{ t('loveJar.unread', loveJarStore.unreadCount, { named: { count: loveJarStore.unreadCount } }) }}
         </span>
       </div>
 
@@ -65,21 +68,21 @@ const drawHint = computed(() => {
         @click="loveJarStore.drawNote"
       >
         <Gift :size="18" aria-hidden="true" />
-        {{ loveJarStore.loading ? 'Zieht...' : 'Zettel ziehen' }}
+        {{ loveJarStore.loading ? t('loveJar.drawing') : t('loveJar.draw') }}
       </button>
 
       <p v-if="loveJarStore.error" class="form-error" data-testid="love-jar-error">{{ loveJarStore.error }}</p>
       <p v-if="!loveJarStore.loading && loveJarStore.notes.length === 0" class="empty-state" data-testid="love-jar-empty">
-        Noch keine Zettel im Glas. Fangt mit einem Kompliment, einem Danke oder einem kleinen Gutschein an.
+        {{ t('loveJar.empty') }}
       </p>
       <p v-else-if="!loveJarStore.loading && !loveJarStore.drawStatus.canDrawToday && !loveJarStore.drawStatus.drawnToday" class="empty-state" data-testid="love-jar-empty">
-        Es ist gerade nichts ziehbar. Schreibt neue Zettel, damit morgen wieder etwas im Glas wartet.
+        {{ t('loveJar.nothingDrawable') }}
       </p>
 
       <div class="note-list">
         <article v-for="note in loveJarStore.notes" :key="note.id" class="note-card" :class="{ drawn: note.isDrawn }" data-testid="love-jar-note">
           <p class="eyebrow">{{ note.category }} - {{ note.authorName }}</p>
-          <p>{{ note.isDrawn ? note.text : 'Ein ungelesener Zettel wartet.' }}</p>
+          <p>{{ note.isDrawn ? note.text : t('loveJar.unreadNote') }}</p>
         </article>
       </div>
     </section>

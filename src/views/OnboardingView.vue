@@ -2,11 +2,14 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Clipboard, KeyRound, LogIn, Sprout, UserPlus } from '@lucide/vue';
+import { useI18n } from 'vue-i18n';
 import type { ContentPreference, RelationshipType } from '@/types/domain';
 import { useAuthStore } from '@/stores/authStore';
+import { localizeApiError } from '@/services/errorMessages';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { t } = useI18n();
 
 const mode = ref<'login' | 'register'>('register');
 const displayName = ref('');
@@ -27,7 +30,7 @@ async function submitAuth() {
       await authStore.login(email.value, password.value);
     }
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : 'Anmeldung fehlgeschlagen';
+    formError.value = localizeApiError(error, 'errors.fallback.auth');
   }
 }
 
@@ -40,7 +43,7 @@ async function createCouple() {
     });
     await router.push('/today');
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : 'Paarraum konnte nicht erstellt werden';
+    formError.value = localizeApiError(error, 'errors.fallback.createCouple');
   }
 }
 
@@ -50,7 +53,7 @@ async function joinCouple() {
     await authStore.joinCouple(inviteCode.value);
     await router.push('/today');
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : 'Paar-Code konnte nicht genutzt werden';
+    formError.value = localizeApiError(error, 'errors.fallback.joinCouple');
   }
 }
 
@@ -67,92 +70,96 @@ async function copyInviteCode() {
 <template>
   <div class="view-grid onboarding-grid">
     <section class="hero-panel">
-      <p class="eyebrow">Onboarding</p>
-      <h1>Willkommen in eurem Herzgarten.</h1>
-      <p v-if="!authStore.isAuthenticated">Erstellt ein Konto oder loggt euch ein. Danach koennt ihr einen vorhandenen Partnercode eingeben oder einen neuen Paarraum anlegen.</p>
-      <p v-else-if="!authStore.hasCouple">Dein Konto ist bereit. Verbinde dich jetzt nachtraeglich mit dem Partnercode oder lege euren gemeinsamen Garten an.</p>
-      <p v-else>Teilt euren Paar-Code, damit dein Partner jederzeit nachtraeglich beitreten kann.</p>
+      <p class="eyebrow">{{ t('auth.onboarding') }}</p>
+      <h1>{{ t('auth.welcomeTitle') }}</h1>
+      <p v-if="!authStore.isAuthenticated">{{ t('auth.introGuest') }}</p>
+      <p v-else-if="!authStore.hasCouple">{{ t('auth.introNoCouple') }}</p>
+      <p v-else>{{ t('auth.introCouple') }}</p>
     </section>
 
     <section v-if="!authStore.isAuthenticated" class="panel auth-panel">
-      <div class="segmented-control" aria-label="Auth Modus">
+      <div class="segmented-control" :aria-label="t('auth.modeLabel')">
         <button data-testid="auth-mode-register" :class="{ active: mode === 'register' }" type="button" @click="mode = 'register'">
           <UserPlus :size="18" aria-hidden="true" />
-          Registrieren
+          {{ t('auth.register') }}
         </button>
         <button data-testid="auth-mode-login" :class="{ active: mode === 'login' }" type="button" @click="mode = 'login'">
           <LogIn :size="18" aria-hidden="true" />
-          Login
+          {{ t('auth.login') }}
         </button>
       </div>
 
       <form class="composer" data-testid="auth-form" @submit.prevent="submitAuth">
-        <label v-if="mode === 'register'" for="display-name">Name</label>
+        <label v-if="mode === 'register'" for="display-name">{{ t('common.name') }}</label>
         <input v-if="mode === 'register'" id="display-name" v-model="displayName" autocomplete="name" data-testid="auth-display-name" />
 
-        <label for="email">E-Mail</label>
+        <label for="email">{{ t('common.email') }}</label>
         <input id="email" v-model="email" autocomplete="email" type="email" data-testid="auth-email" />
 
-        <label for="password">Passwort</label>
+        <label for="password">{{ t('common.password') }}</label>
         <input id="password" v-model="password" autocomplete="current-password" type="password" data-testid="auth-password" />
 
         <p v-if="formError || authStore.error" class="form-error" data-testid="auth-error">{{ formError || authStore.error }}</p>
 
         <button class="primary-button" type="submit" :disabled="authStore.loading" data-testid="auth-submit">
-          {{ mode === 'register' ? 'Konto erstellen' : 'Einloggen' }}
+          {{ mode === 'register' ? t('auth.createAccount') : t('auth.loginAction') }}
         </button>
       </form>
     </section>
 
     <section v-else class="panel auth-panel">
-      <p class="eyebrow">Paarraum</p>
-      <h2>Hallo {{ authStore.user?.displayName }}</h2>
+      <p class="eyebrow">{{ t('nav.coupleRoom') }}</p>
+      <h2>{{ t('auth.hello', { name: authStore.user?.displayName }) }}</h2>
       <div v-if="authStore.couple" class="couple-code" data-testid="couple-code-panel">
-        <p>Euer Paar-Code ist <strong data-testid="couple-code">{{ authStore.couple.inviteCode }}</strong>. Dein Partner kann ihn auch spaeter nach dem Login eingeben.</p>
+        <p>
+          {{ t('auth.coupleCodePrefix') }}
+          <strong data-testid="couple-code">{{ authStore.couple.inviteCode }}</strong>.
+          {{ t('auth.coupleCodeSuffix') }}
+        </p>
         <button class="secondary-button inline-button" type="button" data-testid="copy-couple-code" @click="copyInviteCode">
           <Clipboard :size="18" aria-hidden="true" />
-          {{ copied ? 'Kopiert' : 'Code kopieren' }}
+          {{ copied ? t('common.copied') : t('auth.copyCode') }}
         </button>
       </div>
       <div v-else class="couple-actions">
         <div class="next-step-note">
           <KeyRound :size="20" aria-hidden="true" />
           <div>
-            <strong>Partnercode nachtraeglich eingeben</strong>
-            <p>Wenn dein Partner den Garten schon angelegt hat, trage hier den Code ein. Danach landet ihr beide im selben Paarraum.</p>
+            <strong>{{ t('auth.enterPartnerCodeLater') }}</strong>
+            <p>{{ t('auth.enterPartnerCodeHint') }}</p>
           </div>
         </div>
 
         <form class="join-form highlighted-form" data-testid="join-couple-form" @submit.prevent="joinCouple">
-          <label for="invite-code">Partnercode</label>
+          <label for="invite-code">{{ t('auth.partnerCode') }}</label>
           <input id="invite-code" v-model="inviteCode" placeholder="HERZ-4821" autocomplete="off" data-testid="invite-code-input" />
           <button class="primary-button" type="submit" :disabled="!inviteCode.trim()" data-testid="join-couple-submit">
             <KeyRound :size="18" aria-hidden="true" />
-            Mit Partner verbinden
+            {{ t('auth.connectPartner') }}
           </button>
         </form>
 
-        <div class="section-divider"><span>oder neuen Paarraum erstellen</span></div>
+        <div class="section-divider"><span>{{ t('auth.orCreateNew') }}</span></div>
 
         <form class="join-form" data-testid="create-couple-form" @submit.prevent="createCouple">
-          <label for="relationship-type">Beziehungsmodus</label>
+          <label for="relationship-type">{{ t('auth.relationshipMode') }}</label>
           <select id="relationship-type" v-model="relationshipType" data-testid="relationship-type-select">
-            <option value="mixed">Gemischt</option>
-            <option value="local">Zusammen vor Ort</option>
-            <option value="long_distance">Fernbeziehung</option>
+            <option value="mixed">{{ t('auth.relationship.mixed') }}</option>
+            <option value="local">{{ t('auth.relationship.local') }}</option>
+            <option value="long_distance">{{ t('auth.relationship.long_distance') }}</option>
           </select>
 
-          <label for="content-preference">Content-Stil</label>
+          <label for="content-preference">{{ t('auth.contentStyle') }}</label>
           <select id="content-preference" v-model="contentPreference" data-testid="content-preference-select">
-            <option value="balanced">Ausgewogen</option>
-            <option value="romantic">Romantisch</option>
-            <option value="playful">Verspielt</option>
-            <option value="deep">Tiefgruendig</option>
+            <option value="balanced">{{ t('auth.preference.balanced') }}</option>
+            <option value="romantic">{{ t('auth.preference.romantic') }}</option>
+            <option value="playful">{{ t('auth.preference.playful') }}</option>
+            <option value="deep">{{ t('auth.preference.deep') }}</option>
           </select>
 
           <button class="primary-button" type="submit" data-testid="create-couple-submit">
             <Sprout :size="18" aria-hidden="true" />
-            Garten anlegen
+            {{ t('auth.createGarden') }}
           </button>
         </form>
       </div>

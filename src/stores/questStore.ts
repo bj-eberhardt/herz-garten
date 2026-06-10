@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia';
 import { apiRequest } from '@/services/api';
+import { i18n } from '@/i18n';
+import { localizeApiError } from '@/services/errorMessages';
 import type { Couple, Quest } from '@/types/domain';
 import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
@@ -60,7 +62,7 @@ export const useQuestStore = defineStore('quests', {
         );
         this.applyQuestPayload(payload);
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Quests konnten nicht geladen werden';
+        this.error = localizeApiError(error, 'errors.fallback.questsLoad');
       } finally {
         this.loading = false;
       }
@@ -82,7 +84,7 @@ export const useQuestStore = defineStore('quests', {
         this.applyQuestPayload(payload);
         await useNotificationStore().loadNotifications();
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Quest konnte nicht aktualisiert werden';
+        this.error = localizeApiError(error, 'errors.fallback.questUpdate');
         throw error;
       } finally {
         this.loading = false;
@@ -96,10 +98,10 @@ export const useQuestStore = defineStore('quests', {
     },
     buttonLabel(quest: QuestWithProgress, currentUserId?: string) {
       const status = this.statusFor(quest);
-      if (status === 'completed') return 'Abgeschlossen';
-      if (this.completedByCurrentUser(quest, currentUserId)) return 'Wartet auf Partner';
-      if (status === 'accepted') return 'Abschluss bestaetigen';
-      return 'Annehmen';
+      if (status === 'completed') return i18n.global.t('quests.actions.completed');
+      if (this.completedByCurrentUser(quest, currentUserId)) return i18n.global.t('quests.actions.waitingPartner');
+      if (status === 'accepted') return i18n.global.t('quests.actions.confirmComplete');
+      return i18n.global.t('quests.actions.accept');
     },
     buttonDisabled(quest: QuestWithProgress, currentUserId?: string) {
       return this.statusFor(quest) === 'completed' || this.completedByCurrentUser(quest, currentUserId) || this.loading;

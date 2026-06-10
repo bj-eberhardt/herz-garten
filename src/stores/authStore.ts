@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { apiRequest, clearToken, getToken, setToken } from '@/services/api';
+import { localizeApiError } from '@/services/errorMessages';
 import type { ContentPreference, Couple, RelationshipType } from '@/types/domain';
 
 interface AuthUser {
@@ -66,7 +67,7 @@ export const useAuthStore = defineStore('auth', {
         this.user = result.user;
         await this.refreshMe();
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Anmeldung fehlgeschlagen';
+        this.error = localizeApiError(error, 'errors.fallback.auth');
         throw error;
       } finally {
         this.loading = false;

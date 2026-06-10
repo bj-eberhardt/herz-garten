@@ -4,6 +4,7 @@ import type { Request, Response, Router } from 'express';
 import { Router as createRouter } from 'express';
 import { currentUser, requireAuth, signToken } from './auth.js';
 import { pool } from './db.js';
+import { handleError, sendApiError } from './errors.js';
 
 interface Queryable {
   query: typeof pool.query;
@@ -87,6 +88,9 @@ async function createNotifications(
     body: string;
     sourceType: string;
     sourceId?: string;
+    titleKey?: string;
+    bodyKey?: string;
+    params?: Record<string, unknown>;
   },
 ) {
   const uniqueUserIds = [...new Set(options.userIds)].filter(Boolean);
@@ -94,8 +98,8 @@ async function createNotifications(
   for (const userId of uniqueUserIds) {
     await client.query(
       `
-        insert into notifications (id, couple_id, user_id, type, title, body, source_type, source_id)
-        values ($1, $2, $3, $4, $5, $6, $7, $8)
+        insert into notifications (id, couple_id, user_id, type, title, body, source_type, source_id, title_key, body_key, params)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         on conflict do nothing
       `,
       [
@@ -107,6 +111,9 @@ async function createNotifications(
         options.body,
         options.sourceType,
         options.sourceId ?? null,
+        options.titleKey ?? null,
+        options.bodyKey ?? null,
+        JSON.stringify(options.params ?? {}),
       ],
     );
   }
@@ -460,6 +467,9 @@ function mapNotification(row: Record<string, unknown>) {
     type: row.type,
     title: row.title,
     body: row.body,
+    titleKey: row.titleKey,
+    bodyKey: row.bodyKey,
+    params: row.params ?? {},
     sourceType: row.sourceType,
     sourceId: row.sourceId,
     readAt: row.readAt,
@@ -477,6 +487,9 @@ async function buildNotificationPayload(userId: string) {
         type,
         title,
         body,
+        title_key as "titleKey",
+        body_key as "bodyKey",
+        params,
         source_type as "sourceType",
         source_id as "sourceId",
         read_at as "readAt",
@@ -943,11 +956,6 @@ async function createUniqueInviteCode() {
   throw new Error('Could not create unique invite code');
 }
 
-function handleError(response: Response, error: unknown) {
-  console.error(error);
-  response.status(500).json({ error: 'Unexpected server error' });
-}
-
 export function apiRouter(): Router {
   const router = createRouter();
 
@@ -957,7 +965,7 @@ export function apiRouter(): Router {
     const password = normalizeText(request.body.password);
 
     if (!email || !displayName || password.length < 8) {
-      response.status(400).json({ error: 'Email, display name and password with at least 8 chars are required' });
+      sendApiError(response, 400, 'auth.registrationInvalid');
       return;
     }
 
@@ -979,7 +987,7 @@ export function apiRouter(): Router {
       });
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
-        response.status(409).json({ error: 'Email already registered' });
+        sendApiError(response, 409, 'auth.emailAlreadyRegistered');
         return;
       }
       handleError(response, error);
@@ -991,7 +999,7 @@ export function apiRouter(): Router {
     const password = normalizeText(request.body.password);
 
     if (!email || !password) {
-      response.status(400).json({ error: 'Email and password are required' });
+      sendApiError(response, 400, 'auth.registrationInvalid');
       return;
     }
 
@@ -1008,7 +1016,7 @@ export function apiRouter(): Router {
       const valid = user ? await bcrypt.compare(password, user.passwordHash) : false;
 
       if (!valid) {
-        response.status(401).json({ error: 'Invalid credentials' });
+        sendApiError(response, 401, 'auth.invalidCredentials');
         return;
       }
 
@@ -1063,7 +1071,7 @@ export function apiRouter(): Router {
       );
 
       if (!result.rows[0]) {
-        response.status(404).json({ error: 'Notification not found' });
+        sendApiError(response, 404, 'notification.notFound');
         return;
       }
 
@@ -1180,7 +1188,7 @@ export function apiRouter(): Router {
     try {
       const existing = await getCurrentCouple(user.id);
       if (existing) {
-        response.status(409).json({ error: 'User is already in a couple', couple: existing });
+        sendApiError(response, 409, 'couple.alreadyConnected');
         return;
       }
 
@@ -1217,14 +1225,14 @@ export function apiRouter(): Router {
     const code = normalizeText(request.body.inviteCode).toUpperCase();
 
     if (!code) {
-      response.status(400).json({ error: 'Invite code is required' });
+      sendApiError(response, 400, 'couple.inviteCodeRequired');
       return;
     }
 
     try {
       const existing = await getCurrentCouple(user.id);
       if (existing) {
-        response.status(409).json({ error: 'User is already in a couple', couple: existing });
+        sendApiError(response, 409, 'couple.alreadyConnected');
         return;
       }
 
@@ -1245,7 +1253,7 @@ export function apiRouter(): Router {
       );
       const couple = coupleResult.rows[0];
       if (!couple) {
-        response.status(404).json({ error: 'Invite code not found' });
+        sendApiError(response, 404, 'couple.inviteCodeNotFound', { code });
         return;
       }
 
@@ -1253,7 +1261,7 @@ export function apiRouter(): Router {
         couple.id,
       ]);
       if (memberCount.rows[0].count >= 2) {
-        response.status(409).json({ error: 'Couple already has two members' });
+        sendApiError(response, 409, 'couple.full');
         return;
       }
 
@@ -1276,7 +1284,7 @@ export function apiRouter(): Router {
     try {
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
-        response.status(409).json({ error: 'No couple connected' });
+        sendApiError(response, 409, 'couple.notConnected');
         return;
       }
 
@@ -1307,7 +1315,7 @@ export function apiRouter(): Router {
     try {
       const payload = await buildTodayPayload(user.id);
       if (!payload) {
-        response.status(409).json({ error: 'No couple connected' });
+        sendApiError(response, 409, 'couple.notConnected');
         return;
       }
       response.json(payload);
@@ -1321,7 +1329,7 @@ export function apiRouter(): Router {
     const answerText = normalizeText(request.body.answerText);
 
     if (!answerText) {
-      response.status(400).json({ error: 'Answer text is required' });
+      sendApiError(response, 400, 'today.answerRequired');
       return;
     }
 
@@ -1329,13 +1337,13 @@ export function apiRouter(): Router {
     try {
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
-        response.status(409).json({ error: 'No couple connected' });
+        sendApiError(response, 409, 'couple.notConnected');
         return;
       }
 
       const member = await ensureCoupleMembership(user.id, couple.id);
       if (!member) {
-        response.status(403).json({ error: 'Couple access denied' });
+        sendApiError(response, 403, 'couple.accessDenied');
         return;
       }
 
@@ -1405,6 +1413,8 @@ export function apiRouter(): Router {
           type: 'daily_revealed',
           title: 'Eure Antworten sind sichtbar',
           body: 'Aus euren Antworten ist ein neuer Gartenmoment gewachsen.',
+          titleKey: 'notifications.titles.dailyRevealed',
+          bodyKey: 'notifications.bodies.dailyRevealed',
           sourceType: 'today',
           sourceId: instance.id,
         });
@@ -1416,6 +1426,9 @@ export function apiRouter(): Router {
           type: 'daily_answer_waiting',
           title: 'Eine Antwort wartet',
           body: `${user.displayName} hat die Tagesfrage beantwortet. Wenn du antwortest, seht ihr beide eure Gedanken.`,
+          titleKey: 'notifications.titles.dailyAnswerWaiting',
+          bodyKey: 'notifications.bodies.dailyAnswerWaiting',
+          params: { name: user.displayName },
           sourceType: 'today',
           sourceId: instance.id,
         });
@@ -1439,7 +1452,7 @@ export function apiRouter(): Router {
     try {
       const payload = await buildQuestPayload(user.id, normalizeQuestFilters(request.query));
       if (!payload) {
-        response.status(409).json({ error: 'No couple connected' });
+        sendApiError(response, 409, 'couple.notConnected');
         return;
       }
       response.json(payload);
@@ -1454,13 +1467,13 @@ export function apiRouter(): Router {
     try {
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
-        response.status(409).json({ error: 'No couple connected' });
+        sendApiError(response, 409, 'couple.notConnected');
         return;
       }
 
       const questResult = await pool.query('select id from quests where id = $1', [request.params.questId]);
       if (!questResult.rows[0]) {
-        response.status(404).json({ error: 'Quest not found' });
+        sendApiError(response, 404, 'quest.notFound');
         return;
       }
 
@@ -1491,7 +1504,7 @@ export function apiRouter(): Router {
     try {
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
-        response.status(409).json({ error: 'No couple connected' });
+        sendApiError(response, 409, 'couple.notConnected');
         return;
       }
 
@@ -1513,7 +1526,7 @@ export function apiRouter(): Router {
       const quest = questResult.rows[0];
       if (!quest) {
         await client.query('rollback');
-        response.status(404).json({ error: 'Quest not found' });
+        sendApiError(response, 404, 'quest.notFound');
         return;
       }
 
@@ -1579,6 +1592,9 @@ export function apiRouter(): Router {
           type: 'quest_completed',
           title: 'Quest abgeschlossen',
           body: `Eure Quest "${quest.title}" hat euren Garten wachsen lassen.`,
+          titleKey: 'notifications.titles.questCompleted',
+          bodyKey: 'notifications.bodies.questCompleted',
+          params: { title: quest.title },
           sourceType: 'quest',
           sourceId: coupleQuestId,
         });
@@ -1590,6 +1606,9 @@ export function apiRouter(): Router {
           type: 'quest_waiting_confirmation',
           title: 'Quest wartet auf dich',
           body: `${user.displayName} hat "${quest.title}" bestaetigt. Wenn es fuer dich auch passt, kannst du sie abschliessen.`,
+          titleKey: 'notifications.titles.questWaitingConfirmation',
+          bodyKey: 'notifications.bodies.questWaitingConfirmation',
+          params: { name: user.displayName, title: quest.title },
           sourceType: 'quest',
           sourceId: coupleQuestId,
         });
@@ -1613,7 +1632,7 @@ export function apiRouter(): Router {
     try {
       const payload = await buildKnowMePayload(user.id);
       if (!payload) {
-        response.status(409).json({ error: 'No couple connected' });
+        sendApiError(response, 409, 'couple.notConnected');
         return;
       }
       response.json(payload);
@@ -1632,17 +1651,17 @@ export function apiRouter(): Router {
     const correctOptionIndex = Number(request.body.correctOptionIndex);
 
     if (catalogQuestionId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(catalogQuestionId)) {
-      response.status(400).json({ error: 'Invalid catalog question id' });
+      sendApiError(response, 400, 'knowMe.invalidCatalogQuestionId');
       return;
     }
 
     if ((!catalogQuestionId && !freeQuestionText) || options.length < 2 || options.length > 4) {
-      response.status(400).json({ error: 'Question text and 2-4 answer options are required' });
+      sendApiError(response, 400, 'knowMe.questionInvalid');
       return;
     }
 
     if (!Number.isInteger(correctOptionIndex) || correctOptionIndex < 0 || correctOptionIndex >= options.length) {
-      response.status(400).json({ error: 'A valid correct option is required' });
+      sendApiError(response, 400, 'knowMe.correctOptionInvalid');
       return;
     }
 
@@ -1650,7 +1669,7 @@ export function apiRouter(): Router {
     try {
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
-        response.status(409).json({ error: 'No couple connected' });
+        sendApiError(response, 409, 'couple.notConnected');
         return;
       }
 
@@ -1668,7 +1687,7 @@ export function apiRouter(): Router {
         const catalogQuestion = catalogResult.rows[0];
         if (!catalogQuestion) {
           await client.query('rollback');
-          response.status(400).json({ error: 'Catalog question not found' });
+          sendApiError(response, 400, 'knowMe.catalogQuestionNotFound');
           return;
         }
 
@@ -1685,7 +1704,7 @@ export function apiRouter(): Router {
         );
         if ((alreadyUsedResult.rowCount ?? 0) > 0) {
           await client.query('rollback');
-          response.status(409).json({ error: 'Catalog question was already used by this author' });
+          sendApiError(response, 409, 'knowMe.catalogQuestionAlreadyUsed');
           return;
         }
 
@@ -1709,6 +1728,9 @@ export function apiRouter(): Router {
         type: 'know_me_question',
         title: 'Eine Kennst-du-mich-Frage wartet',
         body: `${user.displayName} hat eine Frage ueber sich gestellt. Was schaetzt du?`,
+        titleKey: 'notifications.titles.knowMeQuestion',
+        bodyKey: 'notifications.bodies.knowMeQuestion',
+        params: { name: user.displayName },
         sourceType: 'know_me',
         sourceId: questionId,
       });
@@ -1728,7 +1750,7 @@ export function apiRouter(): Router {
     const selectedOptionIndex = Number(request.body.selectedOptionIndex);
 
     if (!Number.isInteger(selectedOptionIndex) || selectedOptionIndex < 0 || selectedOptionIndex > 3) {
-      response.status(400).json({ error: 'A valid selected option is required' });
+      sendApiError(response, 400, 'knowMe.selectedOptionInvalid');
       return;
     }
 
@@ -1736,7 +1758,7 @@ export function apiRouter(): Router {
     try {
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
-        response.status(409).json({ error: 'No couple connected' });
+        sendApiError(response, 409, 'couple.notConnected');
         return;
       }
 
@@ -1762,25 +1784,25 @@ export function apiRouter(): Router {
       const question = questionResult.rows[0];
       if (!question) {
         await client.query('rollback');
-        response.status(404).json({ error: 'Know-me question not found' });
+        sendApiError(response, 404, 'knowMe.questionNotFound');
         return;
       }
 
       if (question.authorId === user.id) {
         await client.query('rollback');
-        response.status(403).json({ error: 'Author cannot guess their own question' });
+        sendApiError(response, 403, 'knowMe.authorCannotGuessOwnQuestion');
         return;
       }
 
       if (question.status !== 'open') {
         await client.query('rollback');
-        response.status(409).json({ error: 'Know-me question is already answered' });
+        sendApiError(response, 409, 'knowMe.questionAlreadyAnswered');
         return;
       }
 
       if (selectedOptionIndex >= question.options.length) {
         await client.query('rollback');
-        response.status(400).json({ error: 'Selected option does not exist' });
+        sendApiError(response, 400, 'knowMe.optionDoesNotExist');
         return;
       }
 
@@ -1808,6 +1830,9 @@ export function apiRouter(): Router {
         body: isCorrect
           ? `${user.displayName} hat dich richtig eingeschaetzt. Eine besondere Blume ist gewachsen.`
           : `${user.displayName} hat geraten. Nicht getroffen, aber ein neuer Gespraechsanlass.`,
+        titleKey: isCorrect ? 'notifications.titles.knowMeAnsweredHit' : 'notifications.titles.knowMeAnsweredMiss',
+        bodyKey: isCorrect ? 'notifications.bodies.knowMeAnsweredHit' : 'notifications.bodies.knowMeAnsweredMiss',
+        params: { name: user.displayName },
         sourceType: 'know_me',
         sourceId: question.id,
       });
@@ -1828,7 +1853,7 @@ export function apiRouter(): Router {
     try {
       const payload = await buildLoveJarPayload(user.id);
       if (!payload) {
-        response.status(409).json({ error: 'No couple connected' });
+        sendApiError(response, 409, 'couple.notConnected');
         return;
       }
       response.json(payload);
@@ -1844,12 +1869,12 @@ export function apiRouter(): Router {
     const validCategories = new Set(['compliment', 'memory', 'voucher', 'wish', 'surprise']);
 
     if (!text) {
-      response.status(400).json({ error: 'Note text is required' });
+      sendApiError(response, 400, 'loveJar.noteRequired');
       return;
     }
 
     if (!validCategories.has(category)) {
-      response.status(400).json({ error: 'Invalid note category' });
+      sendApiError(response, 400, 'loveJar.invalidCategory');
       return;
     }
 
@@ -1857,7 +1882,7 @@ export function apiRouter(): Router {
     try {
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
-        response.status(409).json({ error: 'No couple connected' });
+        sendApiError(response, 409, 'couple.notConnected');
         return;
       }
 
@@ -1878,6 +1903,9 @@ export function apiRouter(): Router {
         type: 'love_jar_note',
         title: 'Ein neuer Zettel wartet',
         body: `${user.displayName} hat etwas in euren Love Jar gelegt.`,
+        titleKey: 'notifications.titles.loveJarNote',
+        bodyKey: 'notifications.bodies.loveJarNote',
+        params: { name: user.displayName },
         sourceType: 'love_jar',
         sourceId: noteId,
       });
@@ -1900,7 +1928,7 @@ export function apiRouter(): Router {
     try {
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
-        response.status(409).json({ error: 'No couple connected' });
+        sendApiError(response, 409, 'couple.notConnected');
         return;
       }
 
@@ -1920,7 +1948,7 @@ export function apiRouter(): Router {
 
       if ((alreadyDrawnResult.rowCount ?? 0) > 0) {
         await client.query('rollback');
-        response.status(409).json({ error: 'You already drew a Love Jar note today' });
+        sendApiError(response, 409, 'loveJar.alreadyDrawnToday');
         return;
       }
 
@@ -1947,7 +1975,7 @@ export function apiRouter(): Router {
 
       if (!noteResult.rows[0]) {
         await client.query('rollback');
-        response.status(404).json({ error: 'No unread Love Jar note available' });
+        sendApiError(response, 404, 'loveJar.noUnreadNote');
         return;
       }
 
@@ -1976,7 +2004,7 @@ export function apiRouter(): Router {
     try {
       const payload = await buildMemoryPayload(user.id);
       if (!payload) {
-        response.status(409).json({ error: 'No couple connected' });
+        sendApiError(response, 409, 'couple.notConnected');
         return;
       }
       response.json(payload);
@@ -1994,17 +2022,17 @@ export function apiRouter(): Router {
     const validCategories = new Set(['date', 'travel', 'milestone', 'funny', 'everyday', 'special']);
 
     if (!title) {
-      response.status(400).json({ error: 'Memory title is required' });
+      sendApiError(response, 400, 'memory.titleRequired');
       return;
     }
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      response.status(400).json({ error: 'Memory date must be YYYY-MM-DD' });
+      sendApiError(response, 400, 'memory.invalidDate');
       return;
     }
 
     if (!validCategories.has(category)) {
-      response.status(400).json({ error: 'Invalid memory category' });
+      sendApiError(response, 400, 'memory.invalidCategory');
       return;
     }
 
@@ -2012,7 +2040,7 @@ export function apiRouter(): Router {
     try {
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
-        response.status(409).json({ error: 'No couple connected' });
+        sendApiError(response, 409, 'couple.notConnected');
         return;
       }
 
@@ -2039,6 +2067,9 @@ export function apiRouter(): Router {
         type: 'memory_created',
         title: 'Neue Erinnerung',
         body: `${user.displayName} hat "${title}" in eure Timeline gelegt.`,
+        titleKey: 'notifications.titles.memoryCreated',
+        bodyKey: 'notifications.bodies.memoryCreated',
+        params: { name: user.displayName, title },
         sourceType: 'memory',
         sourceId: memoryId,
       });
@@ -2058,7 +2089,7 @@ export function apiRouter(): Router {
     const user = currentUser(request);
     const couple = await getCurrentCouple(user.id);
     if (!couple) {
-      response.status(409).json({ error: 'No couple connected' });
+      sendApiError(response, 409, 'couple.notConnected');
       return;
     }
 
@@ -2100,11 +2131,11 @@ export function apiRouter(): Router {
     try {
       const payload = await buildGardenObjectDetail(user.id, objectId);
       if (!payload) {
-        response.status(409).json({ error: 'No couple connected' });
+        sendApiError(response, 409, 'couple.notConnected');
         return;
       }
       if (!payload.object) {
-        response.status(404).json({ error: 'Garden object not found' });
+        sendApiError(response, 404, 'garden.objectNotFound');
         return;
       }
       response.json(payload);
