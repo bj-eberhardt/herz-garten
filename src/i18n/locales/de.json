@@ -4,7 +4,7 @@
     "brandStart": "Herzgarten Start",
     "save": "Speichern",
     "saving": "Speichert...",
-    "close": "Schliessen",
+    "close": "Schließen",
     "copy": "Kopieren",
     "copied": "Kopiert",
     "all": "Alle",
@@ -34,20 +34,22 @@
   "auth": {
     "onboarding": "Onboarding",
     "welcomeTitle": "Willkommen in eurem Herzgarten.",
-    "introGuest": "Erstellt ein Konto oder loggt euch ein. Danach koennt ihr einen vorhandenen Partnercode eingeben oder einen neuen Paarraum anlegen.",
-    "introNoCouple": "Dein Konto ist bereit. Verbinde dich jetzt nachtraeglich mit dem Partnercode oder lege euren gemeinsamen Garten an.",
-    "introCouple": "Teilt euren Paar-Code, damit dein Partner jederzeit nachtraeglich beitreten kann.",
+    "introGuest": "Erstellt ein Konto oder loggt euch ein. Danach könnt ihr einen vorhandenen Partnercode eingeben oder einen neuen Paarraum anlegen.",
+    "introNoCouple": "Dein Konto ist bereit. Verbinde dich jetzt nachträglich mit dem Partnercode oder lege euren gemeinsamen Garten an.",
+    "introCouple": "Teilt euren Paar-Code, damit dein Partner jederzeit nachträglich beitreten kann.",
+    "howTitle": "Was ist das?",
+    "howText": "Herzgarten ist euer geschützter Paarraum. Erst wenn beide im selben Raum sind, werden Fragen, Quests, Zettel, Erinnerungen und Gartenmomente miteinander geteilt.",
     "modeLabel": "Auth Modus",
     "register": "Registrieren",
     "login": "Login",
     "createAccount": "Konto erstellen",
     "loginAction": "Einloggen",
     "hello": "Hallo {name}",
-    "coupleCodeText": "Euer Paar-Code ist {code}. Dein Partner kann ihn auch spaeter nach dem Login eingeben.",
+    "coupleCodeText": "Euer Paar-Code ist {code}. Dein Partner kann ihn auch später nach dem Login eingeben.",
     "coupleCodePrefix": "Euer Paar-Code ist",
-    "coupleCodeSuffix": "Dein Partner kann ihn auch spaeter nach dem Login eingeben.",
+    "coupleCodeSuffix": "Dein Partner kann ihn auch später nach dem Login eingeben.",
     "copyCode": "Code kopieren",
-    "enterPartnerCodeLater": "Partnercode nachtraeglich eingeben",
+    "enterPartnerCodeLater": "Partnercode nachträglich eingeben",
     "enterPartnerCodeHint": "Wenn dein Partner den Garten schon angelegt hat, trage hier den Code ein. Danach landet ihr beide im selben Paarraum.",
     "partnerCode": "Partnercode",
     "connectPartner": "Mit Partner verbinden",
@@ -64,23 +66,27 @@
       "balanced": "Ausgewogen",
       "romantic": "Romantisch",
       "playful": "Verspielt",
-      "deep": "Tiefgruendig"
+      "deep": "Tiefgründig"
     }
   },
   "today": {
     "eyebrow": "Euer Heute",
-    "title": "Kleine Momente lassen euren Garten weiterbluehen.",
+    "title": "Kleine Momente lassen euren Garten weiterblühen.",
+    "howTitle": "Was ist das?",
+    "howText": "Jeden Tag wartet eine Frage auf euch beide. Deine Antwort bleibt verborgen, bis dein Partner am selben Tag ebenfalls antwortet; erst dann werden beide Antworten sichtbar.",
     "heartPoints": "{count} Herzpunkt | {count} Herzpunkte",
     "gardenStage": "Gartenstufe {stage}",
     "dailyQuestion": "Tagesfrage",
     "noQuestion": "Keine Tagesfrage geladen.",
-    "waitingStatus": "Deine Antwort ist gespeichert. Sie wird sichtbar, sobald dein Partner geantwortet hat.",
+    "waitingStatus": "Deine Antwort ist gespeichert. Sie wird nur sichtbar, wenn dein Partner heute ebenfalls antwortet.",
     "answerPlaceholder": "Deine Antwort bleibt verborgen, bis beide geantwortet haben.",
     "sendAnswer": "Antwort senden"
   },
   "quests": {
     "eyebrow": "Quests",
-    "title": "Sanfte Aufgaben fuer mehr Naehe.",
+    "title": "Sanfte Aufgaben für mehr Nähe.",
+    "howTitle": "Was ist das?",
+    "howText": "Quests sind kleine gemeinsame Aufgaben. Ihr könnt eine Quest annehmen und später abschließen; bei vielen Quests zählt der Abschluss erst, wenn beide ihn bestätigen.",
     "loading": "Quests werden geladen...",
     "filters": {
       "category": "Kategorie",
@@ -103,32 +109,34 @@
     },
     "sections": {
       "activeEyebrow": "Aktiv",
-      "activeTitle": "Bereit zum Abschliessen",
+      "activeTitle": "Bereit zum Abschließen",
       "openEyebrow": "Offen",
-      "openTitle": "Neue Vorschlaege",
+      "openTitle": "Neue Vorschläge",
       "completedEyebrow": "Abgeschlossen",
       "completedTitle": "Erledigte Quests",
       "emptyOpen": "Keine offenen Quests im Moment."
     },
     "status": {
-      "bothConfirm": "Beide Partner bestaetigen den Abschluss.",
-      "ready": "Bereit zum Abschliessen.",
+      "bothConfirm": "Beide Partner bestätigen den Abschluss.",
+      "ready": "Bereit zum Abschließen.",
       "completed": "Diese Quest hat bereits Gartenpunkte erzeugt."
     },
     "actions": {
       "completed": "Abgeschlossen",
       "waitingPartner": "Wartet auf Partner",
-      "confirmComplete": "Abschluss bestaetigen",
+      "confirmComplete": "Abschluss bestätigen",
       "accept": "Annehmen"
     }
   },
   "garden": {
     "eyebrow": "Herzgarten",
     "title": "Eure gemeinsamen Momente werden sichtbar.",
+    "howTitle": "Was ist das?",
+    "howText": "Der Garten zeigt, was ihr gemeinsam erlebt habt. Antworten, Quests, Love-Jar-Zettel, Erinnerungen und Spieltreffer lassen neue Objekte wachsen.",
     "loading": "Garten wird geladen...",
     "canvasLabel": "Herzgarten",
     "progressEyebrow": "Fortschritt",
-    "progressTitle": "Euer Garten waechst durch echte Momente.",
+    "progressTitle": "Euer Garten wächst durch echte Momente.",
     "defaultTitle": "Gartenmoment",
     "dailyQuestion": "Tagesfrage",
     "loveJarNote": "Love-Jar-Zettel",
@@ -137,21 +145,21 @@
     "doneWas": "Erledigt wurde",
     "inLoveJar": "Im Love Jar lag",
     "recordedWas": "Festgehalten wurde",
-    "guessedCorrectlyWas": "Richtig eingeschaetzt wurde",
+    "guessedCorrectlyWas": "Richtig eingeschätzt wurde",
     "correct": "Richtig:",
     "guessed": "Geraten:",
     "rewardPoints": "Belohnung: {count} Herzpunkte",
     "hiddenLoveJar": "Dieser Love-Jar-Zettel bleibt verborgen, bis er gezogen wurde.",
     "loveJarMeta": "Von {author} · Kategorie {category}",
-    "knowMeSuccess": "Ihr kennt euch ein Stueck besser. +12 Herzpunkte",
-    "noDetails": "Fuer dieses Objekt sind noch keine Details hinterlegt.",
+    "knowMeSuccess": "Ihr kennt euch ein Stück besser. +12 Herzpunkte",
+    "noDetails": "Für dieses Objekt sind noch keine Details hinterlegt.",
     "celebration": {
-      "default": "Dieser Gartenmoment gehoert zu eurer gemeinsamen Geschichte.",
-      "question": "Diese Blume ist gewachsen, weil ihr beide euch Zeit fuer dieselbe Frage genommen habt.",
+      "default": "Dieser Gartenmoment gehört zu eurer gemeinsamen Geschichte.",
+      "question": "Diese Blume ist gewachsen, weil ihr beide euch Zeit für dieselbe Frage genommen habt.",
       "quest": "Dieses Objekt feiert eure abgeschlossene Quest: {title}.",
       "loveJar": "Dieses Licht erinnert an einen kleinen Zettel, der in euren Love Jar gelegt wurde.",
       "memory": "Dieser Stein bewahrt eure Erinnerung: {title}.",
-      "knowMe": "Diese besondere Blume ist gewachsen, weil ihr euch richtig eingeschaetzt habt."
+      "knowMe": "Diese besondere Blume ist gewachsen, weil ihr euch richtig eingeschätzt habt."
     },
     "progress": {
       "dailyQuestions": "Tagesfragen",
@@ -171,18 +179,22 @@
   "knowMe": {
     "eyebrow": "Mini-Game",
     "title": "Wie gut kennst du mich?",
-    "intro": "Stellt euch kleine Multiple-Choice-Fragen. Ein Treffer laesst eine besondere Blume im Garten wachsen.",
+    "intro": "Stellt euch kleine Multiple-Choice-Fragen. Ein Treffer lässt eine besondere Blume im Garten wachsen.",
+    "howTitle": "Was ist das?",
+    "howText": "Du stellst eine Frage über dich und legst mögliche Antworten fest. Dein Partner rät, was zu dir passt; danach seht ihr die Auflösung und bekommt bei einem Treffer einen Gartenmoment.",
     "loading": "Spiel wird geladen...",
     "createEyebrow": "Frage stellen",
-    "createTitle": "Erzaehl etwas ueber dich, das dein Partner einschaetzen darf.",
+    "createTitle": "Erzähl etwas über dich, das dein Partner einschätzen darf.",
     "yourQuestion": "Deine Frage",
-    "questionPlaceholder": "Was waere mein perfekter Sonntag?",
+    "questionPlaceholder": "Was wäre mein perfekter Sonntag?",
     "catalogSource": "Vorschlag aus dem Katalog",
     "ownSource": "Eigene Frage",
-    "catalogEmpty": "Du hast alle passenden Vorschlaege schon gestellt. Du kannst jederzeit eine eigene Frage schreiben.",
+    "catalogEmpty": "Du hast alle passenden Vorschläge schon gestellt. Du kannst jederzeit eine eigene Frage schreiben.",
     "option": "Option {number}",
-    "answerOptionPlaceholder": "Antwortmoeglichkeit",
+    "answerOptionPlaceholder": "Antwortmöglichkeit",
     "correctAnswer": "Richtige Antwort",
+    "correctAnswerPlaceholder": "Das passt wirklich zu mir",
+    "correctAnswerHint": "Hier muss die richtige Antwort rein. Wir mischen die Reihenfolge, bevor dein Partner die Frage sieht.",
     "sendQuestion": "Frage senden",
     "toGuessEyebrow": "Zum Raten",
     "toGuessTitle": "Offene Fragen deines Partners",
@@ -195,22 +207,26 @@
     "playedEyebrow": "Gespielt",
     "playedTitle": "Was ihr schon herausgefunden habt",
     "hit": "Treffer",
-    "resolved": "Aufgeloest",
+    "resolved": "Aufgelöst",
     "correct": "Richtig:",
     "guessed": "Geraten:",
-    "success": "Ihr kennt euch ein Stueck besser. Im Garten ist eine besondere Blume gewachsen.",
-    "miss": "Nicht getroffen, aber ein neuer Gespraechsanlass."
+    "success": "Ihr kennt euch ein Stück besser. Im Garten ist eine besondere Blume gewachsen.",
+    "miss": "Nicht getroffen, aber ein neuer Gesprächsanlass."
   },
   "loveJar": {
     "eyebrow": "Love Jar",
     "title": "Ein Glas voller kleiner Zettel.",
-    "howTitle": "Wie funktioniert das?",
-    "howText": "Ihr legt kurze Botschaften ins Glas. Ziehen ist bewusst langsam: Jede Person kann pro Tag nur einen Zettel ziehen. Partnerzettel haben Vorrang, damit der Moment sich wie eine kleine Nachricht vom anderen anfuehlt.",
+    "howTitle": "Was ist das?",
+    "howText": "Ihr legt kurze Botschaften ins Glas. Ziehen ist bewusst langsam: Jede Person kann pro Tag nur einen Zettel ziehen. Deine eigenen Zettel bleiben für dich verschlossen, nur dein Partner kann sie ziehen. So fühlt sich jeder Moment wie eine kleine Nachricht vom anderen an.",
     "composerEyebrow": "Zettel schreiben",
     "composerTitle": "Was passt gut ins Glas?",
-    "composerHint": "Kleine Saetze reichen: ein Kompliment, ein Dank, eine Erinnerung, ein Wunsch oder ein Gutschein fuer einen Moment zu zweit.",
+    "composerHint": "Kleine Sätze reichen: ein Kompliment, ein Dank, eine Erinnerung, ein Wunsch oder ein Gutschein für einen Moment zu zweit.",
+    "templatesTitle": "Vorlagen",
+    "templatesPage": "{current} / {total}",
+    "previousTemplates": "Vorherige Vorlagen",
+    "nextTemplates": "Nächste Vorlagen",
     "newNote": "Neuer Zettel",
-    "notePlaceholder": "Heute moechte ich dir sagen ...",
+    "notePlaceholder": "Heute möchte ich dir sagen ...",
     "saveNote": "In das Glas legen",
     "drawEyebrow": "Heute ziehen",
     "drawTitle": "Ein Zettel pro Tag",
@@ -219,11 +235,18 @@
     "drawing": "Zieht...",
     "empty": "Noch keine Zettel im Glas. Fangt mit einem Kompliment, einem Danke oder einem kleinen Gutschein an.",
     "nothingDrawable": "Es ist gerade nichts ziehbar. Schreibt neue Zettel, damit morgen wieder etwas im Glas wartet.",
-    "unreadNote": "Ein ungelesener Zettel wartet.",
+    "unreadNote": "Ein ungelesener Zettel wartet auf dich.",
+    "ownUnreadNote": "Das ist dein Zettel. Er bleibt liebevoll verschlossen, bis dein Partner ihn zieht.",
+    "fromAuthor": "Von {name}",
+    "noteStatus": {
+      "opened": "geöffnet",
+      "ownLocked": "für deinen Partner",
+      "partnerLocked": "für dich verschlossen"
+    },
     "drawHints": {
       "drawnToday": "Du hast heute schon einen Zettel gezogen. Morgen ist wieder ein neuer Moment dran.",
-      "partnerUnread": "Ein Partner-Zettel wartet. Eigene Zettel bleiben zurueckgestellt. | {count} Partner-Zettel warten. Eigene Zettel bleiben zurueckgestellt.",
-      "ownUnread": "Es warten nur eigene Zettel. Du kannst einen als Rueckblick ziehen oder erst neue Partnerzettel sammeln.",
+      "partnerUnread": "Ein Partner-Zettel wartet. Eigene Zettel bleiben zurückgestellt. | {count} Partner-Zettel warten. Eigene Zettel bleiben zurückgestellt.",
+      "ownUnread": "Im Glas liegen gerade nur deine eigenen Zettel. Sie sind für deinen Partner gedacht und bleiben für dich verschlossen.",
       "none": "Gerade ist kein ungelesener Zettel im Glas. Schreibt euch neue kleine Botschaften."
     },
     "categories": {
@@ -231,16 +254,18 @@
       "memory": "Erinnerung",
       "voucher": "Gutschein",
       "wish": "Wunsch",
-      "surprise": "Ueberraschung"
+      "surprise": "Überraschung"
     }
   },
   "memories": {
     "eyebrow": "Erinnerungen",
-    "title": "Bewahrt die Momente, aus denen euer Garten waechst.",
+    "title": "Bewahrt die Momente, aus denen euer Garten wächst.",
+    "howTitle": "Was ist das?",
+    "howText": "Erinnerungen sind eure gemeinsame Timeline. Haltet kleine oder große Momente mit Datum und Kategorie fest, damit sie später im Garten wieder sichtbar werden.",
     "newMemory": "Neue Erinnerung",
     "titlePlaceholder": "Titel der Erinnerung",
     "description": "Beschreibung",
-    "descriptionPlaceholder": "Was moechtest du festhalten?",
+    "descriptionPlaceholder": "Was möchtest du festhalten?",
     "date": "Datum",
     "empty": "Noch keine Erinnerungen.",
     "categories": {
@@ -255,6 +280,8 @@
   "notifications": {
     "eyebrow": "Benachrichtigungen",
     "title": "Kleine Hinweise aus eurem Herzgarten.",
+    "howTitle": "Was ist das?",
+    "howText": "Hier landen Hinweise, wenn im Paarraum etwas auf dich wartet: Antworten, Quest-Bestätigungen, neue Zettel, Erinnerungen oder Spielrunden.",
     "unread": "keine ungelesenen Hinweise | ein ungelesener Hinweis | {count} ungelesene Hinweise",
     "hint": "Hier landen nur sanfte In-App-Hinweise, keine Push-Nachrichten.",
     "readAll": "Alle gelesen",
@@ -275,48 +302,65 @@
     "bodies": {
       "dailyAnswerWaiting": "{name} hat die Tagesfrage beantwortet. Jetzt fehlst noch du.",
       "dailyRevealed": "Ihr habt beide geantwortet. Eine neue Blume ist gewachsen.",
-      "questWaitingConfirmation": "{name} hat \"{title}\" bestaetigt. Wenn es fuer dich auch passt, kannst du sie abschliessen.",
+      "questWaitingConfirmation": "{name} hat \"{title}\" bestätigt. Wenn es für dich auch passt, kannst du sie abschließen.",
       "questCompleted": "Eure Quest \"{title}\" hat euren Garten wachsen lassen.",
       "loveJarNote": "{name} hat etwas in euren Love Jar gelegt.",
       "memoryCreated": "{name} hat \"{title}\" in eure Timeline gelegt.",
-      "knowMeQuestion": "{name} hat eine Frage ueber sich gestellt. Was schaetzt du?",
-      "knowMeAnsweredHit": "{name} hat dich richtig eingeschaetzt. Eine besondere Blume ist gewachsen.",
-      "knowMeAnsweredMiss": "{name} hat geraten. Nicht getroffen, aber ein neuer Gespraechsanlass.",
-      "coupleDisconnected": "{name} hat das Konto geloescht. Eure Paarung wurde deshalb getrennt. Du kannst dich jetzt neu paaren."
+      "knowMeQuestion": "{name} hat eine Frage über sich gestellt. Was schätzt du?",
+      "knowMeAnsweredHit": "{name} hat dich richtig eingeschätzt. Eine besondere Blume ist gewachsen.",
+      "knowMeAnsweredMiss": "{name} hat geraten. Nicht getroffen, aber ein neuer Gesprächsanlass.",
+      "coupleDisconnected": "{name} hat das Konto gelöscht. Eure Paarung wurde deshalb getrennt. Du kannst dich jetzt neu paaren."
     }
   },
   "settings": {
     "eyebrow": "Profil",
     "title": "Paarraum und Datenschutz.",
+    "howTitle": "Was ist das?",
+    "howText": "Hier verwaltest du dein Konto und euren Paarraum. Du kannst Daten exportieren, dich ausloggen, den Paarraum verlassen oder dein Konto löschen.",
     "user": "Nutzer:",
     "email": "E-Mail:",
     "coupleCode": "Paar-Code:",
     "relationshipMode": "Beziehungsmodus:",
     "contentStyle": "Content-Stil:",
-    "privacyNote": "Keine oeffentlichen Profile. Kein Beziehungsscore.",
+    "privacyNote": "Keine öffentlichen Profile. Kein Beziehungsscore.",
+    "hintSettingsEyebrow": "Hinweise",
+    "hintSettingsTitle": "Erklärboxen anzeigen",
+    "hintSettingsText": "Lege pro Bereich fest, ob die kurze „Was ist das?“-Box angezeigt werden soll. Ausgeblendete Hinweise kannst du hier jederzeit wieder aktivieren.",
+    "hintSettingsSaved": "Hinweis-Einstellung wurde gespeichert.",
+    "featureExplainers": {
+      "onboarding": "Onboarding",
+      "today": "Heute",
+      "quests": "Quests",
+      "garden": "Garten",
+      "knowMe": "Spiel",
+      "loveJar": "Love Jar",
+      "memories": "Momente",
+      "notifications": "Benachrichtigungen",
+      "settings": "Profil"
+    },
     "privacyTitle": "Datenschutz auf einen Blick",
-    "privacyIntro": "Herzgarten zeigt nur Inhalte innerhalb deines aktuellen Paarraums. Export, Paarraum verlassen und Kontoloeschung betreffen genau diesen geschuetzten Bereich.",
+    "privacyIntro": "Herzgarten zeigt nur Inhalte innerhalb deines aktuellen Paarraums. Export, Paarraum verlassen und Kontolöschung betreffen genau diesen geschützten Bereich.",
     "privacyPrivateTitle": "Was bleibt privat?",
-    "privacyPrivateText": "Dein Konto, deine E-Mail-Adresse und deine persoenlichen Aktionen sind nicht oeffentlich sichtbar. Es gibt keine Profile ausserhalb eures Paarraums.",
+    "privacyPrivateText": "Dein Konto, deine E-Mail-Adresse und deine persönlichen Aktionen sind nicht öffentlich sichtbar. Es gibt keine Profile außerhalb eures Paarraums.",
     "privacyPartnerTitle": "Was sieht dein Partner?",
-    "privacyPartnerText": "Dein Partner sieht geteilte Antworten, Quests, Erinnerungen, Love-Jar-Eintraege und Spielantworten, sobald sie fuer euren Paarraum freigegeben sind.",
+    "privacyPartnerText": "Dein Partner sieht geteilte Antworten, Quests, Erinnerungen, Love-Jar-Einträge und Spielantworten, sobald sie für euren Paarraum freigegeben sind.",
     "privacyLeaveTitle": "Was passiert beim Paarraum verlassen?",
     "privacyLeaveText": "Dein Konto bleibt bestehen, aber die Verbindung zum aktuellen Paarraum wird entfernt. Du kannst danach einen neuen Paarraum erstellen oder einem anderen beitreten.",
-    "privacyDeleteTitle": "Was passiert beim Konto loeschen?",
-    "privacyDeleteText": "Dein Konto wird dauerhaft entfernt. Eigene personenbezogene Inhalte und daraus entstandene Gartenobjekte werden bereinigt; leere Paarraeume werden geloescht.",
+    "privacyDeleteTitle": "Was passiert beim Konto löschen?",
+    "privacyDeleteText": "Dein Konto wird dauerhaft entfernt. Eigene personenbezogene Inhalte und daraus entstandene Gartenobjekte werden bereinigt; leere Paarräume werden gelöscht.",
     "exportCreated": "Export wurde erstellt.",
     "confirmLeave": "Paarraum wirklich verlassen?",
-    "confirmDelete": "Konto wirklich dauerhaft loeschen?",
+    "confirmDelete": "Konto wirklich dauerhaft löschen?",
     "exportData": "Daten exportieren",
     "logout": "Ausloggen",
     "leaveCouple": "Paarraum verlassen",
-    "deleteAccount": "Konto loeschen"
+    "deleteAccount": "Konto löschen"
   },
   "errors": {
     "common": {
       "unexpected": "Da ist etwas schiefgelaufen. Bitte versuche es gleich noch einmal.",
-      "network": "Die Verbindung zum Server ist gerade nicht moeglich. Bitte versuche es gleich noch einmal.",
-      "validation": "Bitte pruefe deine Eingaben."
+      "network": "Die Verbindung zum Server ist gerade nicht möglich. Bitte versuche es gleich noch einmal.",
+      "validation": "Bitte prüfe deine Eingaben."
     },
     "auth": {
       "missingToken": "Deine Sitzung fehlt. Bitte logge dich erneut ein.",
@@ -328,30 +372,30 @@
     "couple": {
       "alreadyConnected": "Du bist bereits mit einem Paarraum verbunden.",
       "inviteCodeRequired": "Bitte gib einen Paar-Code ein.",
-      "inviteCodeNotFound": "Diesen Paar-Code konnten wir nicht finden. Bitte pruefe den Code noch einmal.",
+      "inviteCodeNotFound": "Diesen Paar-Code konnten wir nicht finden. Bitte prüfe den Code noch einmal.",
       "full": "Dieser Paarraum hat bereits zwei Mitglieder.",
       "notConnected": "Du bist noch mit keinem Paarraum verbunden.",
       "accessDenied": "Du hast keinen Zugriff auf diesen Paarraum."
     },
     "today": {
       "answerRequired": "Bitte schreibe zuerst eine Antwort.",
-      "noActiveQuestion": "Gerade ist keine aktive Tagesfrage verfuegbar."
+      "noActiveQuestion": "Gerade ist keine aktive Tagesfrage verfügbar."
     },
     "quest": {
       "notFound": "Diese Quest konnten wir nicht finden.",
       "invalidAction": "Diese Quest kann gerade nicht aktualisiert werden."
     },
     "knowMe": {
-      "invalidCatalogQuestionId": "Der ausgewaehlte Fragenvorschlag ist ungueltig.",
-      "questionInvalid": "Bitte schreibe eine Frage und mindestens zwei Antwortmoeglichkeiten.",
-      "correctOptionInvalid": "Bitte waehle eine gueltige richtige Antwort.",
+      "invalidCatalogQuestionId": "Der ausgewählte Fragenvorschlag ist ungültig.",
+      "questionInvalid": "Bitte schreibe eine Frage und mindestens zwei Antwortmöglichkeiten.",
+      "correctOptionInvalid": "Bitte wähle eine gültige richtige Antwort.",
       "catalogQuestionNotFound": "Diesen Fragenvorschlag konnten wir nicht finden.",
       "catalogQuestionAlreadyUsed": "Diesen Fragenvorschlag hast du schon gestellt.",
-      "selectedOptionInvalid": "Bitte waehle eine gueltige Antwort.",
+      "selectedOptionInvalid": "Bitte wähle eine gültige Antwort.",
       "questionNotFound": "Diese Kennst-du-mich-Frage konnten wir nicht finden.",
       "authorCannotGuessOwnQuestion": "Diese Frage hast du selbst erstellt. Dein Partner darf raten.",
       "questionAlreadyAnswered": "Diese Frage wurde bereits beantwortet.",
-      "optionDoesNotExist": "Diese Antwortmoeglichkeit gibt es nicht."
+      "optionDoesNotExist": "Diese Antwortmöglichkeit gibt es nicht."
     },
     "loveJar": {
       "noteRequired": "Bitte schreibe zuerst einen Zettel.",
@@ -361,7 +405,7 @@
     },
     "memory": {
       "titleRequired": "Bitte gib der Erinnerung einen Titel.",
-      "invalidDate": "Bitte waehle ein gueltiges Datum.",
+      "invalidDate": "Bitte wähle ein gültiges Datum.",
       "invalidCategory": "Diese Erinnerungs-Kategorie gibt es nicht."
     },
     "garden": {
@@ -391,7 +435,8 @@
       "knowMeGuess": "Antwort konnte nicht gespeichert werden.",
       "export": "Export fehlgeschlagen.",
       "leaveCouple": "Paarraum konnte nicht verlassen werden.",
-      "deleteAccount": "Konto konnte nicht geloescht werden."
+      "deleteAccount": "Konto konnte nicht gelöscht werden.",
+      "preferences": "Profil-Einstellungen konnten nicht gespeichert werden."
     }
   },
   "content": {
@@ -400,28 +445,29 @@
       "Danke, dass du ...",
       "Mein liebster Moment mit dir war ...",
       "Ich freue mich mit dir auf ...",
-      "Gutschein fuer ...",
-      "Heute moechte ich dir sagen ...",
+      "Gutschein für ...",
+      "Heute möchte ich dir sagen ...",
       "Du hast meinen Tag leichter gemacht, weil ...",
       "Ich musste an dich denken, als ...",
       "Eine kleine Sache, die ich an dir bewundere, ist ...",
-      "Wenn wir bald Zeit haben, wuensche ich mir ...",
+      "Wenn wir bald Zeit haben, wünsche ich mir ...",
       "Mein Herzmoment der Woche mit dir war ...",
-      "Ich fuehle mich dir nah, wenn ...",
-      "Eine Erinnerung, die ich gern wiederholen wuerde, ist ...",
+      "Ich fühle mich dir nah, wenn ...",
+      "Eine Erinnerung, die ich gern wiederholen würde, ist ...",
       "Ich bin stolz auf uns, weil ...",
-      "Gutschein fuer einen Abend ohne Handy: ...",
+      "Gutschein für einen Abend ohne Handy: ...",
       "Heute schenke ich dir diesen Gedanken: ...",
-      "Was du vielleicht zu selten hoerst: ...",
-      "Ich freue mich auf unser naechstes ...",
-      "Ein kleines Versprechen fuer diese Woche: ...",
-      "Du bringst mich zum Laecheln, wenn ...",
-      "Ich moechte dir bald wieder zeigen, dass ...",
-      "Ein Wunsch fuer uns beide: ...",
-      "Danke fuer deine Geduld bei ...",
-      "Ich fuehle mich sicher mit dir, wenn ...",
-      "Ein Mini-Date, das ich gern mit dir haette: ...",
+      "Was du vielleicht zu selten hörst: ...",
+      "Ich freue mich auf unser nächstes ...",
+      "Ein kleines Versprechen für diese Woche: ...",
+      "Du bringst mich zum Lächeln, wenn ...",
+      "Ich möchte dir bald wieder zeigen, dass ...",
+      "Ein Wunsch für uns beide: ...",
+      "Danke für deine Geduld bei ...",
+      "Ich fühle mich sicher mit dir, wenn ...",
+      "Ein Mini-Date, das ich gern mit dir hätte: ...",
       "Was ich an unserem Alltag liebe: ..."
     ]
   }
 }
+

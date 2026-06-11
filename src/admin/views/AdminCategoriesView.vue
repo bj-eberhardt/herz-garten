@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import { Plus, Save, Trash2 } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
 
-type ContentType = 'daily-questions' | 'quests' | 'know-me-catalog' | 'love-jar-templates';
+type ContentType = 'daily-questions' | 'quests' | 'know-me-catalog' | 'love-jar-templates' | 'memories';
 
 interface LocaleOption {
   locale: string;
@@ -27,6 +27,7 @@ const contentTypes: Array<{ id: ContentType; label: string }> = [
   { id: 'quests', label: 'Quests' },
   { id: 'know-me-catalog', label: 'Know Me' },
   { id: 'love-jar-templates', label: 'Love Jar' },
+  { id: 'memories', label: 'Memories' },
 ];
 
 const selectedType = ref<ContentType>('daily-questions');
@@ -128,7 +129,7 @@ async function deleteCategory(category: CategoryItem) {
     });
     items.value = payload.items;
   } catch {
-    error.value = 'Kategorie kann nur geloescht werden, wenn sie nicht verwendet wird.';
+    error.value = 'Kategorie kann nur gelöscht werden, wenn sie nicht verwendet wird.';
   }
 }
 
@@ -167,7 +168,7 @@ onMounted(async () => {
       <label class="admin-checkbox"><input v-model="form.active" type="checkbox" /> Aktiv</label>
 
       <section class="admin-translation-box">
-        <h2>Uebersetzungen</h2>
+        <h2>Übersetzungen</h2>
         <div v-for="locale in locales" :key="locale.locale" class="admin-translation-row">
           <strong>{{ locale.locale }}</strong>
           <input v-model="form.translations[locale.locale].label" :placeholder="`Label ${locale.locale}`" />
@@ -182,7 +183,7 @@ onMounted(async () => {
 
     <div class="admin-table-header">
       <div class="admin-toolbar">
-        <p class="muted">Kategorien koennen nur geloescht werden, solange sie nicht verwendet werden.</p>
+        <p class="muted">Kategorien können nur gelöscht werden, solange sie nicht verwendet werden.</p>
       </div>
       <button class="primary-button" type="button" data-testid="admin-category-new" @click="openNew">
         <Plus :size="18" aria-hidden="true" />

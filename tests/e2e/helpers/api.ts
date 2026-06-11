@@ -1,7 +1,7 @@
 import type { APIRequestContext, BrowserContext, Page } from '@playwright/test';
 import type { TestUser } from './testUsers';
 
-const apiBaseURL = process.env.E2E_API_URL ?? 'http://localhost:3000';
+const apiBaseURL = process.env.E2E_API_URL ?? 'http://localhost:3001';
 
 function authHeaders(token?: string, headers: Record<string, string> = {}) {
   return {
@@ -60,6 +60,19 @@ export async function apiPostRaw(
   headers: Record<string, string> = {},
 ) {
   return request.post(`${apiBaseURL}${path}`, {
+    data: body,
+    headers: authHeaders(token, headers),
+  });
+}
+
+export async function apiPatchRaw(
+  request: APIRequestContext,
+  path: string,
+  body: unknown = {},
+  token?: string,
+  headers: Record<string, string> = {},
+) {
+  return request.patch(`${apiBaseURL}${path}`, {
     data: body,
     headers: authHeaders(token, headers),
   });

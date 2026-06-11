@@ -92,6 +92,7 @@ test.describe('daily question api', () => {
       409,
       'couple.notConnected',
     );
+    await expectApiError(await apiPostRaw(request, '/api/today/answer', {}, user.token), 400, 'today.answerRequired');
     await expectApiError(await apiPostRaw(request, '/api/today/answer', { answerText: '' }, user.token), 400, 'today.answerRequired');
   });
 });

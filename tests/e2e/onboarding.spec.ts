@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { registerByApi } from './helpers/api';
 import { createCoupleViaUi, registerViaUi } from './helpers/auth';
 import { testRunId, testUser } from './helpers/testUsers';
 
@@ -26,14 +27,18 @@ test('partner can register separately and join later with invite code', async ({
 
 test('wrong invite code shows a clear error', async ({ page }) => {
   await registerViaUi(page, testUser('bad-code'));
-  await page.getByTestId('invite-code-input').fill('HERZ-0000');
+  await page.getByTestId('invite-code-input').fill('apfel-sonne-0000');
   await page.getByTestId('join-couple-submit').click();
   await expect(page.getByTestId('couple-error')).toBeVisible();
   await expect(page.getByTestId('couple-error')).toContainText('Diesen Paar-Code konnten wir nicht finden');
 });
 
-test('authenticated user without couple is routed to onboarding', async ({ page }) => {
-  await registerViaUi(page, testUser('no-couple'));
+test('authenticated user without couple is routed to onboarding', async ({ page, request }) => {
+  const auth = await registerByApi(request, testUser('no-couple', testRunId()));
+  await page.goto('/onboarding');
+  await page.evaluate((token) => {
+    window.localStorage.setItem('herzgarten_token', token);
+  }, auth.token);
   await page.goto('/today');
   await expect(page).toHaveURL(/\/onboarding$/);
   await expect(page.getByTestId('join-couple-form')).toBeVisible();

@@ -294,6 +294,12 @@ select {
   width: 100%;
 }
 
+.form-submitted :is(input, textarea, select):required:invalid,
+.form-submitted .required-invalid {
+  border-color: #d6453d;
+  box-shadow: 0 0 0 3px rgba(214, 69, 61, 0.14);
+}
+
 textarea {
   resize: vertical;
 }
@@ -366,6 +372,66 @@ textarea {
   padding: 14px;
 }
 
+.love-note-card {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  position: relative;
+}
+
+.love-note-card.locked-note {
+  background:
+    linear-gradient(135deg, rgba(255, 250, 246, 0.94), rgba(255, 241, 239, 0.82)),
+    #fff8f2;
+  border-style: dashed;
+}
+
+.love-note-card.own-note {
+  background:
+    linear-gradient(135deg, rgba(238, 245, 223, 0.9), rgba(255, 250, 246, 0.88)),
+    #f8fbef;
+  border-color: #d7e6c7;
+}
+
+.love-note-seal {
+  align-items: center;
+  background: #fffaf6;
+  border: 1px solid #efd7ca;
+  border-radius: 8px;
+  color: #9f4f42;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 48px;
+  justify-content: center;
+  width: 56px;
+}
+
+.own-note .love-note-seal {
+  border-color: #c9ddba;
+  color: #5f7948;
+}
+
+.love-note-seal svg {
+  fill: rgba(248, 184, 168, 0.18);
+  height: 32px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.8;
+  width: 42px;
+}
+
+.love-note-author {
+  color: #806456;
+  font-size: 0.84rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.love-note-text {
+  margin-bottom: 0;
+}
+
 .card-grid {
   display: grid;
   gap: 14px;
@@ -394,16 +460,21 @@ textarea {
 }
 
 .quest-filters {
-  align-items: end;
+  align-items: stretch;
   display: grid;
-  gap: 10px;
+  gap: 14px;
   grid-template-columns: repeat(4, minmax(150px, 1fr));
 }
 
-.quest-filters label {
+.quest-filter-field {
+  align-content: center;
+  display: grid;
+  gap: 6px;
+}
+
+.quest-filter-field label {
   font-size: 0.78rem;
   font-weight: 800;
-  margin-bottom: -4px;
   text-transform: uppercase;
 }
 
@@ -436,7 +507,20 @@ textarea {
 }
 
 .note-card.drawn {
-  background: #fff4cc;
+  background:
+    linear-gradient(180deg, rgba(255, 250, 232, 0.96), rgba(255, 244, 204, 0.94)),
+    #fff4cc;
+  border-color: #e8cb85;
+  box-shadow: 0 18px 45px rgba(116, 73, 55, 0.1);
+  padding: 20px;
+}
+
+.note-card.drawn .love-note-text {
+  color: #4f4038;
+  font-family: "Segoe Print", "Bradley Hand", "Noteworthy", cursive;
+  font-size: 1.08rem;
+  line-height: 1.75;
+  max-width: 62ch;
 }
 
 .feature-explainer,
@@ -447,9 +531,54 @@ textarea {
   gap: 12px;
 }
 
+.feature-explainer {
+  padding-right: 52px;
+  position: relative;
+}
+
 .feature-explainer p,
 .draw-header p {
   margin-bottom: 0;
+}
+
+.feature-explainer-close {
+  align-items: center;
+  background: #fff8f2;
+  border: 1px solid #efd7ca;
+  border-radius: 8px;
+  color: #806456;
+  cursor: pointer;
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: 36px;
+}
+
+.feature-explainer-close:hover,
+.feature-explainer-close:focus-visible {
+  background: #fff1ef;
+  color: #7e4a3f;
+}
+
+.feature-explainer-icon {
+  color: #9f4f42;
+  flex: 0 0 auto;
+  height: 64px;
+  width: 64px;
+}
+
+@media (min-width: 720px) {
+  .feature-explainer {
+    gap: 20px;
+  }
+
+  .feature-explainer-icon {
+    height: 100px;
+    width: 100px;
+  }
 }
 
 .draw-panel {
@@ -489,6 +618,74 @@ textarea {
 
 .settings-list p {
   margin-bottom: 0;
+}
+
+.hint-settings {
+  display: grid;
+  gap: 18px;
+}
+
+.hint-settings p {
+  margin-bottom: 0;
+}
+
+.toggle-list {
+  display: grid;
+  gap: 10px;
+}
+
+.toggle-row {
+  align-items: center;
+  background: #fff8f2;
+  border: 1px solid #efd7ca;
+  border-radius: 8px;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.toggle-row span {
+  font-weight: 800;
+}
+
+.toggle-row input {
+  appearance: none;
+  background: #d3b69b;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  height: 28px;
+  position: relative;
+  transition: background 0.15s ease;
+  width: 52px;
+}
+
+.toggle-row input::after {
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(95, 70, 59, 0.22);
+  content: "";
+  height: 22px;
+  left: 3px;
+  position: absolute;
+  top: 3px;
+  transition: transform 0.15s ease;
+  width: 22px;
+}
+
+.toggle-row input:checked {
+  background: #7c8f68;
+}
+
+.toggle-row input:checked::after {
+  transform: translateX(24px);
+}
+
+.toggle-row input:focus-visible {
+  outline: 3px solid rgba(239, 125, 112, 0.28);
+  outline-offset: 2px;
 }
 
 .privacy-details {
@@ -740,6 +937,36 @@ textarea {
   gap: 8px;
 }
 
+.template-section {
+  display: grid;
+  gap: 10px;
+}
+
+.template-header {
+  align-items: center;
+  color: #806456;
+  display: flex;
+  font-size: 0.86rem;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.template-header strong {
+  color: #7e4a3f;
+  font-size: 0.9rem;
+}
+
+.template-header span {
+  font-weight: 800;
+}
+
+.template-browser {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto 1fr auto;
+}
+
 .template-chip {
   background: #fff8f2;
   border: 1px solid #efd7ca;
@@ -754,6 +981,25 @@ textarea {
   padding: 8px 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.template-page-button {
+  align-items: center;
+  background: #eef5df;
+  border: 1px solid #d7e6c7;
+  border-radius: 8px;
+  color: #4f6e3d;
+  cursor: pointer;
+  display: inline-flex;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.template-page-placeholder {
+  display: block;
+  height: 40px;
+  width: 40px;
 }
 
 .question-source {
@@ -836,6 +1082,29 @@ textarea {
 .answer-option {
   display: grid;
   gap: 6px;
+}
+
+.know-me-option-grid label:first-child {
+  background: #f3faec;
+  border: 1px solid #c9ddba;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.option-label-text {
+  font-weight: 800;
+}
+
+.correct-answer-input {
+  border-color: #7fa36c;
+  box-shadow: 0 0 0 3px rgba(127, 163, 108, 0.14);
+}
+
+.field-hint {
+  color: #4f6e3d;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .answer-option {

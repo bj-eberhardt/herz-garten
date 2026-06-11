@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
+import { HeartHandshake } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
+import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
 import QuestCard from '@/components/quests/QuestCard.vue';
 import { useAuthStore } from '@/stores/authStore';
 import { useQuestStore } from '@/stores/questStore';
@@ -31,62 +33,72 @@ const completedQuests = computed(() =>
       <h1>{{ t('quests.title') }}</h1>
     </section>
 
+    <FeatureExplainer feature-key="quests" :icon="HeartHandshake" :title="t('quests.howTitle')" :text="t('quests.howText')" />
+
     <p v-if="questStore.error" class="form-error">{{ questStore.error }}</p>
     <p v-if="questStore.loading" class="muted">{{ t('quests.loading') }}</p>
 
     <section class="panel quest-filters" data-testid="quest-filters">
-      <label for="quest-category-filter">{{ t('quests.filters.category') }}</label>
-      <select
-        id="quest-category-filter"
-        v-model="questStore.filters.category"
-        data-testid="quest-filter-category"
-        @change="questStore.loadQuests()"
-      >
-        <option value="all">{{ t('quests.filters.all') }}</option>
-        <option v-for="category in questStore.categories" :key="category.value" :value="category.value">
-          {{ category.label }}
-        </option>
-      </select>
+      <div class="quest-filter-field">
+        <label for="quest-category-filter">{{ t('quests.filters.category') }}</label>
+        <select
+          id="quest-category-filter"
+          v-model="questStore.filters.category"
+          data-testid="quest-filter-category"
+          @change="questStore.loadQuests()"
+        >
+          <option value="all">{{ t('quests.filters.all') }}</option>
+          <option v-for="category in questStore.categories" :key="category.value" :value="category.value">
+            {{ category.label }}
+          </option>
+        </select>
+      </div>
 
-      <label for="quest-effort-filter">{{ t('quests.filters.effort') }}</label>
-      <select
-        id="quest-effort-filter"
-        v-model="questStore.filters.effortLevel"
-        data-testid="quest-filter-effort"
-        @change="questStore.loadQuests()"
-      >
-        <option value="all">{{ t('quests.filters.all') }}</option>
-        <option value="low">{{ t('quests.filters.low') }}</option>
-        <option value="medium">{{ t('quests.filters.medium') }}</option>
-        <option value="high">{{ t('quests.filters.high') }}</option>
-      </select>
+      <div class="quest-filter-field">
+        <label for="quest-effort-filter">{{ t('quests.filters.effort') }}</label>
+        <select
+          id="quest-effort-filter"
+          v-model="questStore.filters.effortLevel"
+          data-testid="quest-filter-effort"
+          @change="questStore.loadQuests()"
+        >
+          <option value="all">{{ t('quests.filters.all') }}</option>
+          <option value="low">{{ t('quests.filters.low') }}</option>
+          <option value="medium">{{ t('quests.filters.medium') }}</option>
+          <option value="high">{{ t('quests.filters.high') }}</option>
+        </select>
+      </div>
 
-      <label for="quest-duration-filter">{{ t('quests.filters.duration') }}</label>
-      <select
-        id="quest-duration-filter"
-        v-model="questStore.filters.maxMinutes"
-        data-testid="quest-filter-duration"
-        @change="questStore.loadQuests()"
-      >
-        <option value="all">{{ t('quests.filters.all') }}</option>
-        <option value="5">{{ t('quests.filters.upToMinutes', { count: 5 }) }}</option>
-        <option value="10">{{ t('quests.filters.upToMinutes', { count: 10 }) }}</option>
-        <option value="15">{{ t('quests.filters.upToMinutes', { count: 15 }) }}</option>
-        <option value="30">{{ t('quests.filters.upToMinutes', { count: 30 }) }}</option>
-      </select>
+      <div class="quest-filter-field">
+        <label for="quest-duration-filter">{{ t('quests.filters.duration') }}</label>
+        <select
+          id="quest-duration-filter"
+          v-model="questStore.filters.maxMinutes"
+          data-testid="quest-filter-duration"
+          @change="questStore.loadQuests()"
+        >
+          <option value="all">{{ t('quests.filters.all') }}</option>
+          <option value="5">{{ t('quests.filters.upToMinutes', { count: 5 }) }}</option>
+          <option value="10">{{ t('quests.filters.upToMinutes', { count: 10 }) }}</option>
+          <option value="15">{{ t('quests.filters.upToMinutes', { count: 15 }) }}</option>
+          <option value="30">{{ t('quests.filters.upToMinutes', { count: 30 }) }}</option>
+        </select>
+      </div>
 
-      <label for="quest-mode-filter">{{ t('quests.filters.mode') }}</label>
-      <select
-        id="quest-mode-filter"
-        v-model="questStore.filters.mode"
-        data-testid="quest-filter-mode"
-        @change="questStore.loadQuests()"
-      >
-        <option value="all">{{ t('quests.filters.all') }}</option>
-        <option value="together">{{ t('quests.filters.together') }}</option>
-        <option value="solo">{{ t('quests.filters.solo') }}</option>
-        <option value="long_distance">{{ t('quests.filters.long_distance') }}</option>
-      </select>
+      <div class="quest-filter-field">
+        <label for="quest-mode-filter">{{ t('quests.filters.mode') }}</label>
+        <select
+          id="quest-mode-filter"
+          v-model="questStore.filters.mode"
+          data-testid="quest-filter-mode"
+          @change="questStore.loadQuests()"
+        >
+          <option value="all">{{ t('quests.filters.all') }}</option>
+          <option value="together">{{ t('quests.filters.together') }}</option>
+          <option value="solo">{{ t('quests.filters.solo') }}</option>
+          <option value="long_distance">{{ t('quests.filters.long_distance') }}</option>
+        </select>
+      </div>
     </section>
 
     <section v-if="activeQuests.length" class="quest-section" data-testid="quests-active-section">

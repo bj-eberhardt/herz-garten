@@ -1,18 +1,19 @@
 import { test, type APIRequestContext } from '@playwright/test';
-import { apiDeleteRaw, apiGetRaw, apiPostRaw } from '../helpers/api';
+import { apiDeleteRaw, apiGetRaw, apiPatchRaw, apiPostRaw } from '../helpers/api';
 import { expectApiError } from '../helpers/apiAssertions';
 
-type Method = 'GET' | 'POST' | 'DELETE';
+type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 
 const protectedEndpoints: Array<{ method: Method; path: string; body?: unknown }> = [
   { method: 'GET', path: '/api/me' },
+  { method: 'PATCH', path: '/api/me/preferences', body: { featureExplainers: { today: false } } },
   { method: 'GET', path: '/api/notifications' },
   { method: 'POST', path: '/api/notifications/read-all' },
   { method: 'POST', path: '/api/notifications/not-a-notification/read' },
   { method: 'GET', path: '/api/me/export' },
   { method: 'DELETE', path: '/api/me' },
   { method: 'POST', path: '/api/couples' },
-  { method: 'POST', path: '/api/couples/join', body: { inviteCode: 'HERZ-0000' } },
+  { method: 'POST', path: '/api/couples/join', body: { inviteCode: 'apfel-sonne-0000' } },
   { method: 'POST', path: '/api/couples/leave' },
   { method: 'GET', path: '/api/today' },
   { method: 'POST', path: '/api/today/answer', body: { answerText: 'Test' } },
@@ -33,6 +34,7 @@ const protectedEndpoints: Array<{ method: Method; path: string; body?: unknown }
 
 async function callEndpoint(request: APIRequestContext, endpoint: (typeof protectedEndpoints)[number], token?: string) {
   if (endpoint.method === 'GET') return apiGetRaw(request, endpoint.path, token);
+  if (endpoint.method === 'PATCH') return apiPatchRaw(request, endpoint.path, endpoint.body ?? {}, token);
   if (endpoint.method === 'DELETE') return apiDeleteRaw(request, endpoint.path, token);
   return apiPostRaw(request, endpoint.path, endpoint.body ?? {}, token);
 }

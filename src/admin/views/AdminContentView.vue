@@ -65,8 +65,8 @@ const currentCategories = computed(() => categories.value.filter((category) => c
 const defaultLocale = computed(() => locales.value.find((locale) => locale.isDefault) ?? locales.value[0] ?? null);
 const defaultLanguageHint = computed(() =>
   defaultLocale.value
-    ? `Default-Sprache / Fallback: ${defaultLocale.value.label} (${defaultLocale.value.locale}). Die Basisfelder speichern den Fallback; ein Eintrag in den Uebersetzungen kann diesen Text fuer dieselbe Sprache explizit ueberschreiben.`
-    : 'Default-Sprache / Fallback. Die Basisfelder speichern den Fallback; Uebersetzungen koennen ihn pro Sprache ueberschreiben.',
+    ? `Default-Sprache / Fallback: ${defaultLocale.value.label} (${defaultLocale.value.locale}). Die Basisfelder speichern den Fallback; ein Eintrag in den Übersetzungen kann diesen Text für dieselbe Sprache explizit überschreiben.`
+    : 'Default-Sprache / Fallback. Die Basisfelder speichern den Fallback; Übersetzungen können ihn pro Sprache überschreiben.',
 );
 
 function emptyForm(type: ContentType): ContentItem {
@@ -124,7 +124,7 @@ async function scrollToForm() {
 
 function validateForm() {
   const nextErrors: Record<string, string> = {};
-  if (!form.category) nextErrors.category = 'Bitte waehle eine Kategorie aus den gepflegten Kategorien.';
+  if (!form.category) nextErrors.category = 'Bitte wähle eine Kategorie aus den gepflegten Kategorien.';
 
   if (selectedType.value === 'daily-questions') {
     if (!form.text?.trim()) nextErrors.text = 'Bitte gib den Fragetext ein.';
@@ -133,7 +133,7 @@ function validateForm() {
   if (selectedType.value === 'quests') {
     if (!form.title?.trim()) nextErrors.title = 'Bitte gib einen Titel ein.';
     if (!form.description?.trim()) nextErrors.description = 'Bitte gib eine Beschreibung ein.';
-    if (!form.estimatedMinutes || form.estimatedMinutes < 1) nextErrors.estimatedMinutes = 'Minuten muessen groesser als 0 sein.';
+    if (!form.estimatedMinutes || form.estimatedMinutes < 1) nextErrors.estimatedMinutes = 'Minuten müssen größer als 0 sein.';
     if (!form.rewardPoints || form.rewardPoints < 0) nextErrors.rewardPoints = 'Punkte duerfen nicht negativ sein.';
   }
   if (selectedType.value === 'know-me-catalog' && !form.questionText?.trim()) {
@@ -240,7 +240,7 @@ onMounted(async () => {
       <label>
         Kategorie
         <select v-model="form.category" data-testid="admin-content-category">
-          <option value="">Bitte waehlen</option>
+          <option value="">Bitte wählen</option>
           <option v-for="category in currentCategories" :key="category.id" :value="category.value">{{ category.label }}</option>
         </select>
         <small v-if="errors.category" class="admin-field-error">{{ errors.category }}</small>
@@ -255,7 +255,7 @@ onMounted(async () => {
         <label>
           Tiefe
           <input v-model.number="form.depthLevel" min="1" max="4" type="number" />
-          <small>Beschreibt die emotionale Intensitaet der Frage: 1 ist leicht und alltagsnah, 4 ist sehr persoenlich und tiefgehend.</small>
+          <small>Beschreibt die emotionale Intensität der Frage: 1 ist leicht und alltagsnah, 4 ist sehr persönlich und tiefgehend.</small>
           <small v-if="errors.depthLevel" class="admin-field-error">{{ errors.depthLevel }}</small>
         </label>
         <label class="admin-checkbox">
@@ -279,7 +279,7 @@ onMounted(async () => {
         </label>
         <label>Punkte<input v-model.number="form.rewardPoints" min="0" type="number" /><small v-if="errors.rewardPoints" class="admin-field-error">{{ errors.rewardPoints }}</small></label>
         <label>Seed<input v-model="form.rewardSeedType" /></label>
-        <label class="admin-checkbox"><input v-model="form.requiresBothPartners" type="checkbox" /> Beide Partner muessen bestaetigen</label>
+        <label class="admin-checkbox"><input v-model="form.requiresBothPartners" type="checkbox" /> Beide Partner müssen bestätigen</label>
       </template>
 
       <template v-if="selectedType === 'know-me-catalog'">
@@ -293,8 +293,8 @@ onMounted(async () => {
       </template>
 
       <section class="admin-translation-box">
-        <h2>Uebersetzungen</h2>
-        <p class="muted">Die Default-Sprache wird oben als Fallback gespeichert und ist hier sichtbar, falls sie explizit gepflegt oder ueberschrieben werden soll.</p>
+        <h2>Übersetzungen</h2>
+        <p class="muted">Die Default-Sprache wird oben als Fallback gespeichert und ist hier sichtbar, falls sie explizit gepflegt oder überschrieben werden soll.</p>
         <div v-for="locale in locales" :key="locale.locale" class="admin-translation-row">
           <strong>{{ locale.locale }}{{ locale.isDefault ? ' · Default' : '' }}</strong>
           <template v-if="selectedType === 'quests'">

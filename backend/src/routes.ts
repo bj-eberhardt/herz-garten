@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import type { Request, Response, Router } from 'express';
 import { Router as createRouter } from 'express';
 import { currentUser, requireAuth, signToken } from './auth.js';
@@ -9,6 +9,18 @@ import { handleError, sendApiError } from './errors.js';
 interface Queryable {
   query: typeof pool.query;
 }
+
+const defaultFeatureExplainerPreferences: Record<string, boolean> = {
+  onboarding: true,
+  today: true,
+  quests: true,
+  garden: true,
+  knowMe: true,
+  loveJar: true,
+  memories: true,
+  notifications: true,
+  settings: true,
+};
 
 const gardenPositions = [
   [18, 62],
@@ -25,6 +37,27 @@ function normalizeEmail(email: unknown) {
 
 function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function shuffleKnowMeOptions(options: string[], correctOptionIndex: number) {
+  const indexedOptions = options.map((option, index) => ({ option, wasCorrect: index === correctOptionIndex }));
+
+  for (let index = indexedOptions.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomInt(index + 1);
+    [indexedOptions[index], indexedOptions[swapIndex]] = [indexedOptions[swapIndex], indexedOptions[index]];
+  }
+
+  let shuffledCorrectOptionIndex = indexedOptions.findIndex((option) => option.wasCorrect);
+  if (correctOptionIndex === 0 && shuffledCorrectOptionIndex === 0 && indexedOptions.length > 1) {
+    const swapIndex = randomInt(1, indexedOptions.length);
+    [indexedOptions[0], indexedOptions[swapIndex]] = [indexedOptions[swapIndex], indexedOptions[0]];
+    shuffledCorrectOptionIndex = swapIndex;
+  }
+
+  return {
+    options: indexedOptions.map((option) => option.option),
+    correctOptionIndex: shuffledCorrectOptionIndex,
+  };
 }
 
 function todayIsoDate() {
@@ -72,7 +105,54 @@ function publicUser(row: { id: string; email: string; displayName: string }) {
     id: row.id,
     email: row.email,
     displayName: row.displayName,
+    preferences: normalizeUserPreferences('preferences' in row ? row.preferences : undefined),
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function normalizeBooleanRecord(value: unknown) {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(Object.entries(value).filter((entry): entry is [string, boolean] => typeof entry[1] === 'boolean'));
+}
+
+function normalizeUserPreferences(value: unknown) {
+  const preferences = isRecord(value) ? value : {};
+  return {
+    ...preferences,
+    featureExplainers: {
+      ...defaultFeatureExplainerPreferences,
+      ...normalizeBooleanRecord(preferences.featureExplainers),
+    },
+  };
+}
+
+function mergeUserPreferences(current: unknown, patch: unknown) {
+  const normalizedCurrent = normalizeUserPreferences(current);
+  if (!isRecord(patch)) return normalizedCurrent;
+
+  return {
+    ...normalizedCurrent,
+    ...patch,
+    featureExplainers: {
+      ...normalizedCurrent.featureExplainers,
+      ...normalizeBooleanRecord(patch.featureExplainers),
+    },
+  };
+}
+
+async function getPublicUser(userId: string) {
+  const result = await pool.query(
+    `
+      select id, email, display_name as "displayName", preferences
+      from profiles
+      where id = $1
+    `,
+    [userId],
+  );
+  return result.rows[0] ? publicUser(result.rows[0]) : null;
 }
 
 async function getCurrentCouple(userId: string) {
@@ -441,6 +521,31 @@ async function buildQuestPayload(userId: string, filters: QuestFilters = {}, loc
   };
 }
 
+async function buildContentCategoryPayload(contentType: string, locale = 'de') {
+  const result = await pool.query(
+    `
+      select
+        c.value,
+        coalesce(requested.label, fallback.label, c.label) as label
+      from content_categories c
+      left join content_category_translations requested on requested.category_id = c.id and requested.locale = $2
+      left join content_category_translations fallback on fallback.category_id = c.id and fallback.locale = 'de'
+      where c.content_type = $1 and c.active = true
+      order by c.sort_order, label
+    `,
+    [contentType, locale],
+  );
+  return result.rows;
+}
+
+async function isActiveContentCategory(contentType: string, value: string) {
+  const result = await pool.query(
+    'select 1 from content_categories where content_type = $1 and value = $2 and active = true limit 1',
+    [contentType, value],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
 function gardenTypeForQuest(category: string) {
   if (category === 'date') return 'decoration';
   if (category === 'memory') return 'stone';
@@ -492,6 +597,7 @@ function mapLoveJarNote(row: Record<string, unknown>, revealText = true) {
     authorName: row.authorName,
     text: revealText ? row.text : null,
     category: row.category,
+    categoryLabel: row.categoryLabel,
     isDrawn: row.isDrawn,
     drawnAt: row.drawnAt,
     createdAt: row.createdAt,
@@ -509,6 +615,7 @@ function mapMemoryEntry(row: Record<string, unknown>) {
     date: row.date,
     imageUrl: row.imageUrl,
     category: row.category,
+    categoryLabel: row.categoryLabel,
     linkedGardenObjectId: row.linkedGardenObjectId,
     createdAt: row.createdAt,
   };
@@ -599,7 +706,7 @@ async function buildNotificationPayload(userId: string) {
   };
 }
 
-async function buildMemoryPayload(userId: string) {
+async function buildMemoryPayload(userId: string, locale = 'de') {
   const couple = await getCurrentCouple(userId);
   if (!couple) {
     return null;
@@ -617,18 +724,50 @@ async function buildMemoryPayload(userId: string) {
         m.date,
         m.image_url as "imageUrl",
         m.category,
+        coalesce(
+          requested_category.label,
+          fallback_category.label,
+          category.label,
+          case
+            when $2 = 'en' then
+              case m.category
+                when 'everyday' then 'Everyday'
+                when 'date' then 'Date'
+                when 'travel' then 'Travel'
+                when 'milestone' then 'Milestone'
+                when 'funny' then 'Funny'
+                when 'special' then 'Special'
+              end
+            else
+              case m.category
+                when 'everyday' then 'Alltag'
+                when 'date' then 'Date'
+                when 'travel' then 'Reise'
+                when 'milestone' then 'Meilenstein'
+                when 'funny' then 'Lustig'
+                when 'special' then 'Besonders'
+              end
+          end,
+          m.category
+        ) as "categoryLabel",
         m.linked_garden_object_id as "linkedGardenObjectId",
         m.created_at as "createdAt"
       from memory_entries m
       join profiles p on p.id = m.author_id
+      left join content_categories category on category.content_type = 'memories' and category.value = m.category
+      left join content_category_translations requested_category
+        on requested_category.category_id = category.id and requested_category.locale = $2
+      left join content_category_translations fallback_category
+        on fallback_category.category_id = category.id and fallback_category.locale = 'de'
       where m.couple_id = $1
       order by m.date desc, m.created_at desc
     `,
-    [couple.id],
+    [couple.id, locale],
   );
 
   return {
     couple,
+    categories: await buildContentCategoryPayload('memories', locale),
     memories: result.rows.map(mapMemoryEntry),
   };
 }
@@ -761,7 +900,7 @@ async function createKnowMeFlower(client: Queryable, coupleId: string, questionI
   await client.query('update know_me_questions set reward_applied_at = now() where id = $1', [questionId]);
 }
 
-async function buildGardenObjectDetail(userId: string, objectId: string) {
+async function buildGardenObjectDetail(userId: string, objectId: string, locale = 'de') {
   const couple = await getCurrentCouple(userId);
   if (!couple) {
     return null;
@@ -847,14 +986,20 @@ async function buildGardenObjectDetail(userId: string, objectId: string) {
           p.display_name as "authorName",
           case when n.is_drawn then n.text else null end as text,
           n.category,
+          coalesce(requested_category.label, fallback_category.label, category.label, n.category) as "categoryLabel",
           n.is_drawn as "isDrawn",
           n.drawn_at as "drawnAt",
           n.created_at as "createdAt"
         from love_jar_notes n
         join profiles p on p.id = n.author_id
+        left join content_categories category on category.content_type = 'love-jar-templates' and category.value = n.category
+        left join content_category_translations requested_category
+          on requested_category.category_id = category.id and requested_category.locale = $3
+        left join content_category_translations fallback_category
+          on fallback_category.category_id = category.id and fallback_category.locale = 'de'
         where n.id = $1 and n.couple_id = $2
       `,
-      [object.sourceId, couple.id],
+      [object.sourceId, couple.id, locale],
     );
     source = result.rows[0] ? { type: 'love_jar', ...result.rows[0] } : null;
   }
@@ -869,12 +1014,43 @@ async function buildGardenObjectDetail(userId: string, objectId: string) {
           m.description,
           m.date,
           m.category,
+          coalesce(
+            requested_category.label,
+            fallback_category.label,
+            category.label,
+            case
+              when $3 = 'en' then
+                case m.category
+                  when 'everyday' then 'Everyday'
+                  when 'date' then 'Date'
+                  when 'travel' then 'Travel'
+                  when 'milestone' then 'Milestone'
+                  when 'funny' then 'Funny'
+                  when 'special' then 'Special'
+                end
+              else
+                case m.category
+                  when 'everyday' then 'Alltag'
+                  when 'date' then 'Date'
+                  when 'travel' then 'Reise'
+                  when 'milestone' then 'Meilenstein'
+                  when 'funny' then 'Lustig'
+                  when 'special' then 'Besonders'
+                end
+            end,
+            m.category
+          ) as "categoryLabel",
           m.created_at as "createdAt"
         from memory_entries m
         join profiles p on p.id = m.author_id
+        left join content_categories category on category.content_type = 'memories' and category.value = m.category
+        left join content_category_translations requested_category
+          on requested_category.category_id = category.id and requested_category.locale = $3
+        left join content_category_translations fallback_category
+          on fallback_category.category_id = category.id and fallback_category.locale = 'de'
         where m.id = $1 and m.couple_id = $2
       `,
-      [object.sourceId, couple.id],
+      [object.sourceId, couple.id, locale],
     );
     source = result.rows[0] ? { type: 'memory', ...result.rows[0] } : null;
   }
@@ -953,7 +1129,7 @@ async function buildGardenProgress(coupleId: string) {
   );
 }
 
-async function buildLoveJarPayload(userId: string) {
+async function buildLoveJarPayload(userId: string, locale = 'de') {
   const couple = await getCurrentCouple(userId);
   if (!couple) {
     return null;
@@ -968,15 +1144,21 @@ async function buildLoveJarPayload(userId: string) {
         p.display_name as "authorName",
         n.text,
         n.category,
+        coalesce(requested_category.label, fallback_category.label, category.label, n.category) as "categoryLabel",
         n.is_drawn as "isDrawn",
         n.drawn_at as "drawnAt",
         n.created_at as "createdAt"
       from love_jar_notes n
       join profiles p on p.id = n.author_id
+      left join content_categories category on category.content_type = 'love-jar-templates' and category.value = n.category
+      left join content_category_translations requested_category
+        on requested_category.category_id = category.id and requested_category.locale = $2
+      left join content_category_translations fallback_category
+        on fallback_category.category_id = category.id and fallback_category.locale = 'de'
       where n.couple_id = $1
       order by n.created_at desc
     `,
-    [couple.id],
+    [couple.id, locale],
   );
   const statusResult = await pool.query(
     `
@@ -1002,7 +1184,7 @@ async function buildLoveJarPayload(userId: string) {
     notes: result.rows.map((note) => mapLoveJarNote(note, Boolean(note.isDrawn))),
     drawStatus: {
       drawnToday: Boolean(status.drawnToday),
-      canDrawToday: !status.drawnToday && (status.partnerUnreadCount > 0 || status.ownUnreadCount > 0),
+      canDrawToday: !status.drawnToday && status.partnerUnreadCount > 0,
       partnerUnreadCount: status.partnerUnreadCount,
       ownUnreadCount: status.ownUnreadCount,
     },
@@ -1015,17 +1197,26 @@ async function buildLoveJarTemplatePayload(locale = 'de') {
       select
         t.id,
         coalesce(requested.text, fallback.text, t.text) as text,
-        t.category
+        t.category,
+        coalesce(requested_category.label, fallback_category.label, category.label, t.category) as "categoryLabel"
       from love_jar_templates t
       left join love_jar_template_translations requested on requested.template_id = t.id and requested.locale = $1
       left join love_jar_template_translations fallback on fallback.template_id = t.id and fallback.locale = 'de'
+      left join content_categories category on category.content_type = 'love-jar-templates' and category.value = t.category
+      left join content_category_translations requested_category
+        on requested_category.category_id = category.id and requested_category.locale = $1
+      left join content_category_translations fallback_category
+        on fallback_category.category_id = category.id and fallback_category.locale = 'de'
       where t.active = true
       order by t.sort_order, t.text
     `,
     [locale],
   );
 
-  return { templates: result.rows };
+  return {
+    categories: await buildContentCategoryPayload('love-jar-templates', locale),
+    templates: result.rows,
+  };
 }
 
 async function createLoveJarLight(client: Queryable, coupleId: string, noteId: string) {
@@ -1055,15 +1246,138 @@ async function createLoveJarLight(client: Queryable, coupleId: string, noteId: s
   );
 }
 
-function inviteCode() {
-  const number = Math.floor(1000 + Math.random() * 9000);
-  return `HERZ-${number}`;
+const inviteCodeWords: Record<string, string[]> = {
+  de: [
+    'abend',
+    'anker',
+    'apfel',
+    'aster',
+    'bach',
+    'beere',
+    'birke',
+    'blume',
+    'brise',
+    'bruecke',
+    'duft',
+    'eiche',
+    'falter',
+    'feder',
+    'feuer',
+    'flamme',
+    'garten',
+    'glanz',
+    'hafen',
+    'herz',
+    'himmel',
+    'insel',
+    'kakao',
+    'kerze',
+    'kirsch',
+    'kleeblatt',
+    'kompass',
+    'kranz',
+    'laterne',
+    'lilie',
+    'licht',
+    'mandel',
+    'meer',
+    'melodie',
+    'mond',
+    'morgen',
+    'muschel',
+    'nebel',
+    'nest',
+    'olive',
+    'pfad',
+    'quelle',
+    'regen',
+    'rose',
+    'schatz',
+    'schimmer',
+    'segel',
+    'sonne',
+    'stern',
+    'strand',
+    'tau',
+    'traum',
+    'ufer',
+    'wald',
+    'wiese',
+    'wind',
+    'wolke',
+    'wunder',
+  ],
+  en: [
+    'anchor',
+    'apple',
+    'beacon',
+    'berry',
+    'bloom',
+    'bridge',
+    'brook',
+    'candle',
+    'cedar',
+    'charm',
+    'clover',
+    'cocoa',
+    'comet',
+    'compass',
+    'dawn',
+    'ember',
+    'feather',
+    'field',
+    'flame',
+    'garden',
+    'glimmer',
+    'harbor',
+    'heart',
+    'honey',
+    'island',
+    'lantern',
+    'lily',
+    'maple',
+    'meadow',
+    'melody',
+    'moon',
+    'nest',
+    'olive',
+    'pebble',
+    'petal',
+    'river',
+    'rose',
+    'sail',
+    'shell',
+    'shore',
+    'spark',
+    'spring',
+    'star',
+    'stone',
+    'sun',
+    'thread',
+    'tide',
+    'trail',
+    'violet',
+    'willow',
+    'wind',
+    'wonder',
+  ],
+};
+
+function inviteCode(locale = 'de') {
+  const words = inviteCodeWords[locale] ?? inviteCodeWords.de;
+  const first = words[randomInt(words.length)];
+  let second = words[randomInt(words.length)];
+  while (second === first) {
+    second = words[randomInt(words.length)];
+  }
+  const number = String(randomInt(1000, 10000));
+  return `${first}-${second}-${number}`;
 }
 
-async function createUniqueInviteCode() {
+async function createUniqueInviteCode(locale = 'de') {
   for (let attempt = 0; attempt < 10; attempt += 1) {
-    const code = inviteCode();
-    const result = await pool.query('select 1 from couples where invite_code = $1', [code]);
+    const code = inviteCode(locale);
+    const result = await pool.query('select 1 from couples where lower(invite_code) = lower($1)', [code]);
     if (result.rowCount === 0) return code;
   }
 
@@ -1145,8 +1459,37 @@ export function apiRouter(): Router {
 
   router.get('/me', requireAuth, async (request, response) => {
     const user = currentUser(request);
-    const couple = await getCurrentCouple(user.id);
-    response.json({ user, couple });
+    try {
+      const [profile, couple] = await Promise.all([getPublicUser(user.id), getCurrentCouple(user.id)]);
+      response.json({ user: profile ?? user, couple });
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.patch('/me/preferences', requireAuth, async (request, response) => {
+    const user = currentUser(request);
+
+    try {
+      const currentResult = await pool.query('select preferences from profiles where id = $1', [user.id]);
+      const currentPreferences = currentResult.rows[0]?.preferences ?? {};
+      const incomingPreferences = isRecord(request.body.preferences) ? request.body.preferences : request.body;
+      const preferences = mergeUserPreferences(currentPreferences, incomingPreferences);
+      const updated = await pool.query(
+        `
+          update profiles
+          set preferences = $2::jsonb,
+              updated_at = now()
+          where id = $1
+          returning id, email, display_name as "displayName", preferences
+        `,
+        [user.id, JSON.stringify(preferences)],
+      );
+      const couple = await getCurrentCouple(user.id);
+      response.json({ user: publicUser(updated.rows[0]), couple });
+    } catch (error) {
+      handleError(response, error);
+    }
   });
 
   router.get('/notifications', requireAuth, async (request, response) => {
@@ -1310,7 +1653,7 @@ export function apiRouter(): Router {
           userIds: partnerResult.rows.map((row: { id: string }) => row.id),
           type: 'couple_disconnected',
           title: 'Paarung wurde getrennt',
-          body: `${user.displayName} hat das Konto geloescht. Eure Paarung wurde deshalb getrennt. Du kannst dich jetzt neu paaren.`,
+          body: `${user.displayName} hat das Konto gelöscht. Eure Paarung wurde deshalb getrennt. Du kannst dich jetzt neu paaren.`,
           titleKey: 'notifications.titles.coupleDisconnected',
           bodyKey: 'notifications.bodies.coupleDisconnected',
           params: { name: user.displayName },
@@ -1384,6 +1727,7 @@ export function apiRouter(): Router {
     const contentPreference = normalizeText(request.body.contentPreference) || 'balanced';
 
     try {
+      const locale = await resolveLocale(request);
       const existing = await getCurrentCouple(user.id);
       if (existing) {
         sendApiError(response, 409, 'couple.alreadyConnected');
@@ -1391,7 +1735,7 @@ export function apiRouter(): Router {
       }
 
       const coupleId = randomUUID();
-      const code = await createUniqueInviteCode();
+      const code = await createUniqueInviteCode(locale);
       const result = await pool.query(
         `
           insert into couples (id, invite_code, relationship_type, content_preference)
@@ -1420,7 +1764,7 @@ export function apiRouter(): Router {
 
   router.post('/couples/join', requireAuth, async (request, response) => {
     const user = currentUser(request);
-    const code = normalizeText(request.body.inviteCode).toUpperCase();
+    const code = normalizeText(request.body.inviteCode).toLowerCase();
 
     if (!code) {
       sendApiError(response, 400, 'couple.inviteCodeRequired');
@@ -1445,7 +1789,7 @@ export function apiRouter(): Router {
             garden_stage as "gardenStage",
             created_at as "createdAt"
           from couples
-          where invite_code = $1
+          where lower(invite_code) = $1
         `,
         [code],
       );
@@ -1498,7 +1842,7 @@ export function apiRouter(): Router {
       );
       await client.query('commit');
 
-      response.json({ user, couple: null });
+      response.json({ user: (await getPublicUser(user.id)) ?? user, couple: null });
     } catch (error) {
       await client.query('rollback');
       handleError(response, error);
@@ -1810,7 +2154,7 @@ export function apiRouter(): Router {
           userIds: memberIds.filter((memberId) => memberId !== user.id),
           type: 'quest_waiting_confirmation',
           title: 'Quest wartet auf dich',
-          body: `${user.displayName} hat "${quest.title}" bestaetigt. Wenn es fuer dich auch passt, kannst du sie abschliessen.`,
+          body: `${user.displayName} hat "${quest.title}" bestätigt. Wenn es für dich auch passt, kannst du sie abschließen.`,
           titleKey: 'notifications.titles.questWaitingConfirmation',
           bodyKey: 'notifications.bodies.questWaitingConfirmation',
           params: { name: user.displayName, title: quest.title },
@@ -1923,6 +2267,7 @@ export function apiRouter(): Router {
       }
 
       const questionId = randomUUID();
+      const shuffled = shuffleKnowMeOptions(options, correctOptionIndex);
       await client.query(
         `
           insert into know_me_questions (
@@ -1930,7 +2275,7 @@ export function apiRouter(): Router {
           )
           values ($1, $2, $3, $4, $5, $6, $7)
         `,
-        [questionId, couple.id, user.id, catalogQuestionId, questionText, JSON.stringify(options), correctOptionIndex],
+        [questionId, couple.id, user.id, catalogQuestionId, questionText, JSON.stringify(shuffled.options), shuffled.correctOptionIndex],
       );
       const memberIds = await getCoupleMemberIds(client, couple.id);
       await createNotifications(client, {
@@ -1938,7 +2283,7 @@ export function apiRouter(): Router {
         userIds: memberIds.filter((memberId) => memberId !== user.id),
         type: 'know_me_question',
         title: 'Eine Kennst-du-mich-Frage wartet',
-        body: `${user.displayName} hat eine Frage ueber sich gestellt. Was schaetzt du?`,
+        body: `${user.displayName} hat eine Frage über sich gestellt. Was schätzt du?`,
         titleKey: 'notifications.titles.knowMeQuestion',
         bodyKey: 'notifications.bodies.knowMeQuestion',
         params: { name: user.displayName },
@@ -2040,8 +2385,8 @@ export function apiRouter(): Router {
         type: 'know_me_answered',
         title: isCorrect ? 'Treffer im Kennst-du-mich-Spiel' : 'Eine Antwort ist da',
         body: isCorrect
-          ? `${user.displayName} hat dich richtig eingeschaetzt. Eine besondere Blume ist gewachsen.`
-          : `${user.displayName} hat geraten. Nicht getroffen, aber ein neuer Gespraechsanlass.`,
+          ? `${user.displayName} hat dich richtig eingeschätzt. Eine besondere Blume ist gewachsen.`
+          : `${user.displayName} hat geraten. Nicht getroffen, aber ein neuer Gesprächsanlass.`,
         titleKey: isCorrect ? 'notifications.titles.knowMeAnsweredHit' : 'notifications.titles.knowMeAnsweredMiss',
         bodyKey: isCorrect ? 'notifications.bodies.knowMeAnsweredHit' : 'notifications.bodies.knowMeAnsweredMiss',
         params: { name: user.displayName },
@@ -2072,7 +2417,8 @@ export function apiRouter(): Router {
     const user = currentUser(request);
 
     try {
-      const payload = await buildLoveJarPayload(user.id);
+      const locale = await resolveLocale(request);
+      const payload = await buildLoveJarPayload(user.id, locale);
       if (!payload) {
         sendApiError(response, 409, 'couple.notConnected');
         return;
@@ -2087,20 +2433,19 @@ export function apiRouter(): Router {
     const user = currentUser(request);
     const text = normalizeText(request.body.text);
     const category = normalizeText(request.body.category) || 'compliment';
-    const validCategories = new Set(['compliment', 'memory', 'voucher', 'wish', 'surprise']);
 
     if (!text) {
       sendApiError(response, 400, 'loveJar.noteRequired');
       return;
     }
 
-    if (!validCategories.has(category)) {
-      sendApiError(response, 400, 'loveJar.invalidCategory');
-      return;
-    }
-
     const client = await pool.connect();
     try {
+      const locale = await resolveLocale(request);
+      if (!(await isActiveContentCategory('love-jar-templates', category))) {
+        sendApiError(response, 400, 'loveJar.invalidCategory');
+        return;
+      }
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
         sendApiError(response, 409, 'couple.notConnected');
@@ -2132,7 +2477,7 @@ export function apiRouter(): Router {
       });
       await client.query('commit');
 
-      const payload = await buildLoveJarPayload(user.id);
+      const payload = await buildLoveJarPayload(user.id, locale);
       response.status(201).json(payload);
     } catch (error) {
       await client.query('rollback');
@@ -2147,6 +2492,7 @@ export function apiRouter(): Router {
     const client = await pool.connect();
 
     try {
+      const locale = await resolveLocale(request);
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
         sendApiError(response, 409, 'couple.notConnected');
@@ -2182,9 +2528,9 @@ export function apiRouter(): Router {
             select id
             from love_jar_notes
             where couple_id = $1
+              and author_id <> $2
               and is_drawn = false
             order by
-              case when author_id <> $2 then 0 else 1 end,
               random()
             limit 1
             for update skip locked
@@ -2209,7 +2555,7 @@ export function apiRouter(): Router {
       );
       await client.query('commit');
 
-      const payload = await buildLoveJarPayload(user.id);
+      const payload = await buildLoveJarPayload(user.id, locale);
       response.json(payload);
     } catch (error) {
       await client.query('rollback');
@@ -2223,7 +2569,8 @@ export function apiRouter(): Router {
     const user = currentUser(request);
 
     try {
-      const payload = await buildMemoryPayload(user.id);
+      const locale = await resolveLocale(request);
+      const payload = await buildMemoryPayload(user.id, locale);
       if (!payload) {
         sendApiError(response, 409, 'couple.notConnected');
         return;
@@ -2240,7 +2587,6 @@ export function apiRouter(): Router {
     const description = normalizeText(request.body.description) || null;
     const date = normalizeText(request.body.date) || todayIsoDate();
     const category = normalizeText(request.body.category) || 'everyday';
-    const validCategories = new Set(['date', 'travel', 'milestone', 'funny', 'everyday', 'special']);
 
     if (!title) {
       sendApiError(response, 400, 'memory.titleRequired');
@@ -2252,13 +2598,13 @@ export function apiRouter(): Router {
       return;
     }
 
-    if (!validCategories.has(category)) {
-      sendApiError(response, 400, 'memory.invalidCategory');
-      return;
-    }
-
     const client = await pool.connect();
     try {
+      const locale = await resolveLocale(request);
+      if (!(await isActiveContentCategory('memories', category))) {
+        sendApiError(response, 400, 'memory.invalidCategory');
+        return;
+      }
       const couple = await getCurrentCouple(user.id);
       if (!couple) {
         sendApiError(response, 409, 'couple.notConnected');
@@ -2296,7 +2642,7 @@ export function apiRouter(): Router {
       });
       await client.query('commit');
 
-      const payload = await buildMemoryPayload(user.id);
+      const payload = await buildMemoryPayload(user.id, locale);
       response.status(201).json(payload);
     } catch (error) {
       await client.query('rollback');
@@ -2350,7 +2696,8 @@ export function apiRouter(): Router {
     const objectId = String(request.params.objectId);
 
     try {
-      const payload = await buildGardenObjectDetail(user.id, objectId);
+      const locale = await resolveLocale(request);
+      const payload = await buildGardenObjectDetail(user.id, objectId, locale);
       if (!payload) {
         sendApiError(response, 409, 'couple.notConnected');
         return;

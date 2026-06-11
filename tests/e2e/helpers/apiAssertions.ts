@@ -14,7 +14,7 @@ import type {
 
 export interface AuthPayload {
   token: string;
-  user: Pick<User, 'id' | 'email' | 'displayName'>;
+  user: Pick<User, 'id' | 'email' | 'displayName'> & { preferences?: Record<string, unknown> };
 }
 
 export interface ErrorPayload {
@@ -24,7 +24,7 @@ export interface ErrorPayload {
 }
 
 export interface MePayload {
-  user: Pick<User, 'id' | 'email' | 'displayName'>;
+  user: Pick<User, 'id' | 'email' | 'displayName'> & { preferences?: Record<string, unknown> };
   couple: Couple | null;
 }
 
@@ -78,6 +78,7 @@ export interface KnowMePayload {
 export interface LoveJarPayload {
   couple: Couple;
   notes: LoveJarNote[];
+  categories?: Array<{ value: string; label: string }>;
   drawStatus: {
     drawnToday: boolean;
     canDrawToday: boolean;
@@ -88,6 +89,7 @@ export interface LoveJarPayload {
 
 export interface MemoriesPayload {
   couple: Couple;
+  categories?: Array<{ value: string; label: string }>;
   memories: MemoryEntry[];
 }
 
@@ -155,7 +157,7 @@ function expectCouple(value: unknown) {
   expect(value).toEqual(
     expect.objectContaining({
       id: expect.any(String),
-      inviteCode: expect.stringMatching(/^HERZ-\d{4}$/),
+      inviteCode: expect.stringMatching(/^[a-z]+-[a-z]+-\d{4}$/),
       relationshipType: expect.any(String),
       contentPreference: expect.any(String),
       heartPoints: expect.any(Number),
@@ -189,6 +191,8 @@ export function expectAuthPayload(payload: AuthPayload) {
 
 export function expectMePayload(payload: MePayload) {
   expectUser(payload.user);
+  expect(payload.user.preferences).toEqual(expect.any(Object));
+  expect(payload.user.preferences?.featureExplainers).toEqual(expect.any(Object));
   if (payload.couple) expectCouple(payload.couple);
 }
 
@@ -273,6 +277,19 @@ export function expectKnowMePayload(payload: KnowMePayload) {
 export function expectLoveJarPayload(payload: LoveJarPayload) {
   expectCouple(payload.couple);
   expect(Array.isArray(payload.notes)).toBeTruthy();
+  for (const note of payload.notes) {
+    expect(note).toEqual(
+      expect.objectContaining({
+        id: expect.any(String),
+        coupleId: expect.any(String),
+        authorId: expect.any(String),
+        category: expect.any(String),
+        categoryLabel: expect.any(String),
+        isDrawn: expect.any(Boolean),
+        createdAt: expect.any(String),
+      }),
+    );
+  }
   expect(payload.drawStatus).toEqual(
     expect.objectContaining({
       drawnToday: expect.any(Boolean),
@@ -285,6 +302,9 @@ export function expectLoveJarPayload(payload: LoveJarPayload) {
 
 export function expectMemoriesPayload(payload: MemoriesPayload) {
   expectCouple(payload.couple);
+  if (payload.categories) {
+    expect(Array.isArray(payload.categories)).toBeTruthy();
+  }
   expect(Array.isArray(payload.memories)).toBeTruthy();
   for (const memory of payload.memories) {
     expect(memory).toEqual(
@@ -295,6 +315,7 @@ export function expectMemoriesPayload(payload: MemoriesPayload) {
         title: expect.any(String),
         date: expect.any(String),
         category: expect.any(String),
+        categoryLabel: expect.any(String),
         createdAt: expect.any(String),
       }),
     );

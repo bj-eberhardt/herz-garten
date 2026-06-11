@@ -27,6 +27,8 @@ test.describe('auth api', () => {
   });
 
   test('rejects invalid registration input', async ({ request }) => {
+    await expectApiError(await apiPostRaw(request, '/api/auth/register', {}), 400, 'auth.registrationInvalid');
+
     const response = await apiPostRaw(request, '/api/auth/register', {
       email: '',
       displayName: 'Invalid',
@@ -58,6 +60,8 @@ test.describe('auth api', () => {
   });
 
   test('rejects incomplete login input', async ({ request }) => {
+    await expectApiError(await apiPostRaw(request, '/api/auth/login', {}), 400, 'auth.registrationInvalid');
+
     const response = await apiPostRaw(request, '/api/auth/login', {
       email: '',
       password: '',

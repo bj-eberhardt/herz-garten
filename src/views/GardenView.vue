@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
+import { Sprout } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
+import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
 import GardenCanvas from '@/components/garden/GardenCanvas.vue';
 import { useGardenStore } from '@/stores/gardenStore';
 
@@ -78,6 +80,7 @@ onMounted(() => {
       <p class="eyebrow">{{ t('garden.eyebrow') }}</p>
       <h1>{{ t('garden.title') }}</h1>
     </section>
+    <FeatureExplainer feature-key="garden" :icon="Sprout" :title="t('garden.howTitle')" :text="t('garden.howText')" />
     <p v-if="gardenStore.error" class="form-error">{{ gardenStore.error }}</p>
     <p v-if="gardenStore.loading" class="muted">{{ t('garden.loading') }}</p>
 
@@ -132,7 +135,12 @@ onMounted(() => {
         <p class="detail-label">{{ t('garden.inLoveJar') }}</p>
         <p>{{ gardenStore.selectedDetail.source.text ?? t('garden.hiddenLoveJar') }}</p>
         <p class="muted">
-          {{ t('garden.loveJarMeta', { author: gardenStore.selectedDetail.source.authorName, category: gardenStore.selectedDetail.source.category }) }}
+          {{
+            t('garden.loveJarMeta', {
+              author: gardenStore.selectedDetail.source.authorName,
+              category: gardenStore.selectedDetail.source.categoryLabel ?? gardenStore.selectedDetail.source.category,
+            })
+          }}
         </p>
       </template>
 
@@ -140,7 +148,8 @@ onMounted(() => {
         <p class="detail-label">{{ t('garden.recordedWas') }}</p>
         <p>{{ gardenStore.selectedDetail.source.description }}</p>
         <p class="muted">
-          {{ gardenStore.selectedDetail.source.date }} - {{ gardenStore.selectedDetail.source.category }} -
+          {{ gardenStore.selectedDetail.source.date }} -
+          {{ gardenStore.selectedDetail.source.categoryLabel ?? gardenStore.selectedDetail.source.category }} -
           {{ gardenStore.selectedDetail.source.authorName }}
         </p>
       </template>

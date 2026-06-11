@@ -263,8 +263,9 @@
   background: #fff;
   border: 1px solid #d8dfd3;
   border-radius: 8px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
   padding: 4px;
 }
 
@@ -273,8 +274,11 @@
   border: 0;
   border-radius: 8px;
   cursor: pointer;
+  flex: 1 0 max-content;
   font-weight: 900;
   min-height: 40px;
+  padding: 0 14px;
+  white-space: nowrap;
 }
 
 .admin-tabs button.active {
@@ -312,7 +316,7 @@ code {
     position: static;
   }
 
-  .admin-tabs {
-    grid-template-columns: repeat(2, 1fr);
+  .admin-tabs button {
+    flex-basis: auto;
   }
 }

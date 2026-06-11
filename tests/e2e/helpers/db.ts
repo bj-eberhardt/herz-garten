@@ -5,10 +5,35 @@ function sqlLiteral(value: string) {
 }
 
 export function runDbSql(sql: string) {
-  execFileSync('docker', ['compose', 'exec', '-T', 'db', 'psql', '-U', 'herzgarten', '-d', 'herzgarten', '-v', 'ON_ERROR_STOP=1', '-c', sql], {
-    encoding: 'utf8',
-    stdio: 'pipe',
-  });
+  const composeProject = process.env.E2E_COMPOSE_PROJECT ?? 'herzgarten-e2e';
+  execFileSync(
+    'docker',
+    [
+      'compose',
+      '-f',
+      'docker-compose.yml',
+      '-f',
+      'docker-compose.e2e.yml',
+      '-p',
+      composeProject,
+      'exec',
+      '-T',
+      'db',
+      'psql',
+      '-U',
+      'herzgarten',
+      '-d',
+      'herzgarten',
+      '-v',
+      'ON_ERROR_STOP=1',
+      '-c',
+      sql,
+    ],
+    {
+      encoding: 'utf8',
+      stdio: 'pipe',
+    },
+  );
 }
 
 export function moveDailyQuestionInstanceToYesterday(instanceId: string) {

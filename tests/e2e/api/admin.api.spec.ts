@@ -3,7 +3,7 @@ import { apiGet, apiGetRaw, apiPostRaw, registerByApi, setupCoupleByApi } from '
 import { expectApiError, expectJson } from '../helpers/apiAssertions';
 import { testRunId, testUser } from '../helpers/testUsers';
 
-const apiBaseURL = process.env.E2E_API_URL ?? 'http://localhost:3000';
+const apiBaseURL = process.env.E2E_API_URL ?? 'http://localhost:3001';
 
 async function adminLogin(request: APIRequestContext) {
   const response = await apiPostRaw(request, '/api/admin/auth/login', { password: 'admin' });

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { HelpCircle, Plus, Sparkles } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
+import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
 import { useKnowMeStore } from '@/stores/knowMeStore';
 import type { KnowMeRound } from '@/types/domain';
 
@@ -11,8 +12,8 @@ const questionText = ref('');
 const selectedCatalogQuestionId = ref<string | null>(null);
 const isCatalogOpen = ref(false);
 const options = ref(['', '', '', '']);
-const correctOptionIndex = ref(0);
 const selectedGuesses = ref<Record<string, number>>({});
+const createSubmitAttempted = ref(false);
 
 const filledOptions = computed(() => options.value.map((option) => option.trim()).filter(Boolean));
 const selectedCatalogQuestion = computed(() =>
@@ -36,9 +37,8 @@ const showCatalogDropdown = computed(() => isCatalogOpen.value && questionText.v
 const canCreate = computed(
   () =>
     questionText.value.trim().length > 0 &&
-    filledOptions.value.length >= 2 &&
-    correctOptionIndex.value >= 0 &&
-    correctOptionIndex.value < filledOptions.value.length,
+    options.value[0].trim().length > 0 &&
+    options.value[1].trim().length > 0,
 );
 
 function optionLabel(round: KnowMeRound, index?: number | null) {
@@ -74,18 +74,19 @@ function selectFirstCatalogQuestion() {
 }
 
 async function submitRound() {
+  createSubmitAttempted.value = true;
   if (!canCreate.value) return;
   await knowMeStore.createRound({
     questionText: questionText.value.trim(),
     options: filledOptions.value,
-    correctOptionIndex: correctOptionIndex.value,
+    correctOptionIndex: 0,
     catalogQuestionId: selectedCatalogQuestionId.value,
   });
   questionText.value = '';
   selectedCatalogQuestionId.value = null;
   isCatalogOpen.value = false;
   options.value = ['', '', '', ''];
-  correctOptionIndex.value = 0;
+  createSubmitAttempted.value = false;
 }
 
 async function submitGuess(round: KnowMeRound) {
@@ -109,10 +110,12 @@ onMounted(() => {
       </p>
     </section>
 
+    <FeatureExplainer feature-key="knowMe" :icon="HelpCircle" :title="t('knowMe.howTitle')" :text="t('knowMe.howText')" />
+
     <p v-if="knowMeStore.error" class="form-error" data-testid="know-me-error">{{ knowMeStore.error }}</p>
     <p v-if="knowMeStore.loading" class="muted">{{ t('knowMe.loading') }}</p>
 
-    <section class="panel composer" data-testid="know-me-create-panel">
+    <form class="panel composer" :class="{ 'form-submitted': createSubmitAttempted }" data-testid="know-me-create-panel" @submit.prevent="submitRound">
       <div>
         <p class="eyebrow">{{ t('knowMe.createEyebrow') }}</p>
         <h2>{{ t('knowMe.createTitle') }}</h2>
@@ -126,6 +129,7 @@ onMounted(() => {
           data-testid="know-me-question-input"
           :placeholder="t('knowMe.questionPlaceholder')"
           autocomplete="off"
+          required
           role="combobox"
           aria-autocomplete="list"
           :aria-expanded="showCatalogDropdown"
@@ -162,34 +166,32 @@ onMounted(() => {
       </div>
       <p class="question-source" data-testid="know-me-question-source">{{ questionSourceLabel }}</p>
 
-      <div class="option-grid">
+      <div class="option-grid know-me-option-grid">
         <label v-for="(_, index) in options" :key="index" :for="`know-me-option-${index}`">
-          {{ t('knowMe.option', { number: index + 1 }) }}
+          <span class="option-label-text">{{ index === 0 ? t('knowMe.correctAnswer') : t('knowMe.option', { number: index + 1 }) }}</span>
           <input
             :id="`know-me-option-${index}`"
             v-model="options[index]"
             :data-testid="`know-me-option-${index}`"
-            :placeholder="index < 2 ? t('knowMe.answerOptionPlaceholder') : t('common.optional')"
+            :class="{ 'correct-answer-input': index === 0 }"
+            :placeholder="index === 0 ? t('knowMe.correctAnswerPlaceholder') : index === 1 ? t('knowMe.answerOptionPlaceholder') : t('common.optional')"
+            :required="index < 2"
           />
+          <small v-if="index === 0" class="field-hint">{{ t('knowMe.correctAnswerHint') }}</small>
         </label>
       </div>
 
-      <label for="know-me-correct">{{ t('knowMe.correctAnswer') }}</label>
-      <select id="know-me-correct" v-model.number="correctOptionIndex" data-testid="know-me-correct-select">
-        <option v-for="(_, index) in filledOptions" :key="index" :value="index">{{ t('knowMe.option', { number: index + 1 }) }}</option>
-      </select>
-
       <button
         class="primary-button"
-        type="button"
+        type="submit"
         data-testid="know-me-create-submit"
-        :disabled="knowMeStore.loading || !canCreate"
-        @click="submitRound"
+        :disabled="knowMeStore.loading"
+        @click="createSubmitAttempted = true"
       >
         <Plus :size="18" aria-hidden="true" />
         {{ t('knowMe.sendQuestion') }}
       </button>
-    </section>
+    </form>
 
     <section class="quest-section" data-testid="know-me-open-section">
       <div class="section-heading">

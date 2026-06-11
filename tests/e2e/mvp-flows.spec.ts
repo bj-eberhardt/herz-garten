@@ -2,6 +2,8 @@ import { expect, test, type APIRequestContext, type Browser, type Page } from '@
 import { apiGet, apiPost, authenticatePage, setupCoupleByApi } from './helpers/api';
 import { testRunId, testUser } from './helpers/testUsers';
 
+const apiBaseURL = process.env.E2E_API_URL ?? 'http://localhost:3001';
+
 async function setupPages(browser: Browser, request: APIRequestContext, prefix: string) {
   const runId = testRunId();
   const userA = testUser(`${prefix}-a`, runId);
@@ -22,14 +24,14 @@ async function openNotifications(page: Page) {
 }
 
 async function apiPostRaw(request: APIRequestContext, path: string, body: unknown, token: string) {
-  return request.post(`http://localhost:3000${path}`, {
+  return request.post(`${apiBaseURL}${path}`, {
     data: body,
     headers: { Authorization: `Bearer ${token}` },
   });
 }
 
 async function apiGetRaw(request: APIRequestContext, path: string, token: string, headers: Record<string, string> = {}) {
-  return request.get(`http://localhost:3000${path}`, {
+  return request.get(`${apiBaseURL}${path}`, {
     headers: { Authorization: `Bearer ${token}`, ...headers },
   });
 }
@@ -37,7 +39,7 @@ async function apiGetRaw(request: APIRequestContext, path: string, token: string
 test('daily question reveal creates notifications and a garden detail', async ({ browser, request }) => {
   const { contextA, contextB, pageA, pageB } = await setupPages(browser, request, 'daily');
 
-  await pageA.getByTestId('today-answer-input').fill('Ich habe mich heute gesehen gefuehlt.');
+  await pageA.getByTestId('today-answer-input').fill('Ich habe mich heute gesehen gefühlt.');
   await pageA.getByTestId('today-answer-submit').click();
   await expect(pageA.getByTestId('today-waiting-status')).toBeVisible();
 
@@ -124,8 +126,9 @@ test('love jar note can be drawn once per day and shows empty state for new coup
   await expect(pageB.getByTestId('love-jar-empty')).toBeVisible();
 
   await pageA.goto('/love-jar');
+  await expect(pageA.getByTestId('love-jar-category')).toContainText('Kompliment');
   await pageA.getByTestId('love-jar-category').selectOption('compliment');
-  await pageA.getByTestId('love-jar-note-input').fill('Danke fuer deine Ruhe.');
+  await pageA.getByTestId('love-jar-note-input').fill('Danke für deine Ruhe.');
   await pageA.getByTestId('love-jar-save').click();
 
   await openNotifications(pageB);
@@ -134,7 +137,10 @@ test('love jar note can be drawn once per day and shows empty state for new coup
 
   await pageB.goto('/love-jar');
   await pageB.getByTestId('love-jar-draw').click();
-  await expect(pageB.getByTestId('love-jar-note').first()).toContainText('Danke fuer deine Ruhe.');
+  const drawnNote = pageB.getByTestId('love-jar-note').first();
+  await expect(drawnNote).toContainText('Danke für deine Ruhe.');
+  await expect(drawnNote).toContainText('Kompliment');
+  await expect(drawnNote).not.toContainText('compliment');
   await expect(pageB.getByTestId('love-jar-draw')).toBeDisabled();
   await expect(pageB.getByTestId('love-jar-draw-hint')).toContainText('heute schon');
   const duplicateDraw = await apiPostRaw(request, '/api/love-jar/draw', {}, partnerB.token);
@@ -147,6 +153,11 @@ test('love jar note can be drawn once per day and shows empty state for new coup
     }),
   );
 
+  await pageB.getByTestId('nav-garden').click();
+  await pageB.getByTestId('garden-object').first().click();
+  await expect(pageB.getByTestId('garden-detail')).toContainText('Kompliment');
+  await expect(pageB.getByTestId('garden-detail')).not.toContainText('compliment');
+
   await contextA.close();
   await contextB.close();
 });
@@ -156,10 +167,9 @@ test('know me game notifies partner and rewards correct guesses', async ({ brows
 
   await pageA.goto('/know-me');
   await pageA.getByTestId('know-me-question-input').fill('Was ist mein heimlicher Lieblingssnack?');
-  await pageA.getByTestId('know-me-option-0').fill('Salzbrezeln');
-  await pageA.getByTestId('know-me-option-1').fill('Schokolade');
+  await pageA.getByTestId('know-me-option-0').fill('Schokolade');
+  await pageA.getByTestId('know-me-option-1').fill('Salzbrezeln');
   await pageA.getByTestId('know-me-option-2').fill('Apfel');
-  await pageA.getByTestId('know-me-correct-select').selectOption('1');
   await pageA.getByTestId('know-me-create-submit').click();
   await expect(pageA.getByTestId('know-me-own-card').first()).toContainText('Lieblingssnack');
 
@@ -200,11 +210,12 @@ test('know me catalog suggestions can be selected and are hidden per author afte
 
   await pageA.getByTestId('know-me-option-0').fill('Lange schlafen und Kaffee');
   await pageA.getByTestId('know-me-option-1').fill('Um sechs Uhr joggen');
-  await pageA.getByTestId('know-me-correct-select').selectOption('0');
   await pageA.getByTestId('know-me-create-submit').click();
   await expect(pageA.getByTestId('know-me-own-card').first()).toContainText(catalogQuestion);
   await pageA.getByTestId('know-me-question-input').fill('Sonntag');
-  await expect(pageA.getByTestId('know-me-catalog-suggestions')).not.toContainText(catalogQuestion);
+  await expect(
+    pageA.getByTestId('know-me-catalog-suggestion').filter({ hasText: catalogQuestion }),
+  ).toHaveCount(0);
 
   await pageB.goto('/know-me');
   await pageB.getByTestId('know-me-question-input').fill('Sonntag');
@@ -229,7 +240,6 @@ test('know me wrong guess is resolved without garden reward', async ({ browser, 
   await pageA.getByTestId('know-me-question-input').fill('Welcher Ort gibt mir Ruhe?');
   await pageA.getByTestId('know-me-option-0').fill('Wald');
   await pageA.getByTestId('know-me-option-1').fill('Bahnhof');
-  await pageA.getByTestId('know-me-correct-select').selectOption('0');
   await pageA.getByTestId('know-me-create-submit').click();
 
   await pageB.goto('/know-me');
@@ -283,11 +293,15 @@ test('memory creates timeline entry notification and garden detail', async ({ br
 
   await pageA.goto('/memories');
   await pageA.getByTestId('memory-title').fill('Unser E2E Moment');
-  await pageA.getByTestId('memory-description').fill('Ein kurzer Test fuer die Timeline.');
+  await pageA.getByTestId('memory-description').fill('Ein kurzer Test für die Timeline.');
   await pageA.getByTestId('memory-date').fill('2026-06-09');
+  await expect(pageA.getByTestId('memory-category')).toContainText('Alltag');
   await pageA.getByTestId('memory-category').selectOption('everyday');
   await pageA.getByTestId('memory-save').click();
-  await expect(pageA.getByTestId('memory-item').first()).toContainText('Unser E2E Moment');
+  const memoryItem = pageA.getByTestId('memory-item').first();
+  await expect(memoryItem).toContainText('Unser E2E Moment');
+  await expect(memoryItem).toContainText('Alltag');
+  await expect(memoryItem).not.toContainText('everyday');
 
   await openNotifications(pageB);
   await expect(pageB.getByTestId('notification-item').first()).toContainText('Erinnerung');
@@ -296,6 +310,8 @@ test('memory creates timeline entry notification and garden detail', async ({ br
   await expect(pageA.getByTestId('garden-progress')).toContainText('Erinnerungen');
   await pageA.getByTestId('garden-object').first().click();
   await expect(pageA.getByTestId('garden-detail')).toContainText('Unser E2E Moment');
+  await expect(pageA.getByTestId('garden-detail')).toContainText('Alltag');
+  await expect(pageA.getByTestId('garden-detail')).not.toContainText('everyday');
   await expect(pageA.getByTestId('garden-detail-celebration')).toContainText('bewahrt');
 
   await contextA.close();
@@ -306,7 +322,7 @@ test('notifications can be opened and marked read', async ({ browser, request })
   const { contextA, contextB, pageA, pageB } = await setupPages(browser, request, 'notifications');
 
   await pageA.goto('/love-jar');
-  await pageA.getByTestId('love-jar-note-input').fill('Ein Hinweis fuer dich.');
+  await pageA.getByTestId('love-jar-note-input').fill('Ein Hinweis für dich.');
   await pageA.getByTestId('love-jar-save').click();
 
   await pageB.goto('/today');
@@ -336,7 +352,7 @@ test('settings expose export logout and leave couple flows', async ({ browser, r
 
   await pageA.goto('/settings');
   await expect(pageA.getByTestId('privacy-details')).toContainText('Datenschutz auf einen Blick');
-  await expect(pageA.getByTestId('privacy-details')).toContainText('Konto loeschen');
+  await expect(pageA.getByTestId('privacy-details')).toContainText('Konto löschen');
   const downloadPromise = pageA.waitForEvent('download');
   await pageA.getByTestId('settings-export').click();
   await downloadPromise;
@@ -344,6 +360,27 @@ test('settings expose export logout and leave couple flows', async ({ browser, r
   await pageA.getByTestId('settings-logout').click();
   await pageA.goto('/today');
   await expect(pageA).toHaveURL(/\/onboarding$/);
+
+  await contextA.close();
+  await contextB.close();
+});
+
+test('feature explainer boxes can be hidden and re-enabled in settings', async ({ browser, request }) => {
+  const { contextA, contextB, pageA } = await setupPages(browser, request, 'settings-hints');
+
+  await pageA.goto('/today');
+  await expect(pageA.getByTestId('feature-explainer-today')).toBeVisible();
+  await pageA.getByTestId('feature-explainer-close-today').click();
+  await expect(pageA.getByTestId('feature-explainer-today')).toHaveCount(0);
+
+  await pageA.goto('/settings');
+  const todayToggle = pageA.getByTestId('settings-feature-explainer-today');
+  await expect(todayToggle).not.toBeChecked();
+  await todayToggle.check();
+  await expect(todayToggle).toBeChecked();
+
+  await pageA.goto('/today');
+  await expect(pageA.getByTestId('feature-explainer-today')).toBeVisible();
 
   await contextA.close();
   await contextB.close();
@@ -368,7 +405,7 @@ test('settings allow deleting the account and remove login access', async ({ bro
   await expect(pageA.getByTestId('auth-form')).toBeVisible();
   await expect(pageA.evaluate(() => window.localStorage.getItem('herzgarten_token'))).resolves.toBeNull();
 
-  const loginResponse = await request.post('http://localhost:3000/api/auth/login', {
+  const loginResponse = await request.post(`${apiBaseURL}/api/auth/login`, {
     data: { email: userA.email, password: userA.password },
   });
   expect(loginResponse.status()).toBe(401);

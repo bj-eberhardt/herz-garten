@@ -27,12 +27,30 @@ test.describe('love jar api', () => {
     expectLoveJarPayload(empty);
     expect(empty.notes).toHaveLength(0);
 
+    const templatesDe = await expectJson<{
+      categories: Array<{ value: string; label: string }>;
+      templates: Array<{ category: string; categoryLabel: string }>;
+    }>(
+      await apiGetRaw(request, '/api/love-jar/templates', partnerB.token),
+    );
+    expect(templatesDe.categories.find((category) => category.value === 'compliment')?.label).toBe('Kompliment');
+    expect(templatesDe.templates.find((template) => template.category === 'compliment')?.categoryLabel).toBe('Kompliment');
+    const templatesEn = await expectJson<{
+      categories: Array<{ value: string; label: string }>;
+      templates: Array<{ category: string; categoryLabel: string }>;
+    }>(
+      await apiGetRaw(request, '/api/love-jar/templates', partnerB.token, { 'Accept-Language': 'en' }),
+    );
+    expect(templatesEn.categories.find((category) => category.value === 'compliment')?.label).toBe('Compliment');
+    expect(templatesEn.templates.find((template) => template.category === 'compliment')?.categoryLabel).toBe('Compliment');
+
     const created = await expectJson<LoveJarPayload>(
       await apiPostRaw(request, '/api/love-jar', { text: 'API note', category: 'compliment' }, partnerA.token),
       201,
     );
     expectLoveJarPayload(created);
     expect(created.notes.some((note) => note.text === null && note.category === 'compliment')).toBeTruthy();
+    expect(created.notes.find((note) => note.category === 'compliment')?.categoryLabel).toBe('Kompliment');
 
     const drawn = await expectJson<LoveJarPayload>(await apiPostRaw(request, '/api/love-jar/draw', {}, partnerB.token));
     expectLoveJarPayload(drawn);
@@ -40,6 +58,31 @@ test.describe('love jar api', () => {
     expect(drawn.notes.some((note) => note.text === 'API note' && note.isDrawn)).toBeTruthy();
 
     await expectApiError(await apiPostRaw(request, '/api/love-jar/draw', {}, partnerB.token), 409, 'loveJar.alreadyDrawnToday');
+  });
+
+  test('draw does not open own note when no partner note exists', async ({ request }) => {
+    const runId = testRunId();
+    const { partnerA } = await setupCoupleByApi(
+      request,
+      testUser('api-love-own-a', runId),
+      testUser('api-love-own-b', runId),
+    );
+
+    const created = await expectJson<LoveJarPayload>(
+      await apiPostRaw(request, '/api/love-jar', { text: 'Own fallback note', category: 'compliment' }, partnerA.token),
+      201,
+    );
+    expect(created.drawStatus.ownUnreadCount).toBeGreaterThanOrEqual(1);
+    expect(created.drawStatus.partnerUnreadCount).toBe(0);
+    expect(created.drawStatus.canDrawToday).toBe(false);
+
+    await expectApiError(await apiPostRaw(request, '/api/love-jar/draw', {}, partnerA.token), 404, 'loveJar.noUnreadNote');
+
+    const afterDrawAttempt = await expectJson<LoveJarPayload>(await apiGetRaw(request, '/api/love-jar', partnerA.token));
+    expect(afterDrawAttempt.drawStatus.drawnToday).toBe(false);
+    expect(afterDrawAttempt.notes).toEqual(
+      expect.arrayContaining([expect.objectContaining({ authorId: partnerA.user.id, text: null, isDrawn: false })]),
+    );
   });
 
   test('rejects invalid love jar states', async ({ request }) => {
@@ -57,6 +100,7 @@ test.describe('love jar api', () => {
       409,
       'couple.notConnected',
     );
+    await expectApiError(await apiPostRaw(request, '/api/love-jar', {}, partnerA.token), 400, 'loveJar.noteRequired');
     await expectApiError(await apiPostRaw(request, '/api/love-jar', { text: '' }, partnerA.token), 400, 'loveJar.noteRequired');
     await expectApiError(
       await apiPostRaw(request, '/api/love-jar', { text: 'Bad category', category: 'bad' }, partnerA.token),
@@ -79,6 +123,7 @@ test.describe('memories and garden api', () => {
     const emptyMemories = await expectJson<MemoriesPayload>(await apiGetRaw(request, '/api/memories', partnerA.token));
     expectMemoriesPayload(emptyMemories);
     expect(emptyMemories.memories).toHaveLength(0);
+    expect(emptyMemories.categories?.find((category) => category.value === 'everyday')?.label).toBe('Alltag');
 
     const created = await expectJson<MemoriesPayload>(
       await apiPostRaw(
@@ -97,7 +142,14 @@ test.describe('memories and garden api', () => {
     expectMemoriesPayload(created);
     const memory = created.memories.find((item) => item.title === 'API Memory');
     expect(memory).toBeTruthy();
+    expect(memory?.categoryLabel).toBe('Alltag');
     expect(memory?.linkedGardenObjectId).toEqual(expect.any(String));
+
+    const englishMemories = await expectJson<MemoriesPayload>(
+      await apiGetRaw(request, '/api/memories', partnerA.token, { 'Accept-Language': 'en' }),
+    );
+    expect(englishMemories.memories.find((item) => item.title === 'API Memory')?.categoryLabel).toBe('Everyday');
+    expect(englishMemories.categories?.find((category) => category.value === 'everyday')?.label).toBe('Everyday');
 
     const garden = await expectJson<GardenPayload>(await apiGetRaw(request, '/api/garden', partnerA.token));
     expectGardenPayload(garden);
@@ -109,7 +161,7 @@ test.describe('memories and garden api', () => {
       await apiGetRaw(request, `/api/garden/objects/${object!.id}`, partnerA.token),
     );
     expectGardenObjectDetailPayload(detail);
-    expect(detail.source).toEqual(expect.objectContaining({ type: 'memory', title: 'API Memory' }));
+    expect(detail.source).toEqual(expect.objectContaining({ type: 'memory', title: 'API Memory', categoryLabel: 'Alltag' }));
   });
 
   test('rejects invalid memories and no-couple garden access', async ({ request }) => {
@@ -128,6 +180,7 @@ test.describe('memories and garden api', () => {
       409,
       'couple.notConnected',
     );
+    await expectApiError(await apiPostRaw(request, '/api/memories', {}, partnerA.token), 400, 'memory.titleRequired');
     await expectApiError(await apiPostRaw(request, '/api/memories', { title: '' }, partnerA.token), 400, 'memory.titleRequired');
     await expectApiError(
       await apiPostRaw(request, '/api/memories', { title: 'Bad date', date: '09.06.2026' }, partnerA.token),

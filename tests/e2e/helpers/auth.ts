@@ -22,7 +22,7 @@ export async function loginViaUi(page: Page, user: TestUser) {
 export async function createCoupleViaUi(page: Page) {
   await page.getByTestId('create-couple-submit').click();
   await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByTestId('header-couple-link')).toContainText('HERZ-');
+  await expect(page.getByTestId('header-couple-link')).toContainText(/^[a-z]+-[a-z]+-\d{4}$/);
   return (await page.getByTestId('header-couple-link').innerText()).trim();
 }
 

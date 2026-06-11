@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import {
   apiDeleteRaw,
   apiGetRaw,
+  apiPatchRaw,
   apiPostRaw,
   createCoupleByApi,
   joinCoupleByApi,
@@ -77,7 +78,7 @@ test.describe('me and couples api', () => {
 
     await expectApiError(await apiPostRaw(request, '/api/couples', {}, partnerA.token), 409, 'couple.alreadyConnected');
     await expectApiError(
-      await apiPostRaw(request, '/api/couples/join', { inviteCode: 'HERZ-0000' }, partnerB.token),
+      await apiPostRaw(request, '/api/couples/join', { inviteCode: 'apfel-sonne-0000' }, partnerB.token),
       409,
       'couple.alreadyConnected',
     );
@@ -93,7 +94,7 @@ test.describe('me and couples api', () => {
 
     await expectApiError(await apiPostRaw(request, '/api/couples/join', {}, lonely.token), 400, 'couple.inviteCodeRequired');
     await expectApiError(
-      await apiPostRaw(request, '/api/couples/join', { inviteCode: 'HERZ-0000' }, lonely.token),
+      await apiPostRaw(request, '/api/couples/join', { inviteCode: 'apfel-sonne-0000' }, lonely.token),
       404,
       'couple.inviteCodeNotFound',
     );
@@ -110,6 +111,45 @@ test.describe('me and couples api', () => {
     const user = await registerByApi(request, testUser('api-no-couple-leave', testRunId()));
 
     await expectApiError(await apiPostRaw(request, '/api/couples/leave', {}, user.token), 409, 'couple.notConnected');
+  });
+
+  test('stores profile preferences for feature explainers and preserves future options', async ({ request }) => {
+    const user = await registerByApi(request, testUser('api-preferences', testRunId()));
+
+    const initial = await expectJson<MePayload>(await apiGetRaw(request, '/api/me', user.token));
+    expectMePayload(initial);
+    expect(initial.user.preferences?.featureExplainers).toEqual(
+      expect.objectContaining({
+        today: true,
+        loveJar: true,
+        settings: true,
+      }),
+    );
+
+    const updated = await expectJson<MePayload>(
+      await apiPatchRaw(
+        request,
+        '/api/me/preferences',
+        {
+          preferences: {
+            featureExplainers: { today: false, loveJar: false },
+            futureOption: { enabled: true },
+          },
+        },
+        user.token,
+      ),
+    );
+    expect(updated.user.preferences?.featureExplainers).toEqual(
+      expect.objectContaining({
+        today: false,
+        loveJar: false,
+        settings: true,
+      }),
+    );
+    expect(updated.user.preferences?.futureOption).toEqual({ enabled: true });
+
+    const reloaded = await expectJson<MePayload>(await apiGetRaw(request, '/api/me', user.token));
+    expect(reloaded.user.preferences).toEqual(updated.user.preferences);
   });
 
   test('deletes account and invalidates login access', async ({ request }) => {

@@ -6,7 +6,14 @@ import { useDailyQuestionStore } from '@/stores/dailyQuestionStore';
 
 const dailyQuestionStore = useDailyQuestionStore();
 const answer = ref('');
+const submitAttempted = ref(false);
 const { t } = useI18n();
+
+async function submitAnswer() {
+  await dailyQuestionStore.submitAnswer(answer.value);
+  answer.value = '';
+  submitAttempted.value = false;
+}
 </script>
 
 <template>
@@ -29,9 +36,9 @@ const { t } = useI18n();
       {{ t('today.waitingStatus') }}
     </p>
 
-    <form v-else class="answer-form" data-testid="today-answer-form" @submit.prevent="dailyQuestionStore.submitAnswer(answer).then(() => (answer = ''))">
-      <textarea v-model="answer" rows="4" :placeholder="t('today.answerPlaceholder')" data-testid="today-answer-input" />
-      <button class="primary-button" type="submit" :disabled="dailyQuestionStore.loading" data-testid="today-answer-submit">
+    <form v-else class="answer-form" :class="{ 'form-submitted': submitAttempted }" data-testid="today-answer-form" @submit.prevent="submitAnswer">
+      <textarea v-model="answer" rows="4" :placeholder="t('today.answerPlaceholder')" data-testid="today-answer-input" required />
+      <button class="primary-button" type="submit" :disabled="dailyQuestionStore.loading" data-testid="today-answer-submit" @click="submitAttempted = true">
         <Send :size="18" aria-hidden="true" />
         {{ dailyQuestionStore.loading ? t('common.saving') : t('today.sendAnswer') }}
       </button>

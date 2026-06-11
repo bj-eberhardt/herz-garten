@@ -4,8 +4,28 @@ export type QuestCategory = 'romance' | 'date' | 'humor' | 'memory' | 'teamwork'
 export type EffortLevel = 'low' | 'medium' | 'high';
 export type GardenObjectType = 'flower' | 'tree' | 'bench' | 'light' | 'stone' | 'pond' | 'decoration';
 export type GardenSourceType = 'question' | 'quest' | 'memory' | 'love_jar' | 'milestone' | 'know_me';
-export type LoveJarCategory = 'compliment' | 'memory' | 'voucher' | 'wish' | 'surprise';
-export type MemoryCategory = 'date' | 'travel' | 'milestone' | 'funny' | 'everyday' | 'special';
+export type LoveJarCategory = string;
+export type MemoryCategory = string;
+export type FeatureExplainerKey =
+  | 'onboarding'
+  | 'today'
+  | 'quests'
+  | 'garden'
+  | 'knowMe'
+  | 'loveJar'
+  | 'memories'
+  | 'notifications'
+  | 'settings';
+
+export interface UserPreferences {
+  featureExplainers: Record<FeatureExplainerKey, boolean> & Record<string, boolean>;
+  [key: string]: unknown;
+}
+
+export interface CategoryOption {
+  value: string;
+  label: string;
+}
 export type NotificationType =
   | 'daily_answer_waiting'
   | 'daily_revealed'
@@ -98,6 +118,7 @@ export interface LoveJarNote {
   authorId: string;
   text: string;
   category: LoveJarCategory;
+  categoryLabel?: string;
   isDrawn: boolean;
   drawnAt?: string;
   createdAt: string;
@@ -112,6 +133,7 @@ export interface MemoryEntry {
   date: string;
   imageUrl?: string;
   category: MemoryCategory;
+  categoryLabel?: string;
   linkedGardenObjectId?: string;
   createdAt: string;
 }

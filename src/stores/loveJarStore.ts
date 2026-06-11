@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { apiRequest } from '@/services/api';
 import { localizeApiError } from '@/services/errorMessages';
-import type { Couple, LoveJarCategory, LoveJarNote } from '@/types/domain';
+import type { CategoryOption, Couple, LoveJarCategory, LoveJarNote } from '@/types/domain';
 import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
 import { useGardenStore } from './gardenStore';
@@ -23,6 +23,7 @@ export interface LoveJarTemplate {
   id: string;
   text: string;
   category: LoveJarCategory;
+  categoryLabel?: string;
 }
 
 interface LoveJarPayload {
@@ -41,6 +42,7 @@ export const useLoveJarStore = defineStore('loveJar', {
       ownUnreadCount: 0,
     } as LoveJarDrawStatus,
     templates: [] as LoveJarTemplate[],
+    categories: [] as CategoryOption[],
     loading: false,
     error: '',
   }),
@@ -56,8 +58,11 @@ export const useLoveJarStore = defineStore('loveJar', {
     },
     async loadTemplates() {
       try {
-        const payload = await apiRequest<{ templates: LoveJarTemplate[] }>('/api/love-jar/templates');
+        const payload = await apiRequest<{ templates: LoveJarTemplate[]; categories?: CategoryOption[] }>(
+          '/api/love-jar/templates',
+        );
         this.templates = payload.templates;
+        this.categories = payload.categories ?? this.categories;
       } catch (error) {
         this.error = localizeApiError(error, 'errors.fallback.loveJarLoad');
       }

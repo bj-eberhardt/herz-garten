@@ -9,7 +9,7 @@ export const useCoupleStore = defineStore('couple', {
       id: 'demo-couple',
       partnerAId: 'demo-a',
       partnerBId: 'demo-b',
-      inviteCode: 'HERZ-4821',
+      inviteCode: 'apfel-sonne-4821',
       relationshipType: 'mixed',
       contentPreference: 'balanced',
       heartPoints: 120,

@@ -6,7 +6,8 @@ import { config } from './config.js';
 import { pool } from './db.js';
 import { handleError, sendApiError } from './errors.js';
 
-type ContentType = 'daily-questions' | 'quests' | 'know-me-catalog' | 'love-jar-templates';
+type ContentType = 'daily-questions' | 'quests' | 'know-me-catalog' | 'love-jar-templates' | 'memories';
+type EditableContentType = Exclude<ContentType, 'memories'>;
 
 const effortLevels = new Set(['low', 'medium', 'high']);
 
@@ -114,7 +115,9 @@ async function categoryUsage(contentType: ContentType, value: string) {
         ? 'quests'
         : contentType === 'know-me-catalog'
           ? 'know_me_catalog_questions'
-          : 'love_jar_templates';
+          : contentType === 'love-jar-templates'
+            ? 'love_jar_templates'
+            : 'memory_entries';
   const result = await pool.query(`select count(*)::int as count from ${table} where category = $1`, [value]);
   return result.rows[0]?.count ?? 0;
 }
@@ -740,14 +743,14 @@ async function saveLoveJarTemplate(body: Record<string, unknown>, id: string = r
   return id;
 }
 
-async function listContent(type: ContentType, request: Request) {
+async function listContent(type: EditableContentType, request: Request) {
   if (type === 'daily-questions') return listDailyQuestions(request);
   if (type === 'quests') return listQuests(request);
   if (type === 'know-me-catalog') return listKnowMeCatalog(request);
   return listLoveJarTemplates(request);
 }
 
-async function saveContent(type: ContentType, body: Record<string, unknown>, id?: string) {
+async function saveContent(type: EditableContentType, body: Record<string, unknown>, id?: string) {
   if (type === 'daily-questions') return saveDailyQuestion(body, id);
   if (type === 'quests') return saveQuest(body, id);
   if (type === 'know-me-catalog') return saveKnowMeCatalog(body, id);
@@ -755,6 +758,10 @@ async function saveContent(type: ContentType, body: Record<string, unknown>, id?
 }
 
 function isContentType(value: string): value is ContentType {
+  return ['daily-questions', 'quests', 'know-me-catalog', 'love-jar-templates', 'memories'].includes(value);
+}
+
+function isEditableContentType(value: string): value is EditableContentType {
   return ['daily-questions', 'quests', 'know-me-catalog', 'love-jar-templates'].includes(value);
 }
 
@@ -892,7 +899,7 @@ export function adminRouter(): Router {
       await audit('create', 'category', id, { contentType: request.body.contentType, value: request.body.value });
       response.status(201).json({ id, items: await listCategories() });
     } catch {
-      response.status(400).json({ errorKey: 'admin.categoryInvalid', error: 'Kategorie-Daten sind ungueltig.' });
+      response.status(400).json({ errorKey: 'admin.categoryInvalid', error: 'Kategorie-Daten sind ungültig.' });
     }
   });
 
@@ -902,7 +909,7 @@ export function adminRouter(): Router {
       await audit('update', 'category', id, { contentType: request.body.contentType, value: request.body.value });
       response.json({ id, items: await listCategories() });
     } catch {
-      response.status(400).json({ errorKey: 'admin.categoryInvalid', error: 'Kategorie-Daten sind ungueltig.' });
+      response.status(400).json({ errorKey: 'admin.categoryInvalid', error: 'Kategorie-Daten sind ungültig.' });
     }
   });
 
@@ -931,7 +938,7 @@ export function adminRouter(): Router {
   router.get('/content/:type', requireAdminAuth, async (request, response) => {
     try {
       const type = String(request.params.type);
-      if (!isContentType(type)) {
+      if (!isEditableContentType(type)) {
         response.status(404).json({ errorKey: 'content.notFound', error: 'Content-Typ nicht gefunden.' });
         return;
       }
@@ -944,7 +951,7 @@ export function adminRouter(): Router {
   router.post('/content/:type', requireAdminAuth, async (request, response) => {
     try {
       const type = String(request.params.type);
-      if (!isContentType(type)) {
+      if (!isEditableContentType(type)) {
         response.status(404).json({ errorKey: 'content.notFound', error: 'Content-Typ nicht gefunden.' });
         return;
       }
@@ -952,14 +959,14 @@ export function adminRouter(): Router {
       await audit('create', type, id, { fields: Object.keys(request.body ?? {}) });
       response.status(201).json({ id, items: await listContent(type, request) });
     } catch (error) {
-      response.status(400).json({ errorKey: 'admin.contentInvalid', error: 'Content-Daten sind ungueltig.' });
+      response.status(400).json({ errorKey: 'admin.contentInvalid', error: 'Content-Daten sind ungültig.' });
     }
   });
 
   router.patch('/content/:type/:id', requireAdminAuth, async (request, response) => {
     try {
       const type = String(request.params.type);
-      if (!isContentType(type)) {
+      if (!isEditableContentType(type)) {
         response.status(404).json({ errorKey: 'content.notFound', error: 'Content-Typ nicht gefunden.' });
         return;
       }
@@ -967,7 +974,7 @@ export function adminRouter(): Router {
       await audit('update', type, id, { fields: Object.keys(request.body ?? {}) });
       response.json({ id, items: await listContent(type, request) });
     } catch (error) {
-      response.status(400).json({ errorKey: 'admin.contentInvalid', error: 'Content-Daten sind ungueltig.' });
+      response.status(400).json({ errorKey: 'admin.contentInvalid', error: 'Content-Daten sind ungültig.' });
     }
   });
 

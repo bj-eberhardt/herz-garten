@@ -104,7 +104,7 @@ Letzten HTML-Report anzeigen:
 npm run test:e2e:report
 ```
 
-Die Tests starten das Docker-Setup automatisch ueber `docker compose up --build` oder nutzen bereits laufende Container weiter. Testdaten werden mit eindeutigen E-Mail-Adressen erzeugt; die Datenbank muss fuer normale Testlaeufe nicht geloescht werden.
+Die Tests starten ein eigenes Docker-Setup ueber Playwright: Projekt `herzgarten-e2e`, Frontend `http://localhost:5174`, Backend `http://localhost:3001`, PostgreSQL `localhost:5433`. Vor jedem Lauf wird dieses E2E-Projekt mit `down -v` geleert, damit Tests nicht von Daten aus der lokalen Dev-Datenbank abhaengen. Der normale Dev-Stack auf `5173/3000/5432` bleibt davon getrennt.
 
 ## Lokale Entwicklung ohne Docker
 

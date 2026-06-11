@@ -38,15 +38,45 @@ test.describe('know me api', () => {
     expectKnowMePayload(created);
     const round = created.rounds.find((item) => item.questionText === 'Which API option is correct?');
     expect(round).toBeTruthy();
-    expect(round?.status).toBe('open');
+    const createdRound = round!;
+    expect(createdRound.status).toBe('open');
+    expect(createdRound.options[createdRound.correctOptionIndex]).toBe('Second');
 
     const guessed = await expectJson<KnowMePayload>(
-      await apiPostRaw(request, `/api/know-me/${round!.id}/guess`, { selectedOptionIndex: 1 }, partnerB.token),
+      await apiPostRaw(request, `/api/know-me/${createdRound.id}/guess`, { selectedOptionIndex: createdRound.correctOptionIndex }, partnerB.token),
     );
     expectKnowMePayload(guessed);
-    const answered = guessed.rounds.find((item) => item.id === round!.id);
+    const answered = guessed.rounds.find((item) => item.id === createdRound.id);
     expect(answered?.status).toBe('answered');
-    expect(answered?.guess).toEqual(expect.objectContaining({ selectedOptionIndex: 1, isCorrect: true }));
+    expect(answered?.guess).toEqual(expect.objectContaining({ selectedOptionIndex: createdRound.correctOptionIndex, isCorrect: true }));
+  });
+
+  test('shuffles first correct answer before storing', async ({ request }) => {
+    const runId = testRunId();
+    const { partnerA } = await setupCoupleByApi(
+      request,
+      testUser('api-knowme-shuffle-a', runId),
+      testUser('api-knowme-shuffle-b', runId),
+    );
+
+    const created = await expectJson<KnowMePayload>(
+      await apiPostRaw(
+        request,
+        '/api/know-me',
+        {
+          questionText: 'Which answer should move?',
+          options: ['Correct answer', 'Wrong answer', 'Another wrong answer'],
+          correctOptionIndex: 0,
+        },
+        partnerA.token,
+      ),
+      201,
+    );
+    const round = created.rounds.find((item) => item.questionText === 'Which answer should move?');
+    expect(round).toBeTruthy();
+    const createdRound = round!;
+    expect(createdRound.options[createdRound.correctOptionIndex]).toBe('Correct answer');
+    expect(createdRound.correctOptionIndex).not.toBe(0);
   });
 
   test('creates catalog question once per author and rejects duplicate use', async ({ request }) => {

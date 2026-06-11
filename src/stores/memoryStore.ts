@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { apiRequest } from '@/services/api';
 import { localizeApiError } from '@/services/errorMessages';
-import type { Couple, MemoryCategory, MemoryEntry } from '@/types/domain';
+import type { CategoryOption, Couple, MemoryCategory, MemoryEntry } from '@/types/domain';
 import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
 import { useGardenStore } from './gardenStore';
@@ -14,12 +14,14 @@ export type MemoryEntryView = MemoryEntry & {
 export const useMemoryStore = defineStore('memories', {
   state: () => ({
     memories: [] as MemoryEntryView[],
+    categories: [] as CategoryOption[],
     loading: false,
     error: '',
   }),
   actions: {
-    applyMemoryPayload(payload: { couple: Couple; memories: MemoryEntryView[] }) {
+    applyMemoryPayload(payload: { couple: Couple; memories: MemoryEntryView[]; categories?: CategoryOption[] }) {
       this.memories = payload.memories;
+      this.categories = payload.categories ?? this.categories;
       useCoupleStore().setCouple(payload.couple);
       useAuthStore().couple = payload.couple;
     },
@@ -27,7 +29,9 @@ export const useMemoryStore = defineStore('memories', {
       this.loading = true;
       this.error = '';
       try {
-        const payload = await apiRequest<{ couple: Couple; memories: MemoryEntryView[] }>('/api/memories');
+        const payload = await apiRequest<{ couple: Couple; memories: MemoryEntryView[]; categories?: CategoryOption[] }>(
+          '/api/memories',
+        );
         this.applyMemoryPayload(payload);
       } catch (error) {
         this.error = localizeApiError(error, 'errors.fallback.memoriesLoad');
@@ -45,7 +49,9 @@ export const useMemoryStore = defineStore('memories', {
       this.loading = true;
       this.error = '';
       try {
-        const payload = await apiRequest<{ couple: Couple; memories: MemoryEntryView[] }>('/api/memories', {
+        const payload = await apiRequest<{ couple: Couple; memories: MemoryEntryView[]; categories?: CategoryOption[] }>(
+          '/api/memories',
+          {
           method: 'POST',
           body: JSON.stringify({
             title: input.title.trim(),
@@ -53,7 +59,8 @@ export const useMemoryStore = defineStore('memories', {
             date: input.date,
             category: input.category,
           }),
-        });
+          },
+        );
         this.applyMemoryPayload(payload);
         await useGardenStore().loadGarden();
         await useNotificationStore().loadNotifications();

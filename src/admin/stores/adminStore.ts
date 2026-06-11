@@ -52,7 +52,7 @@ export const useAdminStore = defineStore('admin', {
         this.usesDefaultAdminPassword = payload.usesDefaultAdminPassword;
         this.bootstrapped = true;
       } catch {
-        this.error = 'Admin-Passwort ist ungueltig.';
+        this.error = 'Admin-Passwort ist ungültig.';
         throw new Error(this.error);
       } finally {
         this.loading = false;

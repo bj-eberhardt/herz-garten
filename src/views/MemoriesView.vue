@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { Plus } from '@lucide/vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { Plus, Images } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
+import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
 import MemoryTimeline from '@/components/memories/MemoryTimeline.vue';
 import type { MemoryCategory } from '@/types/domain';
 import { useMemoryStore } from '@/stores/memoryStore';
@@ -12,6 +13,16 @@ const title = ref('');
 const description = ref('');
 const date = ref(new Date().toISOString().slice(0, 10));
 const category = ref<MemoryCategory>('everyday');
+const submitAttempted = ref(false);
+const fallbackCategories = computed(() => [
+  { value: 'everyday', label: t('memories.categories.everyday') },
+  { value: 'date', label: t('memories.categories.date') },
+  { value: 'travel', label: t('memories.categories.travel') },
+  { value: 'milestone', label: t('memories.categories.milestone') },
+  { value: 'funny', label: t('memories.categories.funny') },
+  { value: 'special', label: t('memories.categories.special') },
+]);
+const categoryOptions = computed(() => (memoryStore.categories.length ? memoryStore.categories : fallbackCategories.value));
 
 async function submitMemory() {
   await memoryStore.addMemory({
@@ -24,10 +35,17 @@ async function submitMemory() {
   description.value = '';
   date.value = new Date().toISOString().slice(0, 10);
   category.value = 'everyday';
+  submitAttempted.value = false;
 }
 
 onMounted(() => {
   memoryStore.loadMemories();
+});
+
+watch(categoryOptions, (options) => {
+  if (options.length && !options.some((option) => option.value === category.value)) {
+    category.value = options[0].value;
+  }
 });
 </script>
 
@@ -38,29 +56,28 @@ onMounted(() => {
       <h1>{{ t('memories.title') }}</h1>
     </section>
 
-    <form class="panel composer" data-testid="memory-form" @submit.prevent="submitMemory">
+    <FeatureExplainer feature-key="memories" :icon="Images" :title="t('memories.howTitle')" :text="t('memories.howText')" />
+
+    <form class="panel composer" :class="{ 'form-submitted': submitAttempted }" data-testid="memory-form" @submit.prevent="submitMemory">
       <label for="memory-title">{{ t('memories.newMemory') }}</label>
-      <input id="memory-title" v-model="title" :placeholder="t('memories.titlePlaceholder')" data-testid="memory-title" />
+      <input id="memory-title" v-model="title" :placeholder="t('memories.titlePlaceholder')" data-testid="memory-title" required />
 
       <label for="memory-description">{{ t('memories.description') }}</label>
       <textarea id="memory-description" v-model="description" rows="3" :placeholder="t('memories.descriptionPlaceholder')" data-testid="memory-description" />
 
       <label for="memory-date">{{ t('memories.date') }}</label>
-      <input id="memory-date" v-model="date" type="date" data-testid="memory-date" />
+      <input id="memory-date" v-model="date" type="date" data-testid="memory-date" required />
 
       <label for="memory-category">{{ t('common.category') }}</label>
-      <select id="memory-category" v-model="category" data-testid="memory-category">
-        <option value="everyday">{{ t('memories.categories.everyday') }}</option>
-        <option value="date">{{ t('memories.categories.date') }}</option>
-        <option value="travel">{{ t('memories.categories.travel') }}</option>
-        <option value="milestone">{{ t('memories.categories.milestone') }}</option>
-        <option value="funny">{{ t('memories.categories.funny') }}</option>
-        <option value="special">{{ t('memories.categories.special') }}</option>
+      <select id="memory-category" v-model="category" data-testid="memory-category" required>
+        <option v-for="option in categoryOptions" :key="option.value" :value="option.value">
+          {{ option.label }}
+        </option>
       </select>
 
       <p v-if="memoryStore.error" class="form-error">{{ memoryStore.error }}</p>
 
-      <button class="primary-button" type="submit" :disabled="memoryStore.loading" data-testid="memory-save">
+      <button class="primary-button" type="submit" :disabled="memoryStore.loading" data-testid="memory-save" @click="submitAttempted = true">
         <Plus :size="18" aria-hidden="true" />
         {{ memoryStore.loading ? t('common.saving') : t('common.save') }}
       </button>

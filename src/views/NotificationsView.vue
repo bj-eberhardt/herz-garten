@@ -3,6 +3,7 @@ import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { Bell, CheckCheck } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
+import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { useAuthStore } from '@/stores/authStore';
 import type { NotificationItem } from '@/types/domain';
@@ -41,6 +42,8 @@ function notificationBody(notification: NotificationItem) {
       <p class="eyebrow">{{ t('notifications.eyebrow') }}</p>
       <h1>{{ t('notifications.title') }}</h1>
     </section>
+
+    <FeatureExplainer feature-key="notifications" :icon="Bell" :title="t('notifications.howTitle')" :text="t('notifications.howText')" />
 
     <section class="panel notification-toolbar">
       <div>

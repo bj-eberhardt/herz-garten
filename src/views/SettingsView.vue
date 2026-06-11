@@ -1,16 +1,39 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { ShieldCheck } from '@lucide/vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { useAuthStore } from '@/stores/authStore';
+import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
+import { featureExplainerKeys, useAuthStore } from '@/stores/authStore';
 import { localizeApiError } from '@/services/errorMessages';
+import type { FeatureExplainerKey } from '@/types/domain';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const { t } = useI18n();
 const message = ref('');
 const error = ref('');
+const featureExplainerItems = computed(() =>
+  featureExplainerKeys.map((key) => ({
+    key,
+    label: t(`settings.featureExplainers.${key}`),
+  })),
+);
+
+function checkedFromEvent(event: Event) {
+  return (event.target as HTMLInputElement).checked;
+}
+
+async function updateFeatureExplainer(key: FeatureExplainerKey, visible: boolean) {
+  error.value = '';
+  message.value = '';
+  try {
+    await authStore.setFeatureExplainerVisible(key, visible);
+    message.value = t('settings.hintSettingsSaved');
+  } catch (caught) {
+    error.value = localizeApiError(caught, 'errors.fallback.preferences');
+  }
+}
 
 async function exportData() {
   error.value = '';
@@ -62,6 +85,8 @@ async function deleteAccount() {
       <h1>{{ t('settings.title') }}</h1>
     </section>
 
+    <FeatureExplainer feature-key="settings" :icon="ShieldCheck" :title="t('settings.howTitle')" :text="t('settings.howText')" />
+
     <section class="panel settings-list">
       <p><strong>{{ t('settings.user') }}</strong> {{ authStore.user?.displayName }}</p>
       <p><strong>{{ t('settings.email') }}</strong> {{ authStore.user?.email }}</p>
@@ -77,6 +102,28 @@ async function deleteAccount() {
         <button class="secondary-button" type="button" data-testid="settings-logout" @click="authStore.logout()">{{ t('settings.logout') }}</button>
         <button class="secondary-button" type="button" data-testid="settings-leave-couple" @click="leaveCouple">{{ t('settings.leaveCouple') }}</button>
         <button class="danger-button" type="button" data-testid="settings-delete-account" @click="deleteAccount">{{ t('settings.deleteAccount') }}</button>
+      </div>
+    </section>
+
+    <section class="panel hint-settings" data-testid="settings-hint-settings">
+      <div>
+        <p class="eyebrow">{{ t('settings.hintSettingsEyebrow') }}</p>
+        <h2>{{ t('settings.hintSettingsTitle') }}</h2>
+        <p class="muted">{{ t('settings.hintSettingsText') }}</p>
+      </div>
+
+      <div class="toggle-list">
+        <label v-for="item in featureExplainerItems" :key="item.key" class="toggle-row" :for="`feature-explainer-toggle-${item.key}`">
+          <span>{{ item.label }}</span>
+          <input
+            :id="`feature-explainer-toggle-${item.key}`"
+            type="checkbox"
+            role="switch"
+            :checked="authStore.showFeatureExplainer(item.key)"
+            :data-testid="`settings-feature-explainer-${item.key}`"
+            @change="updateFeatureExplainer(item.key, checkedFromEvent($event))"
+          />
+        </label>
       </div>
     </section>
 

@@ -11,12 +11,18 @@ Die Playwright-Suite prueft den MVP-Kernloop mit zwei Partnern: Registrierung, P
 - Playwright UI: `npm run test:e2e:ui`
 - Report: `npm run test:e2e:report`
 
-Die Tests laufen gegen `http://localhost:5173` und `http://localhost:3000`. Docker wird durch Playwright gestartet oder ein laufendes Setup wird wiederverwendet.
+Die Tests laufen gegen ein eigenes E2E-Docker-Projekt:
+
+- Frontend: `http://localhost:5174`
+- Backend: `http://localhost:3001`
+- PostgreSQL: `localhost:5433`
+
+Playwright startet `docker compose -f docker-compose.yml -f docker-compose.e2e.yml -p herzgarten-e2e`. Vor jedem Lauf wird dieses Projekt inklusive Volumes geloescht, damit die E2E-Datenbank sauber startet und der lokale Dev-Stack auf `5173/3000/5432` parallel weiterlaufen kann.
 
 ## Testdaten
 
 - Jeder Test erzeugt eindeutige Nutzer per Zeitstempel und Zufallssuffix.
-- Die Datenbank wird nicht zurueckgesetzt.
+- Die E2E-Datenbank wird pro Lauf neu erstellt.
 - Laengere Flows nutzen API-Setup fuer Nutzer/Paarraum und testen danach die UI.
 - Onboarding wird bewusst komplett ueber die UI getestet.
 

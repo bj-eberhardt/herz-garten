@@ -1,0 +1,16 @@
+services:
+  frontend:
+    environment:
+      VITE_API_URL: http://localhost:3001
+    ports: !override
+      - "5174:5173"
+
+  backend:
+    environment:
+      CORS_ORIGIN: http://localhost:5174
+    ports: !override
+      - "3001:3000"
+
+  db:
+    ports: !override
+      - "5433:5432"

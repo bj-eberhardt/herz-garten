@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Clipboard, KeyRound, LogIn, Sprout, UserPlus } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
+import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
 import type { ContentPreference, RelationshipType } from '@/types/domain';
 import { useAuthStore } from '@/stores/authStore';
 import { localizeApiError } from '@/services/errorMessages';
@@ -20,6 +21,9 @@ const relationshipType = ref<RelationshipType>('mixed');
 const contentPreference = ref<ContentPreference>('balanced');
 const formError = ref('');
 const copied = ref(false);
+const authSubmitAttempted = ref(false);
+const joinSubmitAttempted = ref(false);
+const createSubmitAttempted = ref(false);
 
 async function submitAuth() {
   formError.value = '';
@@ -57,6 +61,10 @@ async function joinCouple() {
   }
 }
 
+watch(mode, () => {
+  authSubmitAttempted.value = false;
+});
+
 async function copyInviteCode() {
   if (!authStore.couple?.inviteCode) return;
   await navigator.clipboard.writeText(authStore.couple.inviteCode);
@@ -77,6 +85,8 @@ async function copyInviteCode() {
       <p v-else>{{ t('auth.introCouple') }}</p>
     </section>
 
+    <FeatureExplainer feature-key="onboarding" :icon="Sprout" :title="t('auth.howTitle')" :text="t('auth.howText')" />
+
     <section v-if="!authStore.isAuthenticated" class="panel auth-panel">
       <div class="segmented-control" :aria-label="t('auth.modeLabel')">
         <button data-testid="auth-mode-register" :class="{ active: mode === 'register' }" type="button" @click="mode = 'register'">
@@ -89,19 +99,19 @@ async function copyInviteCode() {
         </button>
       </div>
 
-      <form class="composer" data-testid="auth-form" @submit.prevent="submitAuth">
+      <form class="composer" :class="{ 'form-submitted': authSubmitAttempted }" data-testid="auth-form" @submit.prevent="submitAuth">
         <label v-if="mode === 'register'" for="display-name">{{ t('common.name') }}</label>
-        <input v-if="mode === 'register'" id="display-name" v-model="displayName" autocomplete="name" data-testid="auth-display-name" />
+        <input v-if="mode === 'register'" id="display-name" v-model="displayName" autocomplete="name" data-testid="auth-display-name" required />
 
         <label for="email">{{ t('common.email') }}</label>
-        <input id="email" v-model="email" autocomplete="email" type="email" data-testid="auth-email" />
+        <input id="email" v-model="email" autocomplete="email" type="email" data-testid="auth-email" required />
 
         <label for="password">{{ t('common.password') }}</label>
-        <input id="password" v-model="password" autocomplete="current-password" type="password" data-testid="auth-password" />
+        <input id="password" v-model="password" autocomplete="current-password" type="password" minlength="8" data-testid="auth-password" required />
 
         <p v-if="formError || authStore.error" class="form-error" data-testid="auth-error">{{ formError || authStore.error }}</p>
 
-        <button class="primary-button" type="submit" :disabled="authStore.loading" data-testid="auth-submit">
+        <button class="primary-button" type="submit" :disabled="authStore.loading" data-testid="auth-submit" @click="authSubmitAttempted = true">
           {{ mode === 'register' ? t('auth.createAccount') : t('auth.loginAction') }}
         </button>
       </form>
@@ -130,10 +140,10 @@ async function copyInviteCode() {
           </div>
         </div>
 
-        <form class="join-form highlighted-form" data-testid="join-couple-form" @submit.prevent="joinCouple">
+        <form class="join-form highlighted-form" :class="{ 'form-submitted': joinSubmitAttempted }" data-testid="join-couple-form" @submit.prevent="joinCouple">
           <label for="invite-code">{{ t('auth.partnerCode') }}</label>
-          <input id="invite-code" v-model="inviteCode" placeholder="HERZ-4821" autocomplete="off" data-testid="invite-code-input" />
-          <button class="primary-button" type="submit" :disabled="!inviteCode.trim()" data-testid="join-couple-submit">
+          <input id="invite-code" v-model="inviteCode" placeholder="apfel-sonne-4821" autocomplete="off" data-testid="invite-code-input" required />
+          <button class="primary-button" type="submit" data-testid="join-couple-submit" @click="joinSubmitAttempted = true">
             <KeyRound :size="18" aria-hidden="true" />
             {{ t('auth.connectPartner') }}
           </button>
@@ -141,23 +151,23 @@ async function copyInviteCode() {
 
         <div class="section-divider"><span>{{ t('auth.orCreateNew') }}</span></div>
 
-        <form class="join-form" data-testid="create-couple-form" @submit.prevent="createCouple">
+        <form class="join-form" :class="{ 'form-submitted': createSubmitAttempted }" data-testid="create-couple-form" @submit.prevent="createCouple">
           <label for="relationship-type">{{ t('auth.relationshipMode') }}</label>
-          <select id="relationship-type" v-model="relationshipType" data-testid="relationship-type-select">
+          <select id="relationship-type" v-model="relationshipType" data-testid="relationship-type-select" required>
             <option value="mixed">{{ t('auth.relationship.mixed') }}</option>
             <option value="local">{{ t('auth.relationship.local') }}</option>
             <option value="long_distance">{{ t('auth.relationship.long_distance') }}</option>
           </select>
 
           <label for="content-preference">{{ t('auth.contentStyle') }}</label>
-          <select id="content-preference" v-model="contentPreference" data-testid="content-preference-select">
+          <select id="content-preference" v-model="contentPreference" data-testid="content-preference-select" required>
             <option value="balanced">{{ t('auth.preference.balanced') }}</option>
             <option value="romantic">{{ t('auth.preference.romantic') }}</option>
             <option value="playful">{{ t('auth.preference.playful') }}</option>
             <option value="deep">{{ t('auth.preference.deep') }}</option>
           </select>
 
-          <button class="primary-button" type="submit" data-testid="create-couple-submit">
+          <button class="primary-button" type="submit" data-testid="create-couple-submit" @click="createSubmitAttempted = true">
             <Sprout :size="18" aria-hidden="true" />
             {{ t('auth.createGarden') }}
           </button>

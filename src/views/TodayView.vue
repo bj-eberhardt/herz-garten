@@ -2,6 +2,7 @@
 import { onMounted } from 'vue';
 import { Heart, Sparkles } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
+import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
 import DailyQuestionCard from '@/components/questions/DailyQuestionCard.vue';
 import { useCoupleStore } from '@/stores/coupleStore';
 import { useDailyQuestionStore } from '@/stores/dailyQuestionStore';
@@ -25,6 +26,8 @@ onMounted(() => {
         <span><Sparkles :size="18" />{{ t('today.gardenStage', { stage: coupleStore.couple.gardenStage }) }}</span>
       </div>
     </section>
+
+    <FeatureExplainer feature-key="today" :icon="Heart" :title="t('today.howTitle')" :text="t('today.howText')" />
 
     <DailyQuestionCard />
   </div>

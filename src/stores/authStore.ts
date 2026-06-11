@@ -1,12 +1,29 @@
 import { defineStore } from 'pinia';
 import { apiRequest, clearToken, getToken, setToken } from '@/services/api';
 import { localizeApiError } from '@/services/errorMessages';
-import type { ContentPreference, Couple, RelationshipType } from '@/types/domain';
+import type { ContentPreference, Couple, FeatureExplainerKey, RelationshipType, UserPreferences } from '@/types/domain';
+
+export const featureExplainerKeys: FeatureExplainerKey[] = [
+  'onboarding',
+  'today',
+  'quests',
+  'garden',
+  'knowMe',
+  'loveJar',
+  'memories',
+  'notifications',
+  'settings',
+];
+
+const defaultPreferences: UserPreferences = {
+  featureExplainers: Object.fromEntries(featureExplainerKeys.map((key) => [key, true])) as UserPreferences['featureExplainers'],
+};
 
 interface AuthUser {
   id: string;
   email: string;
   displayName: string;
+  preferences?: UserPreferences;
 }
 
 interface AuthResponse {
@@ -81,6 +98,29 @@ export const useAuthStore = defineStore('auth', {
         method: 'POST',
         body: JSON.stringify(options),
       });
+      this.couple = result.couple;
+    },
+    showFeatureExplainer(key: FeatureExplainerKey) {
+      return this.user?.preferences?.featureExplainers?.[key] ?? true;
+    },
+    async setFeatureExplainerVisible(key: FeatureExplainerKey, visible: boolean) {
+      if (!this.user) return;
+      const currentPreferences = this.user.preferences ?? defaultPreferences;
+      const preferences: UserPreferences = {
+        ...defaultPreferences,
+        ...currentPreferences,
+        featureExplainers: {
+          ...defaultPreferences.featureExplainers,
+          ...currentPreferences.featureExplainers,
+          [key]: visible,
+        },
+      };
+      this.user = { ...this.user, preferences };
+      const result = await apiRequest<{ user: AuthUser; couple: (Couple & { memberCount?: number }) | null }>('/api/me/preferences', {
+        method: 'PATCH',
+        body: JSON.stringify({ preferences }),
+      });
+      this.user = result.user;
       this.couple = result.couple;
     },
     async joinCouple(inviteCode: string) {

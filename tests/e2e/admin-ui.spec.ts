@@ -41,7 +41,10 @@ test.describe('admin ui', () => {
     await expect(page.getByTestId('admin-content')).toBeVisible();
     await page.getByRole('button', { name: 'Love Jar' }).click();
     await expect(page.locator('.admin-heading span')).toHaveText('Love Jar');
+    await expect(page.getByTestId('admin-content-category-filter')).toContainText('Compliment');
+    await expect(page.getByTestId('admin-content-new')).toBeVisible();
     await page.getByTestId('admin-content-new').click();
+    await expect(page.getByTestId('admin-content-form')).toBeVisible();
     await expect(page.locator('[data-testid="admin-content-category"] option').nth(1)).toBeAttached();
     await page.getByTestId('admin-content-category').selectOption({ index: 1 });
     await page.getByTestId('admin-content-love-jar-text').fill(`UI Love Jar ${runId}`);
