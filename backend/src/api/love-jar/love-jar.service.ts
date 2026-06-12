@@ -7,7 +7,7 @@ import {
   getCoupleMemberIds,
   getCurrentCouple,
   isActiveContentCategory,
-} from '../support.js';
+} from '../support.repository.js';
 import {
   drawPartnerLoveJarNote,
   hasDrawnLoveJarToday,
@@ -33,8 +33,6 @@ export async function createLoveJarNoteForUser(
       coupleId: couple.id,
       userIds: memberIds.filter((memberId) => memberId !== user.id),
       type: 'love_jar_note',
-      title: 'Ein neuer Zettel wartet',
-      body: `${user.displayName} hat etwas in euren Love Jar gelegt.`,
       titleKey: 'notifications.titles.loveJarNote',
       bodyKey: 'notifications.bodies.loveJarNote',
       params: { name: user.displayName },

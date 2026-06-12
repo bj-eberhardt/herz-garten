@@ -18,6 +18,7 @@ const AdminCoupleDetailView = () => import('@/admin/views/AdminCoupleDetailView.
 const AdminCouplesView = () => import('@/admin/views/AdminCouplesView.vue');
 const AdminDashboardView = () => import('@/admin/views/AdminDashboardView.vue');
 const AdminLoginView = () => import('@/admin/views/AdminLoginView.vue');
+const AdminMessageTemplatesView = () => import('@/admin/views/AdminMessageTemplatesView.vue');
 const AdminUsersView = () => import('@/admin/views/AdminUsersView.vue');
 
 const router = createRouter({
@@ -44,6 +45,7 @@ const router = createRouter({
         { path: 'couples/:id', name: 'adminCoupleDetail', component: AdminCoupleDetailView },
         { path: 'content', name: 'adminContent', component: AdminContentView },
         { path: 'categories', name: 'adminCategories', component: AdminCategoriesView },
+        { path: 'messages', name: 'adminMessages', component: AdminMessageTemplatesView },
         { path: 'audit-log', name: 'adminAuditLog', component: AdminAuditLogView },
       ],
     },

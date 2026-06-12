@@ -7,7 +7,7 @@ import {
 } from './catalog.js';
 import { listGardenObjects, updateGardenObjectPlacement, type GardenPlacementUpdate } from './garden.repository.js';
 import { mapGardenObject } from './garden.mapper.js';
-import { buildGardenObjectDetail, buildGardenProgress } from '../support.js';
+import { buildGardenObjectDetail, buildGardenProgress, type CurrentCouple } from '../support.repository.js';
 
 export const gardenObjectIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -58,21 +58,30 @@ export function clampNumber(value: unknown, min: number, max: number, fallback: 
   return Math.min(max, Math.max(min, parsed));
 }
 
-export async function buildGardenPayload(couple: Record<string, unknown>) {
-  const objects = await listGardenObjects(String(couple.id));
+export interface GardenPlacementBody {
+  areaKey?: unknown;
+  positionX?: unknown;
+  positionY?: unknown;
+  zIndex?: unknown;
+  scale?: unknown;
+  rotation?: unknown;
+}
+
+export async function buildGardenPayload(couple: CurrentCouple) {
+  const objects = await listGardenObjects(couple.id);
   return {
     couple,
     objects: objects.map(mapGardenObject),
     areas: gardenAreas,
     unlocks: gardenUnlocks,
-    availableAssets: gardenAssets.filter((asset) => asset.stageUnlock <= Math.max(1, Number(couple.gardenStage))),
+    availableAssets: gardenAssets.filter((asset) => asset.stageUnlock <= Math.max(1, couple.gardenStage)),
     assetCatalog: gardenAssets,
-    nextUnlock: nextGardenUnlock(Number(couple.heartPoints)),
-    progress: await buildGardenProgress(String(couple.id)),
+    nextUnlock: nextGardenUnlock(couple.heartPoints),
+    progress: await buildGardenProgress(couple.id),
   };
 }
 
-export function normalizeGardenPlacement(body: Record<string, unknown>) {
+export function normalizeGardenPlacement(body: GardenPlacementBody) {
   const positionY = Math.round(clampNumber(body.positionY, 28, 88, 64));
   return {
     areaKey: typeof body.areaKey === 'string' ? body.areaKey.trim() : '',
@@ -88,8 +97,8 @@ export function isUnlockedGardenArea(areaKey: string, gardenStage: number) {
   return gardenAreas.some((area) => area.key === areaKey && area.stageUnlock <= Math.max(1, gardenStage));
 }
 
-export async function placeGardenObject(couple: Record<string, unknown>, objectId: string, placement: GardenPlacementUpdate) {
-  const updated = await updateGardenObjectPlacement(String(couple.id), objectId, placement);
+export async function placeGardenObject(couple: CurrentCouple, objectId: string, placement: GardenPlacementUpdate) {
+  const updated = await updateGardenObjectPlacement(couple.id, objectId, placement);
   return updated ? { couple, object: mapGardenObject(updated) } : null;
 }
 

@@ -6,7 +6,7 @@ import { requireCurrentCoupleForUser } from '../shared/currentCouple.js';
 import {
   gardenPlacementBodySchema,
 } from '../bodySchemas.js';
-import { resolveLocale } from '../support.js';
+import { resolveLocale } from '../support.repository.js';
 import {
   buildGardenPayload,
   gardenObjectIdPattern,

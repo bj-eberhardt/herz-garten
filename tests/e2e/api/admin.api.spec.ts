@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
-import { apiGet, apiGetRaw, apiPostRaw, registerByApi, setupCoupleByApi } from '../helpers/api';
+import { apiGet, apiGetRaw, apiPatchRaw, apiPostRaw, registerByApi, setupCoupleByApi } from '../helpers/api';
 import { expectApiError, expectJson } from '../helpers/apiAssertions';
 import { testRunId, testUser } from '../helpers/testUsers';
 
@@ -245,5 +245,84 @@ test.describe('admin api', () => {
     expect(englishTemplates.templates.some((template) => template.text === 'What I love about you is ...')).toBe(true);
     const templates = await apiGet<{ templates: Array<{ text: string }> }>(request, '/api/love-jar/templates', auth.token);
     expect(templates.templates.some((template) => template.text === `Admin jar ${suffix}`)).toBe(true);
+  });
+
+  test('manages notification message templates and validates placeholders', async ({ request }) => {
+    const token = await adminLogin(request);
+    const key = 'notifications.bodies.questWaitingConfirmation';
+
+    const listed = await apiGet<{
+      items: Array<{
+        key: string;
+        requiredParams: string[];
+        translations: Record<string, { text: string }>;
+      }>;
+    }>(request, '/api/admin/message-templates?namespace=notifications', token);
+    const template = listed.items.find((item) => item.key === key);
+    expect(template).toBeTruthy();
+    expect(template!.requiredParams.sort()).toEqual(['name', 'title']);
+    const originalText = template!.translations.de.text;
+
+    await expectApiError(
+      await apiPatchRaw(
+        request,
+        `/api/admin/message-templates/${key}`,
+        { translations: { de: { text: '{name} hat bestätigt.' } } },
+        token,
+      ),
+      400,
+      'admin.messageTemplateInvalid',
+    );
+
+    await expectApiError(
+      await apiPatchRaw(
+        request,
+        `/api/admin/message-templates/${key}`,
+        { translations: { de: { text: '{name} hat "{title}" mit {extra} bestätigt.' } } },
+        token,
+      ),
+      400,
+      'admin.messageTemplateInvalid',
+    );
+
+    const customText = 'Admin-Test: {name} wartet bei "{title}".';
+    try {
+      const saved = await expectJson<{ items: Array<{ key: string; translations: Record<string, { text: string }> }> }>(
+        await apiPatchRaw(
+          request,
+          `/api/admin/message-templates/${key}`,
+          { translations: { de: { text: customText } } },
+          token,
+        ),
+      );
+      expect(saved.items.find((item) => item.key === key)?.translations.de.text).toBe(customText);
+
+      const runId = testRunId();
+      const setup = await setupCoupleByApi(request, testUser('admin-message-a', runId), testUser('admin-message-b', runId));
+      const questPayload = await apiGet<{ quests: Array<{ id: string; title: string; requiresBothPartners: boolean }> }>(
+        request,
+        '/api/quests',
+        setup.partnerA.token,
+      );
+      const quest = questPayload.quests.find((item) => item.requiresBothPartners);
+      expect(quest).toBeTruthy();
+
+      await expectJson(await apiPostRaw(request, `/api/quests/${quest!.id}/complete`, {}, setup.partnerA.token));
+      const notifications = await apiGet<{ notifications: Array<{ body: string; bodyKey: string }> }>(
+        request,
+        '/api/notifications',
+        setup.partnerB.token,
+      );
+      expect(notifications.notifications.find((item) => item.bodyKey === key)?.body).toBe(
+        `Admin-Test: ${setup.partnerA.user.displayName} wartet bei "${quest!.title}".`,
+      );
+    } finally {
+      await apiPatchRaw(
+        request,
+        `/api/admin/message-templates/${key}`,
+        { translations: { de: { text: originalText } } },
+        token,
+      );
+    }
   });
 });

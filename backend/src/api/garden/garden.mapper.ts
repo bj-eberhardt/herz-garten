@@ -1,5 +1,26 @@
 import { fallbackAreaKey, gardenAssets } from './catalog.js';
 
+export interface GardenObjectRow {
+  id: string;
+  coupleId: string;
+  type: string;
+  sourceType: string;
+  sourceId: string | null;
+  label: string;
+  areaKey: string | null;
+  assetKey: string | null;
+  historyTitle?: string | null;
+  positionX: number;
+  positionY: number;
+  zIndex: number | null;
+  scale: number | string | null;
+  rotation: number | null;
+  placedByUser: boolean;
+  rewardPoints: number | string | null;
+  level: number;
+  createdAt: Date | string;
+}
+
 export function assetKeyForQuest(category: string) {
   if (category === 'date') return 'picnic_blanket';
   if (category === 'romance') return 'date_pavilion';
@@ -28,7 +49,7 @@ export function objectTypeForAsset(assetKey: string) {
   return gardenAssets.find((asset) => asset.key === assetKey)?.objectType ?? 'decoration';
 }
 
-export function mapGardenObject(row: Record<string, unknown>) {
+export function mapGardenObject(row: GardenObjectRow) {
   return {
     id: row.id,
     coupleId: row.coupleId,

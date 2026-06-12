@@ -4,7 +4,7 @@ import { handleError, sendApiError } from '../../errors.js';
 import { validateBody } from '../../validation.js';
 import { emptyBodySchema } from '../bodySchemas.js';
 import { readAllNotifications, readNotification } from '../notifications/notifications.service.js';
-import { buildNotificationPayload } from '../support.js';
+import { buildNotificationPayload } from '../support.repository.js';
 
 export function registerNotificationRoutes(router: Router) {
   router.get('/notifications', requireAuth, async (request, response) => {

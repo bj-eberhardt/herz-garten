@@ -5,7 +5,7 @@ import {
   createNotifications,
   getCoupleMemberIds,
   getCurrentCouple,
-} from '../support.js';
+} from '../support.repository.js';
 import {
   acceptQuestForCouple,
   countCoupleMembers,
@@ -52,8 +52,6 @@ export async function completeQuest(user: { id: string; displayName: string }, q
         coupleId: couple.id,
         userIds: memberIds,
         type: 'quest_completed',
-        title: 'Quest abgeschlossen',
-        body: `Eure Quest "${quest.title}" hat euren Garten wachsen lassen.`,
         titleKey: 'notifications.titles.questCompleted',
         bodyKey: 'notifications.bodies.questCompleted',
         params: { title: quest.title },
@@ -66,8 +64,6 @@ export async function completeQuest(user: { id: string; displayName: string }, q
         coupleId: couple.id,
         userIds: memberIds.filter((memberId) => memberId !== user.id),
         type: 'quest_waiting_confirmation',
-        title: 'Quest wartet auf dich',
-        body: `${user.displayName} hat "${quest.title}" bestÃ¤tigt. Wenn es fÃ¼r dich auch passt, kannst du sie abschlieÃŸen.`,
         titleKey: 'notifications.titles.questWaitingConfirmation',
         bodyKey: 'notifications.bodies.questWaitingConfirmation',
         params: { name: user.displayName, title: quest.title },

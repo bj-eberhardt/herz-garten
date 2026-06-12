@@ -5,10 +5,15 @@ import { config } from './config.js';
 import { handleError, sendApiError } from './errors.js';
 import { createRateLimiter } from './security/rateLimit.js';
 import { validateBody } from './validation.js';
-import { adminLoginBodySchema, categoryBodySchema } from './admin/bodySchemas.js';
-import type { ContentType } from './admin/support.js';
+import { adminLoginBodySchema, categoryBodySchema, messageTemplateBodySchema } from './admin/bodySchemas.js';
+import type { ContentType } from './admin/support.repository.js';
 import { audit, buildAuditLogPayload } from './admin/audit/audit.service.js';
 import { deleteCategory, listCategories, saveCategory } from './admin/categories/categories.service.js';
+import {
+  listMessageTemplates,
+  MessageTemplateValidationException,
+  saveMessageTemplate,
+} from './admin/messageTemplates/messageTemplates.service.js';
 import {
   buildOverview,
   getCoupleDetail,
@@ -25,7 +30,7 @@ import {
   sendCsv,
   supportedLocales,
   validateEditableContentBody
-} from './admin/support.js';
+} from './admin/support.repository.js';
 
 const adminAuthRateLimit = createRateLimiter({
   keyPrefix: 'admin-auth',
@@ -127,6 +132,38 @@ export function adminRouter(): Router {
     try {
       response.json(await buildAuditLogPayload());
     } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.get('/message-templates', requireAdminAuth, async (request, response) => {
+    try {
+      const namespace = normalizeText(request.query.namespace) || 'notifications';
+      response.json({ items: await listMessageTemplates(namespace) });
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.patch('/message-templates/:key', requireAdminAuth, validateBody(messageTemplateBodySchema), async (request, response) => {
+    try {
+      const key = String(request.params.key);
+      const result = await saveMessageTemplate(key, request.body);
+      if (result.status === 'notFound') {
+        response.status(404).json({ errorKey: 'admin.messageTemplateNotFound', error: 'Message-Template nicht gefunden.' });
+        return;
+      }
+      await audit('update', 'message-template', null, { key });
+      response.json({ items: result.items });
+    } catch (error) {
+      if (error instanceof MessageTemplateValidationException) {
+        response.status(400).json({
+          errorKey: 'admin.messageTemplateInvalid',
+          error: 'Message-Template ist ungültig.',
+          validationErrors: error.errors,
+        });
+        return;
+      }
       handleError(response, error);
     }
   });

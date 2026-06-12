@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { LockKeyhole } from '@lucide/vue';
 import { useAdminStore } from '@/admin/stores/adminStore';
+import '@/admin/admin.css';
 
 const adminStore = useAdminStore();
 const router = useRouter();

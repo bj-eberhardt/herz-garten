@@ -1,12 +1,236 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import type { Request } from 'express';
 import { pool } from '../db.js';
+import { type NotificationMessageKey, translateNotificationBackend } from '../i18n/messages.js';
 import { fallbackAreaKey, gardenAreas, gardenAssets, gardenStagePointStep, gardenUnlocks } from './garden/catalog.js';
 
 export { fallbackAreaKey, gardenAreas, gardenAssets, gardenStagePointStep, gardenUnlocks };
 
 export interface Queryable {
   query: typeof pool.query;
+}
+
+export interface PublicUserRow {
+  id: string;
+  email: string;
+  displayName: string;
+  preferences?: unknown;
+}
+
+export interface CurrentCouple {
+  id: string;
+  inviteCode: string;
+  relationshipType: string;
+  contentPreference: string;
+  heartPoints: number;
+  gardenStage: number;
+  createdAt: Date | string;
+  memberCount: number;
+}
+
+export interface GardenObjectRow {
+  id: string;
+  coupleId: string;
+  type: string;
+  sourceType: string;
+  sourceId: string | null;
+  label: string;
+  areaKey: string | null;
+  assetKey: string | null;
+  historyTitle?: string | null;
+  positionX: number;
+  positionY: number;
+  zIndex: number | null;
+  scale: number | string | null;
+  rotation: number | null;
+  placedByUser: boolean;
+  rewardPoints: number | string | null;
+  level: number;
+  createdAt: Date | string;
+}
+
+export interface QuestRow {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  categoryLabel: string;
+  estimatedMinutes: number;
+  effortLevel: string;
+  rewardPoints: number;
+  rewardSeedType: string | null;
+  requiresBothPartners: boolean;
+  coupleQuestId: string | null;
+  status: string;
+  completedByUserIds: string[];
+  completedAt: Date | string | null;
+  rewardAppliedAt: Date | string | null;
+}
+
+export interface QuestRewardSource {
+  title: string;
+  category: string;
+  rewardPoints: number;
+}
+
+export interface LoveJarNoteRow {
+  id: string;
+  coupleId: string;
+  authorId: string;
+  authorName: string;
+  text: string | null;
+  category: string;
+  categoryLabel: string;
+  isDrawn: boolean;
+  drawnAt: Date | string | null;
+  createdAt: Date | string;
+}
+
+export interface LoveJarDrawStatusRow {
+  drawnToday: boolean;
+  partnerUnreadCount: number;
+  ownUnreadCount: number;
+}
+
+export interface LoveJarTemplateRow {
+  id: string;
+  text: string;
+  category: string;
+  categoryLabel: string;
+}
+
+export interface GardenProgressRow {
+  answeredQuestionCount: number;
+  completedQuestCount: number;
+  loveJarNoteCount: number;
+  drawnLoveJarNoteCount: number;
+  memoryCount: number;
+  knowMeRoundCount: number;
+  knowMeHitCount: number;
+  gardenObjectCount: number;
+  lastGardenMomentAt: Date | string | null;
+}
+
+export interface QuestionDetailRow {
+  id: string;
+  date: Date | string;
+  question: string;
+  answers: Array<{ displayName: string; answerText: string | null; createdAt: Date | string }>;
+}
+
+export interface QuestDetailRow {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  rewardPoints: number;
+  completedAt: Date | string | null;
+}
+
+export interface LoveJarDetailRow {
+  id: string;
+  authorName: string;
+  text: string | null;
+  category: string;
+  categoryLabel: string;
+  isDrawn: boolean;
+  drawnAt: Date | string | null;
+  createdAt: Date | string;
+}
+
+export interface MemoryDetailRow {
+  id: string;
+  authorName: string;
+  title: string;
+  description: string | null;
+  date: Date | string;
+  category: string;
+  categoryLabel: string;
+  createdAt: Date | string;
+}
+
+export interface KnowMeDetailRow {
+  id: string;
+  questionText: string;
+  options: string[];
+  correctOptionIndex: number;
+  answeredAt: Date | string | null;
+  createdAt: Date | string;
+  authorName: string;
+  guessUserName: string | null;
+  selectedOptionIndex: number | null;
+  isCorrect: boolean | null;
+  guessCreatedAt: Date | string | null;
+}
+
+export type GardenObjectDetailSource =
+  | ({ type: 'question' } & QuestionDetailRow)
+  | ({ type: 'quest' } & QuestDetailRow)
+  | ({ type: 'love_jar' } & LoveJarDetailRow)
+  | ({ type: 'memory' } & MemoryDetailRow)
+  | ({ type: 'know_me' } & KnowMeDetailRow);
+
+export interface MemoryEntryRow {
+  id: string;
+  coupleId: string;
+  authorId: string;
+  authorName: string;
+  title: string;
+  description: string | null;
+  date: Date | string;
+  imageUrl?: string | null;
+  category: string;
+  categoryLabel: string;
+  linkedGardenObjectId?: string | null;
+  createdAt: Date | string;
+}
+
+export interface KnowMeRoundRow {
+  id: string;
+  coupleId: string;
+  authorId: string;
+  authorName: string;
+  catalogQuestionId: string | null;
+  questionText: string;
+  options: string[];
+  correctOptionIndex: number;
+  status: string;
+  rewardAppliedAt: Date | string | null;
+  answeredAt: Date | string | null;
+  createdAt: Date | string;
+  guessId: string | null;
+  guessUserId: string | null;
+  guessUserName: string | null;
+  selectedOptionIndex: number | null;
+  isCorrect: boolean | null;
+  guessCreatedAt: Date | string | null;
+}
+
+export interface KnowMeCatalogQuestionRow {
+  id: string;
+  questionText: string;
+  category: string;
+}
+
+export interface NotificationRow {
+  id: string;
+  coupleId: string | null;
+  userId: string;
+  type: string;
+  title: string;
+  body: string;
+  titleKey: string | null;
+  bodyKey: string | null;
+  params: Record<string, unknown> | null;
+  sourceType: string;
+  sourceId: string | null;
+  readAt: Date | string | null;
+  createdAt: Date | string;
+}
+
+export interface CategoryOptionRow {
+  value: string;
+  label: string;
 }
 
 export const defaultFeatureExplainerPreferences: Record<string, boolean> = {
@@ -90,7 +314,7 @@ export async function resolveLocale(request: Request) {
   return supported.some((locale) => locale.locale === requestedLocale) ? requestedLocale : defaultLocale;
 }
 
-export function publicUser(row: { id: string; email: string; displayName: string }) {
+export function publicUser(row: PublicUserRow) {
   return {
     id: row.id,
     email: row.email,
@@ -134,7 +358,7 @@ export function mergeUserPreferences(current: unknown, patch: unknown) {
 }
 
 export async function getPublicUser(userId: string) {
-  const result = await pool.query(
+  const result = await pool.query<PublicUserRow>(
     `
       select id, email, display_name as "displayName", preferences
       from profiles
@@ -146,7 +370,7 @@ export async function getPublicUser(userId: string) {
 }
 
 export async function getCurrentCouple(userId: string) {
-  const result = await pool.query(
+  const result = await pool.query<CurrentCouple>(
     `
       select
         c.id,
@@ -191,16 +415,17 @@ export async function createNotifications(
       | 'know_me_question'
       | 'know_me_answered'
       | 'couple_disconnected';
-    title: string;
-    body: string;
     sourceType: string;
     sourceId?: string | null;
-    titleKey?: string;
-    bodyKey?: string;
+    titleKey: NotificationMessageKey;
+    bodyKey: NotificationMessageKey;
     params?: Record<string, unknown>;
   },
 ) {
   const uniqueUserIds = [...new Set(options.userIds)].filter(Boolean);
+  const params = options.params ?? {};
+  const title = await translateNotificationBackend(options.titleKey, params);
+  const body = await translateNotificationBackend(options.bodyKey, params);
 
   for (const userId of uniqueUserIds) {
     await client.query(
@@ -214,13 +439,13 @@ export async function createNotifications(
         options.coupleId,
         userId,
         options.type,
-        options.title,
-        options.body,
+        title,
+        body,
         options.sourceType,
         options.sourceId ?? null,
-        options.titleKey ?? null,
-        options.bodyKey ?? null,
-        JSON.stringify(options.params ?? {}),
+        options.titleKey,
+        options.bodyKey,
+        JSON.stringify(params),
       ],
     );
   }
@@ -298,14 +523,14 @@ export async function getOrCreateTodayInstance(client: Queryable, coupleId: stri
 }
 
 export async function ensureCoupleMembership(userId: string, coupleId: string) {
-  const result = await pool.query(
+  const result = await pool.query<{ one: number }>(
     'select 1 from couple_members where user_id = $1 and couple_id = $2',
     [userId, coupleId],
   );
   return (result.rowCount ?? 0) > 0;
 }
 
-export function mapGardenObject(row: Record<string, unknown>) {
+export function mapGardenObject(row: GardenObjectRow) {
   return {
     id: row.id,
     coupleId: row.coupleId,
@@ -337,7 +562,9 @@ export function gardenStageForPoints(points: number) {
 }
 
 export async function gardenStageAfterReward(client: Queryable, coupleId: string, rewardPoints: number) {
-  const result = await client.query('select heart_points as "heartPoints" from couples where id = $1', [coupleId]);
+  const result = await client.query<{ heartPoints: number }>('select heart_points as "heartPoints" from couples where id = $1', [
+    coupleId,
+  ]);
   return gardenStageForPoints(Number(result.rows[0]?.heartPoints ?? 0) + rewardPoints);
 }
 
@@ -409,10 +636,10 @@ export function clampNumber(value: unknown, min: number, max: number, fallback: 
 }
 
 export async function nextGardenPlacement(client: Queryable, coupleId: string, areaKey: string) {
-  const result = await client.query('select count(*)::int as count from garden_objects where couple_id = $1 and area_key = $2', [
-    coupleId,
-    areaKey,
-  ]);
+  const result = await client.query<{ count: number }>(
+    'select count(*)::int as count from garden_objects where couple_id = $1 and area_key = $2',
+    [coupleId, areaKey],
+  );
   const index = Number(result.rows[0]?.count ?? 0);
   const columns = [18, 34, 50, 66, 82];
   const rows = [70, 58, 78, 48, 66, 54];
@@ -423,7 +650,7 @@ export async function nextGardenPlacement(client: Queryable, coupleId: string, a
   };
 }
 
-export function mapQuest(row: Record<string, unknown>) {
+export function mapQuest(row: QuestRow) {
   return {
     id: row.id,
     title: row.title,
@@ -561,7 +788,7 @@ export async function buildQuestPayload(userId: string, filters: QuestFilters = 
     if (filters.mode === 'long_distance') whereClauses.push(`q.category = 'long_distance'`);
   }
 
-  const result = await pool.query(
+  const result = await pool.query<QuestRow>(
     `
       select
         q.id,
@@ -591,7 +818,7 @@ export async function buildQuestPayload(userId: string, filters: QuestFilters = 
     `,
     params,
   );
-  const categoryResult = await pool.query(
+  const categoryResult = await pool.query<CategoryOptionRow>(
     `
       select
         c.value,
@@ -615,7 +842,7 @@ export async function buildQuestPayload(userId: string, filters: QuestFilters = 
 }
 
 export async function buildContentCategoryPayload(contentType: string, locale = 'de') {
-  const result = await pool.query(
+  const result = await pool.query<CategoryOptionRow>(
     `
       select
         c.value,
@@ -632,16 +859,16 @@ export async function buildContentCategoryPayload(contentType: string, locale = 
 }
 
 export async function isActiveContentCategory(contentType: string, value: string) {
-  const result = await pool.query(
+  const result = await pool.query<{ one: number }>(
     'select 1 from content_categories where content_type = $1 and value = $2 and active = true limit 1',
     [contentType, value],
   );
   return (result.rowCount ?? 0) > 0;
 }
 
-export async function applyQuestReward(client: Queryable, coupleId: string, coupleQuestId: string, quest: Record<string, unknown>) {
-  const category = String(quest.category);
-  const rewardPoints = Number(quest.rewardPoints);
+export async function applyQuestReward(client: Queryable, coupleId: string, coupleQuestId: string, quest: QuestRewardSource) {
+  const category = quest.category;
+  const rewardPoints = quest.rewardPoints;
   const areaKey = highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, rewardPoints), 'quest', category);
   const assetKey = assetKeyForQuest(category);
   const placement = await nextGardenPlacement(client, coupleId, areaKey);
@@ -659,7 +886,7 @@ export async function applyQuestReward(client: Queryable, coupleId: string, coup
       coupleId,
       objectTypeForAsset(assetKey),
       coupleQuestId,
-      String(quest.title),
+      quest.title,
       areaKey,
       assetKey,
       placement.positionX,
@@ -680,7 +907,7 @@ export async function applyQuestReward(client: Queryable, coupleId: string, coup
   await client.query('update couple_quests set reward_applied_at = now() where id = $1', [coupleQuestId]);
 }
 
-export function mapLoveJarNote(row: Record<string, unknown>, revealText = true) {
+export function mapLoveJarNote(row: LoveJarNoteRow, revealText = true) {
   return {
     id: row.id,
     coupleId: row.coupleId,
@@ -695,7 +922,7 @@ export function mapLoveJarNote(row: Record<string, unknown>, revealText = true) 
   };
 }
 
-export function mapMemoryEntry(row: Record<string, unknown>) {
+export function mapMemoryEntry(row: MemoryEntryRow) {
   return {
     id: row.id,
     coupleId: row.coupleId,
@@ -712,7 +939,7 @@ export function mapMemoryEntry(row: Record<string, unknown>) {
   };
 }
 
-export function mapKnowMeRound(row: Record<string, unknown>) {
+export function mapKnowMeRound(row: KnowMeRoundRow) {
   return {
     id: row.id,
     coupleId: row.coupleId,
@@ -739,7 +966,7 @@ export function mapKnowMeRound(row: Record<string, unknown>) {
   };
 }
 
-export function mapKnowMeCatalogQuestion(row: Record<string, unknown>) {
+export function mapKnowMeCatalogQuestion(row: KnowMeCatalogQuestionRow) {
   return {
     id: row.id,
     questionText: row.questionText,
@@ -747,7 +974,7 @@ export function mapKnowMeCatalogQuestion(row: Record<string, unknown>) {
   };
 }
 
-export function mapNotification(row: Record<string, unknown>) {
+export function mapNotification(row: NotificationRow) {
   return {
     id: row.id,
     coupleId: row.coupleId,
@@ -766,7 +993,7 @@ export function mapNotification(row: Record<string, unknown>) {
 }
 
 export async function buildNotificationPayload(userId: string) {
-  const result = await pool.query(
+  const result = await pool.query<NotificationRow>(
     `
       select
         id,
@@ -803,7 +1030,7 @@ export async function buildMemoryPayload(userId: string, locale = 'de') {
     return null;
   }
 
-  const result = await pool.query(
+  const result = await pool.query<MemoryEntryRow>(
     `
       select
         m.id,
@@ -869,7 +1096,7 @@ export async function buildKnowMePayload(userId: string, locale = 'de') {
     return null;
   }
 
-  const result = await pool.query(
+  const result = await pool.query<KnowMeRoundRow>(
     `
       select
         q.id,
@@ -900,7 +1127,7 @@ export async function buildKnowMePayload(userId: string, locale = 'de') {
     [couple.id],
   );
 
-  const catalogResult = await pool.query(
+  const catalogResult = await pool.query<KnowMeCatalogQuestionRow>(
     `
       select
         c.id,
@@ -995,7 +1222,7 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
     return null;
   }
 
-  const objectResult = await pool.query(
+  const objectResult = await pool.query<GardenObjectRow>(
     `
       select
         id,
@@ -1026,10 +1253,10 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
     return { couple, object: null, source: null };
   }
 
-  let source: Record<string, unknown> | null = null;
+  let source: GardenObjectDetailSource | null = null;
 
   if (object.sourceType === 'question') {
-    const result = await pool.query(
+    const result = await pool.query<QuestionDetailRow>(
       `
         select
           i.id,
@@ -1056,7 +1283,7 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
   }
 
   if (object.sourceType === 'quest') {
-    const result = await pool.query(
+    const result = await pool.query<QuestDetailRow>(
       `
         select
           cq.id,
@@ -1075,7 +1302,7 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
   }
 
   if (object.sourceType === 'love_jar') {
-    const result = await pool.query(
+    const result = await pool.query<LoveJarDetailRow>(
       `
         select
           n.id,
@@ -1101,7 +1328,7 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
   }
 
   if (object.sourceType === 'memory') {
-    const result = await pool.query(
+    const result = await pool.query<MemoryDetailRow>(
       `
         select
           m.id,
@@ -1152,7 +1379,7 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
   }
 
   if (object.sourceType === 'know_me') {
-    const result = await pool.query(
+    const result = await pool.query<KnowMeDetailRow>(
       `
         select
           q.id,
@@ -1185,7 +1412,7 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
 }
 
 export async function buildGardenProgress(coupleId: string) {
-  const result = await pool.query(
+  const result = await pool.query<GardenProgressRow>(
     `
       select
         count(distinct dqi.id) filter (where dqi.reward_applied_at is not null)::int as "answeredQuestionCount",
@@ -1231,7 +1458,7 @@ export async function buildLoveJarPayload(userId: string, locale = 'de') {
     return null;
   }
 
-  const result = await pool.query(
+  const result = await pool.query<LoveJarNoteRow>(
     `
       select
         n.id,
@@ -1256,7 +1483,7 @@ export async function buildLoveJarPayload(userId: string, locale = 'de') {
     `,
     [couple.id, locale],
   );
-  const statusResult = await pool.query(
+  const statusResult = await pool.query<LoveJarDrawStatusRow>(
     `
       select
         exists (
@@ -1288,7 +1515,7 @@ export async function buildLoveJarPayload(userId: string, locale = 'de') {
 }
 
 export async function buildLoveJarTemplatePayload(locale = 'de') {
-  const result = await pool.query(
+  const result = await pool.query<LoveJarTemplateRow>(
     `
       select
         t.id,

@@ -7,7 +7,7 @@ import {
   getCoupleMemberIds,
   getCurrentCouple,
   isActiveContentCategory,
-} from '../support.js';
+} from '../support.repository.js';
 import { insertMemory, linkMemoryGardenObject } from './memories.repository.js';
 
 export async function createMemoryForUser(
@@ -36,8 +36,6 @@ export async function createMemoryForUser(
       coupleId: couple.id,
       userIds: memberIds.filter((memberId) => memberId !== user.id),
       type: 'memory_created',
-      title: 'Neue Erinnerung',
-      body: `${user.displayName} hat "${input.title}" in eure Timeline gelegt.`,
       titleKey: 'notifications.titles.memoryCreated',
       bodyKey: 'notifications.bodies.memoryCreated',
       params: { name: user.displayName, title: input.title },

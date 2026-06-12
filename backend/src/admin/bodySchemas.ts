@@ -38,6 +38,19 @@ export const categoryBodySchema = z
   })
   .strict();
 
+export const messageTemplateBodySchema = z
+  .object({
+    translations: z.record(
+      z.string(),
+      z
+        .object({
+          text: trimmedString.optional(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+
 export const dailyQuestionBodySchema = z
   .object({
     ...adminContentFormBase,

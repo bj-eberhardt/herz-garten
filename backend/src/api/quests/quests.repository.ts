@@ -2,8 +2,29 @@ import { randomUUID } from 'node:crypto';
 import type { Queryable } from '../support.repository.js';
 import { pool } from '../../db.js';
 
+export interface ActiveQuestIdRow {
+  id: string;
+}
+
+export interface ActiveQuestForCompletion {
+  id: string;
+  title: string;
+  category: string;
+  rewardPoints: number;
+  requiresBothPartners: boolean;
+}
+
+export interface CoupleQuestState {
+  id: string;
+  status: 'available' | 'accepted' | 'completed';
+  completedByUserIds: string[];
+  rewardAppliedAt: Date | string | null;
+}
+
 export async function findActiveQuestId(questId: string) {
-  const result = await pool.query('select id from quests where id = $1 and coalesce(active, true) = true', [questId]);
+  const result = await pool.query<ActiveQuestIdRow>('select id from quests where id = $1 and coalesce(active, true) = true', [
+    questId,
+  ]);
   return result.rows[0] ?? null;
 }
 
@@ -23,7 +44,7 @@ export async function acceptQuestForCouple(coupleId: string, questId: string) {
 }
 
 export async function findActiveQuestForCompletion(client: Queryable, questId: string) {
-  const result = await client.query(
+  const result = await client.query<ActiveQuestForCompletion>(
     `
       select
         id,
@@ -40,7 +61,7 @@ export async function findActiveQuestForCompletion(client: Queryable, questId: s
 }
 
 export async function ensureCoupleQuest(client: Queryable, coupleId: string, questId: string) {
-  const result = await client.query(
+  const result = await client.query<CoupleQuestState>(
     `
       insert into couple_quests (id, couple_id, quest_id, status, completed_by_user_ids)
       values ($1, $2, $3, 'accepted', '{}')
@@ -57,7 +78,7 @@ export async function ensureCoupleQuest(client: Queryable, coupleId: string, que
 }
 
 export async function lockCoupleQuest(client: Queryable, coupleQuestId: string) {
-  const result = await client.query(
+  const result = await client.query<CoupleQuestState>(
     `
       select
         id,
@@ -74,7 +95,9 @@ export async function lockCoupleQuest(client: Queryable, coupleQuestId: string) 
 }
 
 export async function countCoupleMembers(client: Queryable, coupleId: string) {
-  const result = await client.query('select count(*)::int as count from couple_members where couple_id = $1', [coupleId]);
+  const result = await client.query<{ count: number }>('select count(*)::int as count from couple_members where couple_id = $1', [
+    coupleId,
+  ]);
   return Number(result.rows[0]?.count ?? 0);
 }
 

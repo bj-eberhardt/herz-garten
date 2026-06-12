@@ -6,7 +6,7 @@ import {
   getCoupleMemberIds,
   getCurrentCouple,
   shuffleKnowMeOptions,
-} from '../support.js';
+} from '../support.repository.js';
 import {
   findCatalogQuestionText,
   hasAuthorUsedCatalogQuestion,
@@ -49,8 +49,6 @@ export async function createKnowMeQuestionForUser(
       coupleId: couple.id,
       userIds: memberIds.filter((memberId) => memberId !== user.id),
       type: 'know_me_question',
-      title: 'Eine Kennst-du-mich-Frage wartet',
-      body: `${user.displayName} hat eine Frage Ã¼ber sich gestellt. Was schÃ¤tzt du?`,
       titleKey: 'notifications.titles.knowMeQuestion',
       bodyKey: 'notifications.bodies.knowMeQuestion',
       params: { name: user.displayName },
@@ -92,10 +90,6 @@ export async function guessKnowMeQuestionForUser(
       coupleId: couple.id,
       userIds: [question.authorId],
       type: 'know_me_answered',
-      title: isCorrect ? 'Treffer im Kennst-du-mich-Spiel' : 'Eine Antwort ist da',
-      body: isCorrect
-        ? `${user.displayName} hat dich richtig eingeschÃ¤tzt. Eine besondere Blume ist gewachsen.`
-        : `${user.displayName} hat geraten. Nicht getroffen, aber ein neuer GesprÃ¤chsanlass.`,
       titleKey: isCorrect ? 'notifications.titles.knowMeAnsweredHit' : 'notifications.titles.knowMeAnsweredMiss',
       bodyKey: isCorrect ? 'notifications.bodies.knowMeAnsweredHit' : 'notifications.bodies.knowMeAnsweredMiss',
       params: { name: user.displayName },

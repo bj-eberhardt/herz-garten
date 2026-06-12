@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { readdir, readFile } from 'node:fs/promises';
+import { access, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const projectRoot = process.cwd();
@@ -14,7 +14,7 @@ test.describe('backend architecture boundaries', () => {
     const apiRoutes = (await readdir(routeDir))
       .filter((filename) => filename.endsWith('.ts'))
       .map((filename) => `backend/src/api/routes/${filename}`);
-    const routeFiles = ['backend/src/adminRoutes.ts', 'backend/src/api/support.ts', 'backend/src/admin/support.ts', ...apiRoutes];
+    const routeFiles = ['backend/src/adminRoutes.ts', ...apiRoutes];
 
     for (const routeFile of routeFiles) {
       const content = await source(routeFile);
@@ -22,5 +22,10 @@ test.describe('backend architecture boundaries', () => {
       expect(content, routeFile).not.toContain('client.query');
       expect(content, routeFile).not.toContain('pool.connect');
     }
+  });
+
+  test('does not keep empty support facade files around', async () => {
+    await expect(access(path.join(projectRoot, 'backend/src/api/support.ts'))).rejects.toThrow();
+    await expect(access(path.join(projectRoot, 'backend/src/admin/support.ts'))).rejects.toThrow();
   });
 });

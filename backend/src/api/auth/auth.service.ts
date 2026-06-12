@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { insertProfile, findProfileByEmailWithPassword } from './auth.repository.js';
-import { publicUser } from '../support.js';
+import { publicUser } from '../support.repository.js';
 
 export async function registerUser(email: string, displayName: string, password: string) {
   const passwordHash = await bcrypt.hash(password, 12);

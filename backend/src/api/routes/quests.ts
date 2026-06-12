@@ -4,7 +4,7 @@ import { handleError, sendApiError } from '../../errors.js';
 import { validateBody } from '../../validation.js';
 import { emptyBodySchema } from '../bodySchemas.js';
 import { acceptQuest, completeQuest } from '../quests/quests.service.js';
-import { buildQuestPayload, normalizeQuestFilters, resolveLocale } from '../support.js';
+import { buildQuestPayload, normalizeQuestFilters, resolveLocale } from '../support.repository.js';
 
 export function registerQuestRoutes(router: Router) {
   router.get('/quests', requireAuth, async (request, response) => {

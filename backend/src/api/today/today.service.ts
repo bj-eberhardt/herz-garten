@@ -9,7 +9,7 @@ import {
   getOrCreateTodayInstance,
   highestUnlockedAreaForReward,
   nextGardenPlacement,
-} from '../support.js';
+} from '../support.repository.js';
 import {
   addDailyRewardPoints,
   insertDailyGardenReward,
@@ -47,8 +47,6 @@ export async function answerTodayQuestion(user: { id: string; displayName: strin
         coupleId: couple.id,
         userIds: memberIds,
         type: 'daily_revealed',
-        title: 'Eure Antworten sind sichtbar',
-        body: 'Aus euren Antworten ist ein neuer Gartenmoment gewachsen.',
         titleKey: 'notifications.titles.dailyRevealed',
         bodyKey: 'notifications.bodies.dailyRevealed',
         sourceType: 'today',
@@ -60,8 +58,6 @@ export async function answerTodayQuestion(user: { id: string; displayName: strin
         coupleId: couple.id,
         userIds: memberIds.filter((memberId) => memberId !== user.id),
         type: 'daily_answer_waiting',
-        title: 'Eine Antwort wartet',
-        body: `${user.displayName} hat die Tagesfrage beantwortet. Wenn du antwortest, seht ihr beide eure Gedanken.`,
         titleKey: 'notifications.titles.dailyAnswerWaiting',
         bodyKey: 'notifications.bodies.dailyAnswerWaiting',
         params: { name: user.displayName },

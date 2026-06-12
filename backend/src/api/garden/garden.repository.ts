@@ -1,5 +1,6 @@
 import type { Queryable } from '../support.repository.js';
 import { pool } from '../../db.js';
+import type { GardenObjectRow } from './garden.mapper.js';
 
 export interface GardenPlacementUpdate {
   areaKey: string;
@@ -11,7 +12,7 @@ export interface GardenPlacementUpdate {
 }
 
 export async function listGardenObjects(coupleId: string) {
-  const result = await pool.query(
+  const result = await pool.query<GardenObjectRow>(
     `
       select
         go.id,
@@ -49,7 +50,7 @@ export async function listGardenObjects(coupleId: string) {
 }
 
 export async function updateGardenObjectPlacement(coupleId: string, objectId: string, placement: GardenPlacementUpdate) {
-  const result = await pool.query(
+  const result = await pool.query<GardenObjectRow>(
     `
       update garden_objects
       set
@@ -96,9 +97,9 @@ export async function updateGardenObjectPlacement(coupleId: string, objectId: st
 }
 
 export async function countGardenObjectsInArea(client: Queryable, coupleId: string, areaKey: string) {
-  const result = await client.query('select count(*)::int as count from garden_objects where couple_id = $1 and area_key = $2', [
-    coupleId,
-    areaKey,
-  ]);
+  const result = await client.query<{ count: number }>(
+    'select count(*)::int as count from garden_objects where couple_id = $1 and area_key = $2',
+    [coupleId, areaKey],
+  );
   return Number(result.rows[0]?.count ?? 0);
 }

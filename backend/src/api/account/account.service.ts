@@ -16,7 +16,7 @@ import {
   getPublicUser,
   mergeUserPreferences,
   publicUser,
-} from '../support.js';
+} from '../support.repository.js';
 
 export async function updateUserPreferences(userId: string, incomingPreferences: unknown) {
   const currentPreferences = await getProfilePreferences(userId);
@@ -49,8 +49,6 @@ export async function deleteAccount(user: { id: string; displayName: string }) {
         coupleId: membership.couple_id,
         userIds: partnerIds,
         type: 'couple_disconnected',
-        title: 'Paarung wurde getrennt',
-        body: `${user.displayName} hat das Konto gelÃ¶scht. Eure Paarung wurde deshalb getrennt. Du kannst dich jetzt neu paaren.`,
         titleKey: 'notifications.titles.coupleDisconnected',
         bodyKey: 'notifications.bodies.coupleDisconnected',
         params: { name: user.displayName },

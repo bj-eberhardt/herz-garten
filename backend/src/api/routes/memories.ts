@@ -4,7 +4,7 @@ import { handleError, sendApiError } from '../../errors.js';
 import { validateBody } from '../../validation.js';
 import { memoryBodySchema } from '../bodySchemas.js';
 import { createMemoryForUser } from '../memories/memories.service.js';
-import { buildMemoryPayload, normalizeText, resolveLocale, todayIsoDate } from '../support.js';
+import { buildMemoryPayload, normalizeText, resolveLocale, todayIsoDate } from '../support.repository.js';
 
 export function registerMemoryRoutes(router: Router) {
   router.get('/memories', requireAuth, async (request, response) => {

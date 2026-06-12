@@ -1,4 +1,4 @@
-import { buildNotificationPayload } from '../support.js';
+import { buildNotificationPayload } from '../support.repository.js';
 import { markAllNotificationsRead, markNotificationRead } from './notifications.repository.js';
 
 export async function readAllNotifications(userId: string) {

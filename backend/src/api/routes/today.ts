@@ -4,7 +4,7 @@ import { handleError, sendApiError } from '../../errors.js';
 import { validateBody } from '../../validation.js';
 import { todayAnswerBodySchema } from '../bodySchemas.js';
 import { answerTodayQuestion } from '../today/today.service.js';
-import { buildTodayPayload, normalizeText, resolveLocale } from '../support.js';
+import { buildTodayPayload, normalizeText, resolveLocale } from '../support.repository.js';
 
 export function registerTodayRoutes(router: Router) {
   router.get('/today', requireAuth, async (request, response) => {

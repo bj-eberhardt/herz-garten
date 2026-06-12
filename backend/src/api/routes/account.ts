@@ -4,7 +4,7 @@ import { handleError } from '../../errors.js';
 import { validateBody } from '../../validation.js';
 import { preferencesBodySchema } from '../bodySchemas.js';
 import { buildAccountExport, deleteAccount, getMePayload, updateUserPreferences } from '../account/account.service.js';
-import { getCurrentCouple, isRecord, resolveLocale } from '../support.js';
+import { getCurrentCouple, isRecord, resolveLocale } from '../support.repository.js';
 
 export function registerAccountRoutes(router: Router) {
   router.get('/me', requireAuth, async (request, response) => {

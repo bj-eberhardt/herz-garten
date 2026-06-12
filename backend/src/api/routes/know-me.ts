@@ -4,7 +4,7 @@ import { handleError, sendApiError } from '../../errors.js';
 import { validateBody } from '../../validation.js';
 import { knowMeCreateBodySchema, knowMeGuessBodySchema } from '../bodySchemas.js';
 import { createKnowMeQuestionForUser, guessKnowMeQuestionForUser } from '../know-me/know-me.service.js';
-import { buildKnowMePayload, normalizeText, resolveLocale } from '../support.js';
+import { buildKnowMePayload, normalizeText, resolveLocale } from '../support.repository.js';
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

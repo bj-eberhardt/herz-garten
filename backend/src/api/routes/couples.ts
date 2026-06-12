@@ -4,7 +4,7 @@ import { handleError, sendApiError } from '../../errors.js';
 import { validateBody } from '../../validation.js';
 import { createCoupleBodySchema, emptyBodySchema, joinCoupleBodySchema } from '../bodySchemas.js';
 import { createCoupleForUser, joinCoupleForUser, leaveCoupleForUser } from '../couples/couples.service.js';
-import { normalizeText, resolveLocale } from '../support.js';
+import { normalizeText, resolveLocale } from '../support.repository.js';
 
 export function registerCoupleRoutes(router: Router) {
   router.post('/couples', requireAuth, validateBody(createCoupleBodySchema), async (request, response) => {

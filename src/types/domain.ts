@@ -45,7 +45,8 @@ export type NotificationType =
   | 'love_jar_note'
   | 'memory_created'
   | 'know_me_question'
-  | 'know_me_answered';
+  | 'know_me_answered'
+  | 'couple_disconnected';
 
 export interface User {
   id: string;

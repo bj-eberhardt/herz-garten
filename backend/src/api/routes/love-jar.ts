@@ -4,7 +4,7 @@ import { handleError, sendApiError } from '../../errors.js';
 import { validateBody } from '../../validation.js';
 import { emptyBodySchema, loveJarNoteBodySchema } from '../bodySchemas.js';
 import { createLoveJarNoteForUser, drawLoveJarNoteForUser } from '../love-jar/love-jar.service.js';
-import { buildLoveJarPayload, buildLoveJarTemplatePayload, normalizeText, resolveLocale } from '../support.js';
+import { buildLoveJarPayload, buildLoveJarTemplatePayload, normalizeText, resolveLocale } from '../support.repository.js';
 
 export function registerLoveJarRoutes(router: Router) {
   router.get('/love-jar/templates', requireAuth, async (request, response) => {

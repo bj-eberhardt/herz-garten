@@ -6,7 +6,7 @@ import { createRateLimiter } from '../../security/rateLimit.js';
 import { validateBody } from '../../validation.js';
 import { authLoginBodySchema, authRegisterBodySchema } from '../bodySchemas.js';
 import { loginUser, registerUser } from '../auth/auth.service.js';
-import { normalizeEmail, normalizeText } from '../support.js';
+import { normalizeEmail, normalizeText } from '../support.repository.js';
 
 const authRateLimit = createRateLimiter({
   keyPrefix: 'auth',
