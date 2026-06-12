@@ -55,10 +55,28 @@ test.describe('admin api', () => {
     expect(JSON.stringify(usersPayload)).toContain(userA.email);
     expect(JSON.stringify(usersPayload)).not.toContain('private answer text');
 
+    const injectedUsersResponse = await apiGetRaw(
+      request,
+      `/api/admin/users?search=${encodeURIComponent(`%' OR '1'='1`)}`,
+      token,
+    );
+    const injectedUsersPayload = await expectJson<{ items: unknown[]; total: number }>(injectedUsersResponse);
+    expect(injectedUsersPayload.items).toHaveLength(0);
+    expect(injectedUsersPayload.total).toBe(0);
+
     const couplesResponse = await apiGetRaw(request, `/api/admin/couples?search=${setup.inviteCode}`, token);
     const couplesPayload = await expectJson<{ items: Array<{ id: string; inviteCode: string }> }>(couplesResponse);
     expect(couplesPayload.items[0]?.inviteCode).toBe(setup.inviteCode);
     expect(JSON.stringify(couplesPayload)).not.toContain('private answer text');
+
+    const injectedCouplesResponse = await apiGetRaw(
+      request,
+      `/api/admin/couples?search=${encodeURIComponent(`${setup.inviteCode}' OR true --`)}`,
+      token,
+    );
+    const injectedCouplesPayload = await expectJson<{ items: unknown[]; total: number }>(injectedCouplesResponse);
+    expect(injectedCouplesPayload.items).toHaveLength(0);
+    expect(injectedCouplesPayload.total).toBe(0);
 
     const detail = await apiGet<{ couple: { dailyAnswerCount: number; members: unknown[] } }>(
       request,
@@ -119,6 +137,24 @@ test.describe('admin api', () => {
       token,
     );
     expect(invalidCategory.status()).toBe(400);
+
+    await expectApiError(
+      await apiPostRaw(
+        request,
+        '/api/admin/categories',
+        {
+          contentType: 'daily-questions',
+          value: `admin_extra_${suffix}`.replaceAll('-', '_'),
+          label: `Admin Extra ${suffix}`,
+          active: true,
+          sortOrder: 1,
+          unexpected: true,
+        },
+        token,
+      ),
+      400,
+      'common.validation',
+    );
 
     const createDaily = await apiPostRaw(
       request,

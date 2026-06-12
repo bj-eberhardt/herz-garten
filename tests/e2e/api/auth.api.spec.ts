@@ -29,6 +29,17 @@ test.describe('auth api', () => {
   test('rejects invalid registration input', async ({ request }) => {
     await expectApiError(await apiPostRaw(request, '/api/auth/register', {}), 400, 'auth.registrationInvalid');
 
+    await expectApiError(
+      await apiPostRaw(request, '/api/auth/register', {
+        email: 'extra@example.test',
+        displayName: 'Extra',
+        password: 'password-123',
+        unexpected: true,
+      }),
+      400,
+      'common.validation',
+    );
+
     const response = await apiPostRaw(request, '/api/auth/register', {
       email: '',
       displayName: 'Invalid',

@@ -2,6 +2,8 @@ import type { Response } from 'express';
 
 export const apiErrorMessages = {
   'common.unexpected': 'Da ist etwas schiefgelaufen. Bitte versuche es gleich noch einmal.',
+  'common.validation': 'Bitte pruefe deine Eingaben.',
+  'common.rateLimited': 'Zu viele Versuche. Bitte warte einen Moment und versuche es dann erneut.',
   'auth.missingToken': 'Deine Sitzung fehlt. Bitte logge dich erneut ein.',
   'auth.invalidToken': 'Deine Sitzung ist abgelaufen. Bitte logge dich erneut ein.',
   'auth.invalidCredentials': 'E-Mail oder Passwort stimmt nicht.',

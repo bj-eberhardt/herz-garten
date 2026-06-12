@@ -196,6 +196,12 @@ test.describe('memories and garden api', () => {
     );
     expectGardenObjectDetailPayload(detail);
     expect(detail.source).toEqual(expect.objectContaining({ type: 'memory', title: 'API Memory', categoryLabel: 'Alltag' }));
+
+    await expectApiError(
+      await apiGetRaw(request, `/api/garden/objects/${encodeURIComponent(`${object!.id}' OR '1'='1`)}`, partnerA.token),
+      404,
+      'garden.objectNotFound',
+    );
   });
 
   test('rejects invalid memories and no-couple garden access', async ({ request }) => {

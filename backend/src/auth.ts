@@ -25,6 +25,8 @@ interface JwtPayload {
 export function signToken(userId: string) {
   return jwt.sign({}, config.jwtSecret, {
     subject: userId,
+    issuer: config.jwtIssuer,
+    audience: config.userJwtAudience,
     expiresIn: '7d',
   });
 }
@@ -39,7 +41,10 @@ export async function requireAuth(request: Request, response: Response, next: Ne
   }
 
   try {
-    const payload = jwt.verify(token, config.jwtSecret) as JwtPayload;
+    const payload = jwt.verify(token, config.jwtSecret, {
+      issuer: config.jwtIssuer,
+      audience: config.userJwtAudience,
+    }) as JwtPayload;
     const result = await pool.query<AuthUser>(
       `
         select id, email, display_name as "displayName"

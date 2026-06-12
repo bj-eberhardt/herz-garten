@@ -19,6 +19,8 @@ declare global {
 export function signAdminToken() {
   const options: SignOptions = {
     subject: 'admin',
+    issuer: config.jwtIssuer,
+    audience: config.adminJwtAudience,
     expiresIn: config.adminTokenTtl as SignOptions['expiresIn'],
   };
 
@@ -37,7 +39,10 @@ export function requireAdminAuth(request: Request, response: Response, next: Nex
   }
 
   try {
-    const payload = jwt.verify(token, config.adminJwtSecret) as AdminJwtPayload;
+    const payload = jwt.verify(token, config.adminJwtSecret, {
+      issuer: config.jwtIssuer,
+      audience: config.adminJwtAudience,
+    }) as AdminJwtPayload;
     if (payload.sub !== 'admin' || payload.type !== 'admin') {
       sendApiError(response, 401, 'auth.invalidToken');
       return;
