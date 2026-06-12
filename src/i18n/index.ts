@@ -18,6 +18,10 @@ export const i18n = createI18n<[MessageSchema], Locale>({
       long: {
         dateStyle: 'long',
       },
+      shortDateTime: {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      },
     },
   },
 });
