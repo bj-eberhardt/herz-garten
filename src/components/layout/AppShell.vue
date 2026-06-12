@@ -43,6 +43,6 @@ watch(() => authStore.couple?.id, loadNotificationsIfReady);
       <RouterView />
     </main>
 
-    <BottomNavigation />
+    <BottomNavigation v-if="authStore.isAuthenticated" />
   </div>
 </template>

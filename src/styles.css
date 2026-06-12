@@ -204,6 +204,12 @@ h2 {
   gap: 16px;
 }
 
+.garden-level-progress {
+  color: #5f6f44;
+  font-weight: 800;
+  margin-bottom: 0;
+}
+
 .progress-grid {
   display: grid;
   gap: 12px;
@@ -274,6 +280,414 @@ h2 {
 .garden-object:focus-visible {
   box-shadow: 0 10px 24px rgba(84, 68, 49, 0.18);
   transform: translate(-50%, -54%);
+}
+
+.garden-map-shell {
+  background: #f8fbef;
+  border: 1px solid #b8cf9f;
+  border-radius: 8px;
+  box-shadow: 0 18px 45px rgba(84, 68, 49, 0.1);
+  display: grid;
+  gap: 10px;
+  overflow: hidden;
+  padding: 12px;
+}
+
+.garden-toolbar,
+.garden-inventory {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.garden-toolbar {
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.garden-tool-button.active {
+  background: #ef7d70;
+  color: #fff;
+}
+
+.garden-area-tabs {
+  display: flex;
+  flex: 1 1 320px;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.garden-area-tabs button,
+.garden-inventory button {
+  align-items: center;
+  background: #fff8f2;
+  border: 1px solid #efd7ca;
+  border-radius: 8px;
+  color: #6a5147;
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  font-weight: 800;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+.garden-area-tabs button.active {
+  background: #eef5df;
+  border-color: #9fbe81;
+  color: #4f6e3d;
+}
+
+.garden-inventory {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid #d7e6c7;
+  border-radius: 8px;
+  flex-wrap: wrap;
+  min-height: 58px;
+  overflow-x: visible;
+  padding: 8px 10px;
+}
+
+.garden-inventory > svg {
+  color: #4f6e3d;
+  flex: 0 0 auto;
+}
+
+.garden-inventory button img {
+  height: 28px;
+  object-fit: contain;
+  width: 28px;
+}
+
+.garden-legend-title {
+  color: #4f6e3d;
+  flex: 0 0 auto;
+  font-size: 0.84rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.garden-legend-item {
+  align-items: center;
+  background: #fff8f2;
+  border: 1px solid #efd7ca;
+  border-radius: 8px;
+  color: #6a5147;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  font-weight: 800;
+  gap: 4px;
+  min-height: 38px;
+  min-width: 52px;
+  padding: 6px 8px;
+  position: relative;
+}
+
+.garden-legend-item img {
+  height: 28px;
+  object-fit: contain;
+  width: 28px;
+}
+
+.garden-legend-item small {
+  background: #eef5df;
+  border-radius: 999px;
+  color: #4f6e3d;
+  font-size: 0.76rem;
+  font-weight: 900;
+  min-width: 24px;
+  padding: 3px 7px;
+  text-align: center;
+}
+
+.garden-scrollport {
+  border-radius: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+}
+
+.garden-world {
+  height: 520px;
+  position: relative;
+}
+
+.garden-area {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)),
+    var(--area-background) center / cover no-repeat,
+    linear-gradient(180deg, #bfe4ed 0 34%, #d4e8b8 34% 100%);
+  border-right: 1px solid rgba(95, 110, 66, 0.18);
+  bottom: 0;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+}
+
+.garden-area::before {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 38%),
+    radial-gradient(circle at 18% 72%, color-mix(in srgb, var(--area-accent) 16%, transparent), transparent 16%);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.garden-area-sky,
+.garden-area-ground,
+.garden-area-path {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.garden-area-sky {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 42%);
+}
+
+.garden-area-ground {
+  background: radial-gradient(ellipse at 50% 100%, rgba(82, 126, 71, 0.18), transparent 42%);
+}
+
+.garden-area-path {
+  background: radial-gradient(ellipse at 50% 92%, rgba(204, 166, 117, 0.42), transparent 34%);
+}
+
+.garden-area-label {
+  background: rgba(255, 250, 246, 0.88);
+  border: 1px solid rgba(126, 74, 63, 0.12);
+  border-left: 4px solid var(--area-accent);
+  border-radius: 8px;
+  display: grid;
+  gap: 2px;
+  left: 18px;
+  max-width: calc(100% - 36px);
+  padding: 10px 12px;
+  position: absolute;
+  top: 16px;
+  z-index: 30;
+}
+
+.garden-area-label strong {
+  line-height: 1.1;
+}
+
+.garden-area-label span {
+  color: #806456;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.garden-area--locked {
+  filter: saturate(0.68);
+}
+
+.garden-lock {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(126, 74, 63, 0.14);
+  border-radius: 999px;
+  color: #806456;
+  display: inline-flex;
+  font-size: 0.82rem;
+  font-weight: 900;
+  gap: 6px;
+  padding: 8px 12px;
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  z-index: 30;
+}
+
+.garden-lock span {
+  line-height: 1.2;
+  max-width: 180px;
+}
+
+.garden-sprite {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  transform: translate(calc(-1 * var(--anchor-x)), calc(-1 * var(--anchor-y))) rotate(var(--sprite-rotation));
+  transition:
+    filter 160ms ease,
+    transform 160ms ease;
+  touch-action: none;
+}
+
+.garden-sprite::after {
+  background: rgba(66, 50, 38, 0.2);
+  border-radius: 50%;
+  bottom: 4px;
+  content: "";
+  height: 18%;
+  left: 18%;
+  position: absolute;
+  right: 18%;
+  z-index: -1;
+}
+
+.garden-sprite img {
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  width: 100%;
+}
+
+.garden-sprite:hover,
+.garden-sprite:focus-visible,
+.garden-sprite--selected {
+  filter: drop-shadow(0 12px 14px rgba(84, 68, 49, 0.22));
+  outline: 0;
+  transform: translate(calc(-1 * var(--anchor-x)), calc(-1 * var(--anchor-y) - 6px)) rotate(var(--sprite-rotation));
+}
+
+.garden-sprite--editing {
+  cursor: grab;
+}
+
+.garden-sprite--editing:active {
+  cursor: grabbing;
+}
+
+.garden-sprite--selected {
+  box-shadow: 0 0 0 4px rgba(239, 125, 112, 0.24);
+  border-radius: 999px;
+}
+
+.garden-sprite-fallback {
+  background: #ef7d70;
+  border: 3px solid #fff8f2;
+  border-radius: 999px;
+  height: 54px;
+  width: 54px;
+}
+
+.garden-minimap {
+  background: #fff8f2;
+  border: 1px solid #d7e6c7;
+  border-radius: 999px;
+  display: flex;
+  gap: 3px;
+  height: 18px;
+  overflow: hidden;
+  padding: 3px;
+}
+
+.garden-minimap button {
+  background: var(--area-accent);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: 0.78;
+  padding: 0;
+}
+
+.history-link {
+  background: transparent;
+  border: 0;
+  color: #7e4a3f;
+  cursor: pointer;
+  font-weight: 900;
+  justify-self: start;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.garden-history {
+  display: grid;
+  gap: 14px;
+}
+
+.history-level-card {
+  background: #fff8f2;
+  border: 1px solid #efd7ca;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+}
+
+.history-level-card p {
+  color: #5f6f44;
+  font-weight: 800;
+  margin-bottom: 0;
+}
+
+.garden-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.garden-history-item {
+  align-items: center;
+  background: #fffaf6;
+  border: 1px solid #efd7ca;
+  border-radius: 8px;
+  color: #382f2a;
+  cursor: pointer;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 48px 1fr auto;
+  min-height: 68px;
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.garden-history-item:hover,
+.garden-history-item:focus-visible {
+  border-color: #ef7d70;
+  box-shadow: 0 10px 24px rgba(84, 68, 49, 0.12);
+  outline: 0;
+}
+
+.garden-history-item img {
+  height: 44px;
+  object-fit: contain;
+  width: 44px;
+}
+
+.garden-history-item span {
+  display: grid;
+  gap: 3px;
+}
+
+.garden-history-item small {
+  color: #806456;
+  font-weight: 700;
+}
+
+.garden-history-item em {
+  background: #eef5df;
+  border-radius: 999px;
+  color: #4f6e3d;
+  font-style: normal;
+  font-weight: 900;
+  padding: 6px 10px;
+}
+
+.history-pagination {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.history-pagination span {
+  color: #806456;
+  font-weight: 800;
 }
 
 .daily-card,
@@ -541,6 +955,12 @@ textarea {
   margin-bottom: 0;
 }
 
+.onboarding-ad {
+  background:
+    linear-gradient(135deg, rgba(238, 245, 223, 0.96), rgba(255, 241, 239, 0.9)),
+    #fff;
+}
+
 .feature-explainer-close {
   align-items: center;
   background: #fff8f2;
@@ -686,6 +1106,22 @@ textarea {
 .toggle-row input:focus-visible {
   outline: 3px solid rgba(239, 125, 112, 0.28);
   outline-offset: 2px;
+}
+
+.remember-email-row {
+  align-items: center;
+  color: #806456;
+  display: flex;
+  font-size: 0.92rem;
+  font-weight: 800;
+  gap: 10px;
+}
+
+.remember-email-row input {
+  accent-color: #ef7d70;
+  flex: 0 0 auto;
+  height: 18px;
+  width: 18px;
 }
 
 .privacy-details {
@@ -1144,6 +1580,36 @@ textarea {
   .garden-canvas {
     aspect-ratio: 4 / 5;
     min-height: 420px;
+  }
+
+  .garden-map-shell {
+    padding: 8px;
+  }
+
+  .garden-toolbar {
+    align-items: stretch;
+  }
+
+  .garden-toolbar > .garden-tool-button {
+    flex: 1 1 120px;
+  }
+
+  .garden-area-tabs {
+    flex-basis: 100%;
+  }
+
+  .garden-world {
+    height: 560px;
+  }
+
+  .garden-area-label {
+    left: 12px;
+    top: 12px;
+  }
+
+  .garden-lock {
+    right: 12px;
+    top: 12px;
   }
 
   .progress-grid {

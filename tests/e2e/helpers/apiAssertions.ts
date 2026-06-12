@@ -2,7 +2,11 @@ import { expect, type APIResponse } from '@playwright/test';
 import type {
   Couple,
   DailyQuestion,
+  GardenArea,
+  GardenAsset,
+  GardenNextUnlock,
   GardenObject,
+  GardenUnlock,
   KnowMeCatalogQuestion,
   KnowMeRound,
   LoveJarNote,
@@ -96,6 +100,11 @@ export interface MemoriesPayload {
 export interface GardenPayload {
   couple: Couple;
   objects: GardenObject[];
+  areas: GardenArea[];
+  unlocks: GardenUnlock[];
+  availableAssets: GardenAsset[];
+  assetCatalog?: GardenAsset[];
+  nextUnlock?: GardenNextUnlock | null;
   progress: {
     answeredQuestionCount: number;
     completedQuestCount: number;
@@ -178,6 +187,14 @@ function expectGardenObject(value: unknown) {
       label: expect.any(String),
       positionX: expect.any(Number),
       positionY: expect.any(Number),
+      areaKey: expect.any(String),
+      assetKey: expect.any(String),
+      historyTitle: expect.any(String),
+      zIndex: expect.any(Number),
+      scale: expect.any(Number),
+      rotation: expect.any(Number),
+      placedByUser: expect.any(Boolean),
+      rewardPoints: expect.any(Number),
       level: expect.any(Number),
       createdAt: expect.any(String),
     }),
@@ -325,6 +342,21 @@ export function expectMemoriesPayload(payload: MemoriesPayload) {
 export function expectGardenPayload(payload: GardenPayload) {
   expectCouple(payload.couple);
   expect(Array.isArray(payload.objects)).toBeTruthy();
+  expect(Array.isArray(payload.areas)).toBeTruthy();
+  expect(Array.isArray(payload.unlocks)).toBeTruthy();
+  expect(Array.isArray(payload.availableAssets)).toBeTruthy();
+  if (payload.assetCatalog) expect(Array.isArray(payload.assetCatalog)).toBeTruthy();
+  if (payload.nextUnlock) {
+    expect(payload.nextUnlock).toEqual(
+      expect.objectContaining({
+        stage: expect.any(Number),
+        points: expect.any(Number),
+        pointsRemaining: expect.any(Number),
+        areaKey: expect.any(String),
+        areaLabel: expect.any(String),
+      }),
+    );
+  }
   for (const object of payload.objects) expectGardenObject(object);
   expect(payload.progress).toEqual(
     expect.objectContaining({

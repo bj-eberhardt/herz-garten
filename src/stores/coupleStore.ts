@@ -23,7 +23,7 @@ export const useCoupleStore = defineStore('couple', {
     },
     addHeartPoints(points: number) {
       this.couple.heartPoints += points;
-      this.couple.gardenStage = Math.max(1, Math.floor(this.couple.heartPoints / 80) + 1);
+      this.couple.gardenStage = Math.max(1, Math.floor(this.couple.heartPoints / 200) + 1);
     },
   },
 });

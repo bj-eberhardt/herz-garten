@@ -1,7 +1,17 @@
 import { defineStore } from 'pinia';
 import { apiRequest } from '@/services/api';
 import { localizeApiError } from '@/services/errorMessages';
-import type { Couple, GardenObject, GardenObjectType, GardenSourceType } from '@/types/domain';
+import type {
+  Couple,
+  GardenArea,
+  GardenAreaKey,
+  GardenAsset,
+  GardenNextUnlock,
+  GardenObject,
+  GardenObjectType,
+  GardenSourceType,
+  GardenUnlock,
+} from '@/types/domain';
 import { useAuthStore } from './authStore';
 import { useCoupleStore } from './coupleStore';
 
@@ -36,6 +46,11 @@ export interface GardenProgress {
 export const useGardenStore = defineStore('garden', {
   state: () => ({
     objects: [] as GardenObject[],
+    areas: [] as GardenArea[],
+    unlocks: [] as GardenUnlock[],
+    availableAssets: [] as GardenAsset[],
+    assetCatalog: [] as GardenAsset[],
+    nextUnlock: null as GardenNextUnlock | null,
     progress: {
       answeredQuestionCount: 0,
       completedQuestCount: 0,
@@ -59,10 +74,22 @@ export const useGardenStore = defineStore('garden', {
       this.loading = true;
       this.error = '';
       try {
-        const payload = await apiRequest<{ couple: Couple; objects: GardenObject[]; progress: GardenProgress }>(
-          '/api/garden',
-        );
+        const payload = await apiRequest<{
+          couple: Couple;
+          objects: GardenObject[];
+          areas?: GardenArea[];
+          unlocks?: GardenUnlock[];
+          availableAssets?: GardenAsset[];
+          assetCatalog?: GardenAsset[];
+          nextUnlock?: GardenNextUnlock | null;
+          progress: GardenProgress;
+        }>('/api/garden');
         this.objects = payload.objects;
+        this.areas = payload.areas ?? [];
+        this.unlocks = payload.unlocks ?? [];
+        this.availableAssets = payload.availableAssets ?? [];
+        this.assetCatalog = payload.assetCatalog ?? payload.availableAssets ?? [];
+        this.nextUnlock = payload.nextUnlock ?? null;
         this.progress = payload.progress;
         useCoupleStore().setCouple(payload.couple);
         useAuthStore().couple = payload.couple;
@@ -96,14 +123,51 @@ export const useGardenStore = defineStore('garden', {
     clearDetail() {
       this.selectedDetail = null;
     },
+    async updatePlacement(
+      objectId: string,
+      placement: {
+        areaKey: GardenAreaKey;
+        positionX: number;
+        positionY: number;
+        zIndex: number;
+        scale?: number;
+        rotation?: number;
+      },
+    ) {
+      this.error = '';
+      try {
+        const payload = await apiRequest<{ couple: Couple; object: GardenObject }>(
+          `/api/garden/objects/${objectId}/placement`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify(placement),
+          },
+        );
+        const index = this.objects.findIndex((object) => object.id === objectId);
+        if (index >= 0) this.objects[index] = payload.object;
+        if (this.selectedDetail?.object.id === objectId) this.selectedDetail.object = payload.object;
+        useCoupleStore().setCouple(payload.couple);
+        useAuthStore().couple = payload.couple;
+      } catch (error) {
+        this.error = localizeApiError(error, 'errors.fallback.gardenObject');
+        throw error;
+      }
+    },
     addObject(input: GardenObjectInput) {
       const couple = useCoupleStore().couple;
       const [positionX, positionY] = fallbackPositions[this.objects.length % fallbackPositions.length];
       this.objects.push({
         id: crypto.randomUUID(),
         coupleId: couple.id,
+        areaKey: 'heart_bed',
+        assetKey: input.type === 'light' ? 'warm_lantern' : input.type === 'stone' ? 'memory_stone' : 'conversation_flower',
         positionX,
         positionY,
+        zIndex: 1,
+        scale: 1,
+        rotation: 0,
+        placedByUser: false,
+        rewardPoints: 0,
         level: 1,
         createdAt: new Date().toISOString(),
         ...input,

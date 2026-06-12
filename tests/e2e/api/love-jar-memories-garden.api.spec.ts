@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { apiGetRaw, apiPostRaw, registerByApi, setupCoupleByApi } from '../helpers/api';
+import { apiGetRaw, apiPatchRaw, apiPostRaw, registerByApi, setupCoupleByApi } from '../helpers/api';
 import {
   expectApiError,
   expectGardenObjectDetailPayload,
@@ -12,7 +12,12 @@ import {
   type LoveJarPayload,
   type MemoriesPayload,
 } from '../helpers/apiAssertions';
+import { runDbSql } from '../helpers/db';
 import { testRunId, testUser } from '../helpers/testUsers';
+
+function sqlLiteral(value: string) {
+  return `'${value.replace(/'/g, "''")}'`;
+}
 
 test.describe('love jar api', () => {
   test('creates draws and blocks duplicate daily draw', async ({ request }) => {
@@ -153,9 +158,38 @@ test.describe('memories and garden api', () => {
 
     const garden = await expectJson<GardenPayload>(await apiGetRaw(request, '/api/garden', partnerA.token));
     expectGardenPayload(garden);
+    expect(garden.areas.length).toBeGreaterThanOrEqual(10);
+    expect(garden.unlocks.find((unlock) => unlock.stage === 10)?.points).toBe(1800);
+    expect(garden.availableAssets.every((asset) => asset.stageUnlock <= garden.couple.gardenStage)).toBeTruthy();
+    expect(garden.assetCatalog?.some((asset) => asset.key === 'memory_stone')).toBeTruthy();
+    expect(garden.nextUnlock).toEqual(expect.objectContaining({ stage: expect.any(Number), pointsRemaining: expect.any(Number) }));
     expect(garden.progress.memoryCount).toBeGreaterThanOrEqual(1);
     const object = garden.objects.find((item) => item.id === memory!.linkedGardenObjectId);
     expect(object).toBeTruthy();
+    expect(object).toEqual(expect.objectContaining({ areaKey: 'heart_bed', assetKey: 'memory_stone' }));
+
+    await expectApiError(
+      await apiPatchRaw(
+        request,
+        `/api/garden/objects/${object!.id}/placement`,
+        { areaKey: 'memory_tree', positionX: 42, positionY: 58, zIndex: 7, scale: 1.1, rotation: -4 },
+        partnerA.token,
+      ),
+      400,
+      'garden.invalidPlacement',
+    );
+
+    const placed = await expectJson<{ object: GardenPayload['objects'][number] }>(
+      await apiPatchRaw(
+        request,
+        `/api/garden/objects/${object!.id}/placement`,
+        { areaKey: 'heart_bed', positionX: 42, positionY: 58, zIndex: 7, scale: 1.1, rotation: -4 },
+        partnerA.token,
+      ),
+    );
+    expect(placed.object).toEqual(
+      expect.objectContaining({ areaKey: 'heart_bed', positionX: 42, positionY: 58, zIndex: 7, placedByUser: true }),
+    );
 
     const detail = await expectJson<GardenObjectDetailPayload>(
       await apiGetRaw(request, `/api/garden/objects/${object!.id}`, partnerA.token),
@@ -194,6 +228,31 @@ test.describe('memories and garden api', () => {
     );
   });
 
+  test('memory rewards use unlocked areas after stage progression', async ({ request }) => {
+    const runId = testRunId();
+    const { partnerA } = await setupCoupleByApi(
+      request,
+      testUser('api-memory-stage-a', runId),
+      testUser('api-memory-stage-b', runId),
+    );
+    const initialGarden = await expectJson<GardenPayload>(await apiGetRaw(request, '/api/garden', partnerA.token));
+    runDbSql(`
+      update couples
+      set heart_points = 600, garden_stage = 4
+      where id = ${sqlLiteral(initialGarden.couple.id)};
+    `);
+
+    const created = await expectJson<MemoriesPayload>(
+      await apiPostRaw(request, '/api/memories', { title: 'Stage four memory', category: 'everyday' }, partnerA.token),
+      201,
+    );
+    const memory = created.memories.find((item) => item.title === 'Stage four memory');
+    expect(memory?.linkedGardenObjectId).toEqual(expect.any(String));
+    const garden = await expectJson<GardenPayload>(await apiGetRaw(request, '/api/garden', partnerA.token));
+    const object = garden.objects.find((item) => item.id === memory!.linkedGardenObjectId);
+    expect(object).toEqual(expect.objectContaining({ areaKey: 'memory_tree', assetKey: 'memory_stone' }));
+  });
+
   test('returns not found for missing and foreign garden objects', async ({ request }) => {
     const runId = testRunId();
     const coupleA = await setupCoupleByApi(
@@ -223,6 +282,16 @@ test.describe('memories and garden api', () => {
 
     await expectApiError(
       await apiGetRaw(request, `/api/garden/objects/${foreignObjectId}`, coupleB.partnerA.token),
+      404,
+      'garden.objectNotFound',
+    );
+    await expectApiError(
+      await apiPatchRaw(
+        request,
+        `/api/garden/objects/${foreignObjectId}/placement`,
+        { areaKey: 'heart_bed', positionX: 50, positionY: 60, zIndex: 7 },
+        coupleB.partnerA.token,
+      ),
       404,
       'garden.objectNotFound',
     );

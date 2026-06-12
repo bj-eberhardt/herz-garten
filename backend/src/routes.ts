@@ -22,14 +22,208 @@ const defaultFeatureExplainerPreferences: Record<string, boolean> = {
   settings: true,
 };
 
-const gardenPositions = [
-  [18, 62],
-  [36, 48],
-  [55, 66],
-  [74, 42],
-  [24, 28],
-  [64, 24],
+const gardenStagePointStep = 200;
+
+const gardenAreas = [
+  { key: 'heart_bed', label: 'Herzbeet', stageUnlock: 1, startX: 0, width: 520, accent: '#f08a82', backgroundImage: '/garden-backgrounds/heart-bed.png' },
+  { key: 'flower_meadow', label: 'Blumenwiese', stageUnlock: 2, startX: 520, width: 520, accent: '#e7a86f', backgroundImage: '/garden-backgrounds/flower-meadow.png' },
+  { key: 'bench_grove', label: 'Banklichtung', stageUnlock: 3, startX: 1040, width: 520, accent: '#8fb66b', backgroundImage: '/garden-backgrounds/bench-grove.png' },
+  { key: 'memory_tree', label: 'Erinnerungsbereich', stageUnlock: 4, startX: 1560, width: 560, accent: '#7ca37b', backgroundImage: '/garden-backgrounds/memory-tree-area.png' },
+  { key: 'light_meadow', label: 'Lichterwiese', stageUnlock: 5, startX: 2120, width: 560, accent: '#e9bd62', backgroundImage: '/garden-backgrounds/light-meadow.png' },
+  { key: 'pond', label: 'Teich der Ruhe', stageUnlock: 6, startX: 2680, width: 560, accent: '#6fb5c7', backgroundImage: '/garden-backgrounds/pond-area.png' },
+  { key: 'picnic', label: 'Picknickplatz', stageUnlock: 7, startX: 3240, width: 560, accent: '#d87964', backgroundImage: '/garden-backgrounds/picnic-area.png' },
+  { key: 'star_meadow', label: 'Sternenwiese', stageUnlock: 8, startX: 3800, width: 560, accent: '#727bb9', backgroundImage: '/garden-backgrounds/star-meadow.png' },
+  { key: 'wishing_well', label: 'Wunschbrunnen', stageUnlock: 9, startX: 4360, width: 560, accent: '#8b90a8', backgroundImage: '/garden-backgrounds/wishing-well-area.png' },
+  { key: 'garden_fest', label: 'Gartenfest', stageUnlock: 10, startX: 4920, width: 600, accent: '#d89d52', backgroundImage: '/garden-backgrounds/garden-fest.png' },
 ];
+
+const gardenUnlocks = gardenAreas.map((area) => ({
+  stage: area.stageUnlock,
+  points: (area.stageUnlock - 1) * gardenStagePointStep,
+  unlock:
+    area.stageUnlock === 1
+      ? 'Herzbeet, Startwiese, Samenplatz'
+      : area.stageUnlock === 2
+        ? 'Blumenwiese und neue Blumenvarianten'
+        : area.stageUnlock === 3
+          ? 'Paarbank, kleine Wege und Deko'
+          : area.stageUnlock === 4
+            ? 'Erinnerungsbaum und Polaroid-Orte'
+            : area.stageUnlock === 5
+              ? 'Love-Jar-Lichter und Lichterketten'
+              : area.stageUnlock === 6
+                ? 'Teich der Ruhe und Wasserpflanzen'
+                : area.stageUnlock === 7
+                  ? 'Picknickplatz, Decken und Koerbe'
+                  : area.stageUnlock === 8
+                    ? 'Sternenhimmel und Fernbeziehungs-Bruecke'
+                    : area.stageUnlock === 9
+                      ? 'Wunschbrunnen und Wunschlichter'
+                      : 'Gartenfest, Pavillon und Festdeko',
+  areaKey: area.key,
+  areaLabel: area.label,
+}));
+
+const gardenAssets = [
+  {
+    key: 'conversation_flower',
+    label: 'Gespraechsblume',
+    objectType: 'flower',
+    sourceTypes: ['question'],
+    stageUnlock: 1,
+    image: '/garden-assets/conversation-flower.png',
+    width: 86,
+    height: 108,
+    anchorX: 0.5,
+    anchorY: 0.9,
+  },
+  {
+    key: 'heart_flower',
+    label: 'Herzblume',
+    objectType: 'flower',
+    sourceTypes: ['know_me', 'quest'],
+    stageUnlock: 2,
+    image: '/garden-assets/heart-flower.png',
+    width: 92,
+    height: 112,
+    anchorX: 0.5,
+    anchorY: 0.9,
+  },
+  {
+    key: 'memory_tree',
+    label: 'Erinnerungsbaum',
+    objectType: 'tree',
+    sourceTypes: ['quest', 'milestone'],
+    stageUnlock: 4,
+    image: '/garden-assets/memory-tree.png',
+    width: 150,
+    height: 178,
+    anchorX: 0.5,
+    anchorY: 0.94,
+  },
+  {
+    key: 'memory_stone',
+    label: 'Erinnerungsstein',
+    objectType: 'stone',
+    sourceTypes: ['memory', 'quest'],
+    stageUnlock: 4,
+    image: '/garden-assets/memory-stone.png',
+    width: 108,
+    height: 82,
+    anchorX: 0.5,
+    anchorY: 0.82,
+  },
+  {
+    key: 'warm_lantern',
+    label: 'Love-Jar-Licht',
+    objectType: 'light',
+    sourceTypes: ['love_jar', 'quest'],
+    stageUnlock: 5,
+    image: '/garden-assets/warm-lantern.png',
+    width: 76,
+    height: 118,
+    anchorX: 0.5,
+    anchorY: 0.92,
+  },
+  {
+    key: 'couple_bench',
+    label: 'Paarbank',
+    objectType: 'bench',
+    sourceTypes: ['milestone'],
+    stageUnlock: 3,
+    image: '/garden-assets/couple-bench.png',
+    width: 148,
+    height: 100,
+    anchorX: 0.5,
+    anchorY: 0.84,
+  },
+  {
+    key: 'quiet_pond',
+    label: 'Teich der Ruhe',
+    objectType: 'pond',
+    sourceTypes: ['milestone'],
+    stageUnlock: 6,
+    image: '/garden-assets/quiet-pond.png',
+    width: 190,
+    height: 112,
+    anchorX: 0.5,
+    anchorY: 0.78,
+  },
+  {
+    key: 'picnic_blanket',
+    label: 'Picknickdecke',
+    objectType: 'decoration',
+    sourceTypes: ['quest'],
+    stageUnlock: 7,
+    image: '/garden-assets/picnic-blanket.png',
+    width: 148,
+    height: 96,
+    anchorX: 0.5,
+    anchorY: 0.78,
+  },
+  {
+    key: 'wishing_well',
+    label: 'Wunschbrunnen',
+    objectType: 'decoration',
+    sourceTypes: ['milestone'],
+    stageUnlock: 9,
+    image: '/garden-assets/wishing-well.png',
+    width: 128,
+    height: 152,
+    anchorX: 0.5,
+    anchorY: 0.9,
+  },
+  {
+    key: 'date_pavilion',
+    label: 'Date-Pavillon',
+    objectType: 'decoration',
+    sourceTypes: ['quest'],
+    stageUnlock: 10,
+    image: '/garden-assets/date-pavilion.png',
+    width: 174,
+    height: 154,
+    anchorX: 0.5,
+    anchorY: 0.92,
+  },
+  {
+    key: 'distance_bridge',
+    label: 'Fernbeziehungs-Bruecke',
+    objectType: 'decoration',
+    sourceTypes: ['quest'],
+    stageUnlock: 8,
+    image: '/garden-assets/distance-bridge.png',
+    width: 184,
+    height: 112,
+    anchorX: 0.5,
+    anchorY: 0.82,
+  },
+  {
+    key: 'polaroid_frame',
+    label: 'Polaroid-Ort',
+    objectType: 'decoration',
+    sourceTypes: ['memory'],
+    stageUnlock: 4,
+    image: '/garden-assets/polaroid-frame.png',
+    width: 94,
+    height: 118,
+    anchorX: 0.5,
+    anchorY: 0.9,
+  },
+  {
+    key: 'garden_decor',
+    label: 'Gartendeko',
+    objectType: 'decoration',
+    sourceTypes: ['quest', 'milestone'],
+    stageUnlock: 1,
+    image: '/garden-assets/garden-decor.png',
+    width: 92,
+    height: 94,
+    anchorX: 0.5,
+    anchorY: 0.86,
+  },
+] as const;
+
+const fallbackAreaKey = 'heart_bed';
 
 function normalizeEmail(email: unknown) {
   return typeof email === 'string' ? email.trim().toLowerCase() : '';
@@ -323,10 +517,113 @@ function mapGardenObject(row: Record<string, unknown>) {
     sourceType: row.sourceType,
     sourceId: row.sourceId,
     label: row.label,
+    areaKey: row.areaKey ?? fallbackAreaKey,
+    assetKey: row.assetKey ?? assetKeyForGardenObject(String(row.type), String(row.sourceType)),
+    historyTitle: row.historyTitle ?? row.label,
     positionX: row.positionX,
     positionY: row.positionY,
+    zIndex: row.zIndex ?? 1,
+    scale: Number(row.scale ?? 1),
+    rotation: row.rotation ?? 0,
+    placedByUser: Boolean(row.placedByUser),
+    rewardPoints: Number(row.rewardPoints ?? 0),
     level: row.level,
     createdAt: row.createdAt,
+  };
+}
+
+function areaForStage(stage: number) {
+  return gardenAreas.filter((area) => area.stageUnlock <= Math.max(1, stage));
+}
+
+function gardenStageForPoints(points: number) {
+  return Math.max(1, Math.floor(points / gardenStagePointStep) + 1);
+}
+
+async function gardenStageAfterReward(client: Queryable, coupleId: string, rewardPoints: number) {
+  const result = await client.query('select heart_points as "heartPoints" from couples where id = $1', [coupleId]);
+  return gardenStageForPoints(Number(result.rows[0]?.heartPoints ?? 0) + rewardPoints);
+}
+
+function areaKeyForSource(sourceType: string, questCategory = '') {
+  if (sourceType === 'love_jar') return 'light_meadow';
+  if (sourceType === 'memory') return 'memory_tree';
+  if (sourceType === 'know_me') return 'flower_meadow';
+  if (sourceType === 'quest') {
+    if (questCategory === 'date' || questCategory === 'romance') return 'picnic';
+    if (questCategory === 'memory') return 'memory_tree';
+    if (questCategory === 'teamwork') return 'bench_grove';
+    if (questCategory === 'long_distance') return 'star_meadow';
+    return 'flower_meadow';
+  }
+  if (sourceType === 'milestone') return 'wishing_well';
+  return 'heart_bed';
+}
+
+function assetKeyForQuest(category: string) {
+  if (category === 'date') return 'picnic_blanket';
+  if (category === 'romance') return 'date_pavilion';
+  if (category === 'memory') return 'polaroid_frame';
+  if (category === 'teamwork') return 'memory_tree';
+  if (category === 'long_distance') return 'distance_bridge';
+  if (category === 'humor') return 'garden_decor';
+  return 'warm_lantern';
+}
+
+function assetKeyForGardenObject(type: string, sourceType: string, category = '') {
+  if (sourceType === 'question') return 'conversation_flower';
+  if (sourceType === 'love_jar') return 'warm_lantern';
+  if (sourceType === 'memory') return 'memory_stone';
+  if (sourceType === 'know_me') return 'heart_flower';
+  if (sourceType === 'quest') return assetKeyForQuest(category);
+  if (type === 'tree') return 'memory_tree';
+  if (type === 'bench') return 'couple_bench';
+  if (type === 'pond') return 'quiet_pond';
+  if (type === 'stone') return 'memory_stone';
+  if (type === 'light') return 'warm_lantern';
+  return 'garden_decor';
+}
+
+function highestUnlockedAreaForReward(coupleStage: number, sourceType: string, questCategory = '') {
+  const targetAreaKey = areaKeyForSource(sourceType, questCategory);
+  const unlockedAreas = areaForStage(coupleStage);
+  const targetArea = unlockedAreas.find((area) => area.key === targetAreaKey);
+  return targetArea?.key ?? unlockedAreas[unlockedAreas.length - 1]?.key ?? fallbackAreaKey;
+}
+
+function nextGardenUnlock(heartPoints: number) {
+  const currentStage = gardenStageForPoints(heartPoints);
+  const nextUnlock = gardenUnlocks.find((unlock) => unlock.stage > currentStage);
+  return nextUnlock
+    ? {
+        ...nextUnlock,
+        pointsRemaining: Math.max(0, nextUnlock.points - heartPoints),
+      }
+    : null;
+}
+
+function objectTypeForAsset(assetKey: string) {
+  return gardenAssets.find((asset) => asset.key === assetKey)?.objectType ?? 'decoration';
+}
+
+function clampNumber(value: unknown, min: number, max: number, fallback: number) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
+
+async function nextGardenPlacement(client: Queryable, coupleId: string, areaKey: string) {
+  const result = await client.query('select count(*)::int as count from garden_objects where couple_id = $1 and area_key = $2', [
+    coupleId,
+    areaKey,
+  ]);
+  const index = Number(result.rows[0]?.count ?? 0);
+  const columns = [18, 34, 50, 66, 82];
+  const rows = [70, 58, 78, 48, 66, 54];
+  return {
+    positionX: columns[index % columns.length],
+    positionY: rows[Math.floor(index / columns.length) % rows.length],
+    zIndex: 1 + Math.round(rows[Math.floor(index / columns.length) % rows.length] / 10),
   };
 }
 
@@ -546,45 +843,43 @@ async function isActiveContentCategory(contentType: string, value: string) {
   return (result.rowCount ?? 0) > 0;
 }
 
-function gardenTypeForQuest(category: string) {
-  if (category === 'date') return 'decoration';
-  if (category === 'memory') return 'stone';
-  if (category === 'teamwork') return 'tree';
-  return 'light';
-}
-
 async function applyQuestReward(client: Queryable, coupleId: string, coupleQuestId: string, quest: Record<string, unknown>) {
-  const countResult = await client.query('select count(*)::int as count from garden_objects where couple_id = $1', [
-    coupleId,
-  ]);
-  const [positionX, positionY] = gardenPositions[countResult.rows[0].count % gardenPositions.length];
+  const category = String(quest.category);
+  const rewardPoints = Number(quest.rewardPoints);
+  const areaKey = highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, rewardPoints), 'quest', category);
+  const assetKey = assetKeyForQuest(category);
+  const placement = await nextGardenPlacement(client, coupleId, areaKey);
 
   await client.query(
     `
       insert into garden_objects (
-        id, couple_id, type, source_type, source_id, label, position_x, position_y, level
+        id, couple_id, type, source_type, source_id, label, area_key, asset_key, position_x, position_y, z_index, reward_points, level
       )
-      values ($1, $2, $3, 'quest', $4, $5, $6, $7, 1)
+      values ($1, $2, $3, 'quest', $4, $5, $6, $7, $8, $9, $10, $11, 1)
       on conflict do nothing
     `,
     [
       randomUUID(),
       coupleId,
-      gardenTypeForQuest(String(quest.category)),
+      objectTypeForAsset(assetKey),
       coupleQuestId,
       String(quest.title),
-      positionX,
-      positionY,
+      areaKey,
+      assetKey,
+      placement.positionX,
+      placement.positionY,
+      placement.zIndex,
+      rewardPoints,
     ],
   );
   await client.query(
     `
       update couples
       set heart_points = heart_points + $2,
-          garden_stage = greatest(1, floor((heart_points + $2) / 80) + 1)
+          garden_stage = greatest(1, floor((heart_points + $2) / ${gardenStagePointStep}) + 1)
       where id = $1
     `,
-    [coupleId, Number(quest.rewardPoints)],
+    [coupleId, rewardPoints],
   );
   await client.query('update couple_quests set reward_applied_at = now() where id = $1', [coupleQuestId]);
 }
@@ -842,28 +1137,27 @@ async function buildKnowMePayload(userId: string, locale = 'de') {
 }
 
 async function createMemoryStone(client: Queryable, coupleId: string, memoryId: string, title: string) {
-  const countResult = await client.query('select count(*)::int as count from garden_objects where couple_id = $1', [
-    coupleId,
-  ]);
-  const [positionX, positionY] = gardenPositions[countResult.rows[0].count % gardenPositions.length];
+  const areaKey = highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, 8), 'memory');
+  const assetKey = 'memory_stone';
+  const placement = await nextGardenPlacement(client, coupleId, areaKey);
 
   const result = await client.query(
     `
       insert into garden_objects (
-        id, couple_id, type, source_type, source_id, label, position_x, position_y, level
+        id, couple_id, type, source_type, source_id, label, area_key, asset_key, position_x, position_y, z_index, reward_points, level
       )
-      values ($1, $2, 'stone', 'memory', $3, $4, $5, $6, 1)
+      values ($1, $2, 'stone', 'memory', $3, $4, $5, $6, $7, $8, $9, 8, 1)
       on conflict do nothing
       returning id
     `,
-    [randomUUID(), coupleId, memoryId, title, positionX, positionY],
+    [randomUUID(), coupleId, memoryId, title, areaKey, assetKey, placement.positionX, placement.positionY, placement.zIndex],
   );
 
   await client.query(
     `
       update couples
       set heart_points = heart_points + 8,
-          garden_stage = greatest(1, floor((heart_points + 8) / 80) + 1)
+          garden_stage = greatest(1, floor((heart_points + 8) / ${gardenStagePointStep}) + 1)
       where id = $1
     `,
     [coupleId],
@@ -873,26 +1167,25 @@ async function createMemoryStone(client: Queryable, coupleId: string, memoryId: 
 }
 
 async function createKnowMeFlower(client: Queryable, coupleId: string, questionId: string) {
-  const countResult = await client.query('select count(*)::int as count from garden_objects where couple_id = $1', [
-    coupleId,
-  ]);
-  const [positionX, positionY] = gardenPositions[countResult.rows[0].count % gardenPositions.length];
+  const areaKey = highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, 12), 'know_me');
+  const assetKey = 'heart_flower';
+  const placement = await nextGardenPlacement(client, coupleId, areaKey);
 
   await client.query(
     `
       insert into garden_objects (
-        id, couple_id, type, source_type, source_id, label, position_x, position_y, level
+        id, couple_id, type, source_type, source_id, label, area_key, asset_key, position_x, position_y, z_index, reward_points, level
       )
-      values ($1, $2, 'flower', 'know_me', $3, 'Kennst-du-mich-Blume', $4, $5, 1)
+      values ($1, $2, 'flower', 'know_me', $3, 'Kennst-du-mich-Blume', $4, $5, $6, $7, $8, 12, 1)
       on conflict do nothing
     `,
-    [randomUUID(), coupleId, questionId, positionX, positionY],
+    [randomUUID(), coupleId, questionId, areaKey, assetKey, placement.positionX, placement.positionY, placement.zIndex],
   );
   await client.query(
     `
       update couples
       set heart_points = heart_points + 12,
-          garden_stage = greatest(1, floor((heart_points + 12) / 80) + 1)
+          garden_stage = greatest(1, floor((heart_points + 12) / ${gardenStagePointStep}) + 1)
       where id = $1
     `,
     [coupleId],
@@ -915,8 +1208,15 @@ async function buildGardenObjectDetail(userId: string, objectId: string, locale 
         source_type as "sourceType",
         source_id as "sourceId",
         label,
+        area_key as "areaKey",
+        asset_key as "assetKey",
         position_x as "positionX",
         position_y as "positionY",
+        z_index as "zIndex",
+        scale,
+        rotation,
+        placed_by_user as "placedByUser",
+        reward_points as "rewardPoints",
         level,
         created_at as "createdAt"
       from garden_objects
@@ -1220,26 +1520,25 @@ async function buildLoveJarTemplatePayload(locale = 'de') {
 }
 
 async function createLoveJarLight(client: Queryable, coupleId: string, noteId: string) {
-  const countResult = await client.query('select count(*)::int as count from garden_objects where couple_id = $1', [
-    coupleId,
-  ]);
-  const [positionX, positionY] = gardenPositions[countResult.rows[0].count % gardenPositions.length];
+  const areaKey = highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, 5), 'love_jar');
+  const assetKey = 'warm_lantern';
+  const placement = await nextGardenPlacement(client, coupleId, areaKey);
 
   await client.query(
     `
       insert into garden_objects (
-        id, couple_id, type, source_type, source_id, label, position_x, position_y, level
+        id, couple_id, type, source_type, source_id, label, area_key, asset_key, position_x, position_y, z_index, reward_points, level
       )
-      values ($1, $2, 'light', 'love_jar', $3, 'Love-Jar-Licht', $4, $5, 1)
+      values ($1, $2, 'light', 'love_jar', $3, 'Love-Jar-Licht', $4, $5, $6, $7, $8, 5, 1)
       on conflict do nothing
     `,
-    [randomUUID(), coupleId, noteId, positionX, positionY],
+    [randomUUID(), coupleId, noteId, areaKey, assetKey, placement.positionX, placement.positionY, placement.zIndex],
   );
   await client.query(
     `
       update couples
       set heart_points = heart_points + 5,
-          garden_stage = greatest(1, floor((heart_points + 5) / 80) + 1)
+          garden_stage = greatest(1, floor((heart_points + 5) / ${gardenStagePointStep}) + 1)
       where id = $1
     `,
     [coupleId],
@@ -1924,27 +2223,25 @@ export function apiRouter(): Router {
       );
 
       if (answersResult.rows.length >= 2 && !instance.rewardAppliedAt) {
-        const countResult = await client.query(
-          'select count(*)::int as count from garden_objects where couple_id = $1',
-          [couple.id],
-        );
-        const [positionX, positionY] = gardenPositions[countResult.rows[0].count % gardenPositions.length];
+        const areaKey = highestUnlockedAreaForReward(await gardenStageAfterReward(client, couple.id, 10), 'question');
+        const assetKey = 'conversation_flower';
+        const placement = await nextGardenPlacement(client, couple.id, areaKey);
 
         await client.query(
           `
             insert into garden_objects (
-              id, couple_id, type, source_type, source_id, label, position_x, position_y, level
+              id, couple_id, type, source_type, source_id, label, area_key, asset_key, position_x, position_y, z_index, reward_points, level
             )
-            values ($1, $2, 'flower', 'question', $3, 'Tagesfrage beantwortet', $4, $5, 1)
+            values ($1, $2, 'flower', 'question', $3, 'Tagesfrage beantwortet', $4, $5, $6, $7, $8, 10, 1)
             on conflict do nothing
           `,
-          [randomUUID(), couple.id, instance.id, positionX, positionY],
+          [randomUUID(), couple.id, instance.id, areaKey, assetKey, placement.positionX, placement.positionY, placement.zIndex],
         );
         await client.query(
           `
             update couples
             set heart_points = heart_points + 10,
-                garden_stage = greatest(1, floor((heart_points + 10) / 80) + 1)
+                garden_stage = greatest(1, floor((heart_points + 10) / ${gardenStagePointStep}) + 1)
             where id = $1
           `,
           [couple.id],
@@ -2664,19 +2961,34 @@ export function apiRouter(): Router {
       const objectsResult = await pool.query(
         `
           select
-            id,
-            couple_id as "coupleId",
-            type,
-            source_type as "sourceType",
-            source_id as "sourceId",
-            label,
-            position_x as "positionX",
-            position_y as "positionY",
-            level,
-            created_at as "createdAt"
-          from garden_objects
-          where couple_id = $1
-          order by created_at
+            go.id,
+            go.couple_id as "coupleId",
+            go.type,
+            go.source_type as "sourceType",
+            go.source_id as "sourceId",
+            go.label,
+            coalesce(dq.text, q.title, m.title, ln.text, km.question_text, go.label) as "historyTitle",
+            go.area_key as "areaKey",
+            go.asset_key as "assetKey",
+            go.position_x as "positionX",
+            go.position_y as "positionY",
+            go.z_index as "zIndex",
+            go.scale,
+            go.rotation,
+            go.placed_by_user as "placedByUser",
+            go.reward_points as "rewardPoints",
+            go.level,
+            go.created_at as "createdAt"
+          from garden_objects go
+          left join daily_question_instances dqi on go.source_type = 'question' and go.source_id = dqi.id
+          left join daily_questions dq on dq.id = dqi.question_id
+          left join couple_quests cq on go.source_type = 'quest' and go.source_id = cq.id
+          left join quests q on q.id = cq.quest_id
+          left join memory_entries m on go.source_type = 'memory' and go.source_id = m.id
+          left join love_jar_notes ln on go.source_type = 'love_jar' and go.source_id = ln.id
+          left join know_me_questions km on go.source_type = 'know_me' and go.source_id = km.id
+          where go.couple_id = $1
+          order by go.created_at
         `,
         [couple.id],
       );
@@ -2684,7 +2996,83 @@ export function apiRouter(): Router {
       response.json({
         couple,
         objects: objectsResult.rows.map(mapGardenObject),
+        areas: gardenAreas,
+        unlocks: gardenUnlocks,
+        availableAssets: gardenAssets.filter((asset) => asset.stageUnlock <= Math.max(1, Number(couple.gardenStage))),
+        assetCatalog: gardenAssets,
+        nextUnlock: nextGardenUnlock(Number(couple.heartPoints)),
         progress: await buildGardenProgress(couple.id),
+      });
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.patch('/garden/objects/:objectId/placement', requireAuth, async (request, response) => {
+    const user = currentUser(request);
+    const objectId = String(request.params.objectId);
+    const couple = await getCurrentCouple(user.id);
+    if (!couple) {
+      sendApiError(response, 409, 'couple.notConnected');
+      return;
+    }
+
+    const areaKey = normalizeText(request.body?.areaKey);
+    const validArea = gardenAreas.find((area) => area.key === areaKey && area.stageUnlock <= Math.max(1, Number(couple.gardenStage)));
+    if (!validArea) {
+      sendApiError(response, 400, 'garden.invalidPlacement');
+      return;
+    }
+
+    const positionX = Math.round(clampNumber(request.body?.positionX, 4, 96, 50));
+    const positionY = Math.round(clampNumber(request.body?.positionY, 28, 88, 64));
+    const zIndex = Math.round(clampNumber(request.body?.zIndex, 1, 99, 1 + positionY / 10));
+    const scale = clampNumber(request.body?.scale, 0.7, 1.35, 1);
+    const rotation = Math.round(clampNumber(request.body?.rotation, -12, 12, 0));
+
+    try {
+      const result = await pool.query(
+        `
+          update garden_objects
+          set
+            area_key = $1,
+            position_x = $2,
+            position_y = $3,
+            z_index = $4,
+            scale = $5,
+            rotation = $6,
+            placed_by_user = true
+          where id = $7 and couple_id = $8
+          returning
+            id,
+            couple_id as "coupleId",
+            type,
+            source_type as "sourceType",
+            source_id as "sourceId",
+            label,
+            area_key as "areaKey",
+            asset_key as "assetKey",
+            position_x as "positionX",
+            position_y as "positionY",
+            z_index as "zIndex",
+            scale,
+            rotation,
+            placed_by_user as "placedByUser",
+            reward_points as "rewardPoints",
+            level,
+            created_at as "createdAt"
+        `,
+        [areaKey, positionX, positionY, zIndex, scale, rotation, objectId, couple.id],
+      );
+
+      if (!result.rows[0]) {
+        sendApiError(response, 404, 'garden.objectNotFound');
+        return;
+      }
+
+      response.json({
+        couple,
+        object: mapGardenObject(result.rows[0]),
       });
     } catch (error) {
       handleError(response, error);

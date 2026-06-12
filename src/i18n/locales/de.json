@@ -39,11 +39,15 @@
     "introCouple": "Teilt euren Paar-Code, damit dein Partner jederzeit nachträglich beitreten kann.",
     "howTitle": "Was ist das?",
     "howText": "Herzgarten ist euer geschützter Paarraum. Erst wenn beide im selben Raum sind, werden Fragen, Quests, Zettel, Erinnerungen und Gartenmomente miteinander geteilt.",
+    "adEyebrow": "Für euch beide",
+    "adTitle": "Lasst kleine Momente sichtbar wachsen.",
+    "adText": "Herzgarten verwandelt Fragen, Komplimente, Erinnerungen und gemeinsame Aufgaben in einen wachsenden Garten. Ihr baut keinen Score auf, sondern einen geschützten Ort für eure Beziehung.",
     "modeLabel": "Auth Modus",
     "register": "Registrieren",
     "login": "Login",
     "createAccount": "Konto erstellen",
     "loginAction": "Einloggen",
+    "rememberEmail": "E-Mail-Adresse in diesem Browser merken",
     "hello": "Hallo {name}",
     "coupleCodeText": "Euer Paar-Code ist {code}. Dein Partner kann ihn auch später nach dem Login eingeben.",
     "coupleCodePrefix": "Euer Paar-Code ist",
@@ -137,6 +141,8 @@
     "canvasLabel": "Herzgarten",
     "progressEyebrow": "Fortschritt",
     "progressTitle": "Euer Garten wächst durch echte Momente.",
+    "levelProgress": "Ihr seid bei Stufe {stage} mit {points} Herzpunkten. Noch {remaining} Punkte bis {area}.",
+    "levelProgressComplete": "Ihr seid bei Stufe {stage} mit {points} Herzpunkten. Euer Garten blüht weiter.",
     "defaultTitle": "Gartenmoment",
     "dailyQuestion": "Tagesfrage",
     "loveJarNote": "Love-Jar-Zettel",
@@ -153,6 +159,35 @@
     "loveJarMeta": "Von {author} · Kategorie {category}",
     "knowMeSuccess": "Ihr kennt euch ein Stück besser. +12 Herzpunkte",
     "noDetails": "Für dieses Objekt sind noch keine Details hinterlegt.",
+    "stageLabel": "Stufe {stage}",
+    "unlockAt": "Ab Stufe {stage}",
+    "unlockAtPoints": "Ab Stufe {stage} · {points} Punkte · noch {remaining}",
+    "inventoryEmpty": "Alle sichtbaren Gartenmomente sind platziert.",
+    "legendTitle": "Legende",
+    "legendEmpty": "Noch keine sichtbaren Symbole.",
+    "toolbar": {
+      "edit": "Umräumen",
+      "done": "Fertig",
+      "home": "Start"
+    },
+    "history": {
+      "show": "Verlauf anzeigen",
+      "hide": "Verlauf ausblenden",
+      "nextLevelTitle": "Nächste Stufe",
+      "nextLevel": "Noch {count} Punkte bis {area}.",
+      "allUnlocked": "Alle Bereiche sind freigeschaltet. Euer Garten blüht weiter.",
+      "types": {
+        "question": "Tagesfrage",
+        "loveJar": "Love-Jar-Zettel",
+        "memory": "Moment",
+        "quest": "Herausforderung",
+        "knowMe": "Spielmoment",
+        "default": "Gartenmoment"
+      },
+      "previous": "Zurück",
+      "next": "Weiter",
+      "page": "Seite {current} / {total}"
+    },
     "celebration": {
       "default": "Dieser Gartenmoment gehört zu eurer gemeinsamen Geschichte.",
       "question": "Diese Blume ist gewachsen, weil ihr beide euch Zeit für dieselbe Frage genommen habt.",
@@ -409,7 +444,8 @@
       "invalidCategory": "Diese Erinnerungs-Kategorie gibt es nicht."
     },
     "garden": {
-      "objectNotFound": "Dieses Gartenobjekt konnten wir nicht finden."
+      "objectNotFound": "Dieses Gartenobjekt konnten wir nicht finden.",
+      "invalidPlacement": "Diese Gartenposition ist nicht verfügbar."
     },
     "notification": {
       "notFound": "Diese Benachrichtigung konnten wir nicht finden."

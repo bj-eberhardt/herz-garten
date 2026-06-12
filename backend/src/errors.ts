@@ -34,6 +34,7 @@ export const apiErrorMessages = {
   'memory.invalidDate': 'Bitte wähle ein gültiges Datum.',
   'memory.invalidCategory': 'Diese Erinnerungs-Kategorie gibt es nicht.',
   'garden.objectNotFound': 'Dieses Gartenobjekt konnten wir nicht finden.',
+  'garden.invalidPlacement': 'Diese Gartenposition ist nicht verfuegbar.',
   'notification.notFound': 'Diese Benachrichtigung konnten wir nicht finden.',
 } as const;
 

@@ -4,6 +4,17 @@ export type QuestCategory = 'romance' | 'date' | 'humor' | 'memory' | 'teamwork'
 export type EffortLevel = 'low' | 'medium' | 'high';
 export type GardenObjectType = 'flower' | 'tree' | 'bench' | 'light' | 'stone' | 'pond' | 'decoration';
 export type GardenSourceType = 'question' | 'quest' | 'memory' | 'love_jar' | 'milestone' | 'know_me';
+export type GardenAreaKey =
+  | 'heart_bed'
+  | 'flower_meadow'
+  | 'bench_grove'
+  | 'memory_tree'
+  | 'light_meadow'
+  | 'pond'
+  | 'picnic'
+  | 'star_meadow'
+  | 'wishing_well'
+  | 'garden_fest';
 export type LoveJarCategory = string;
 export type MemoryCategory = string;
 export type FeatureExplainerKey =
@@ -106,10 +117,53 @@ export interface GardenObject {
   sourceType: GardenSourceType;
   sourceId?: string;
   label: string;
+  areaKey: GardenAreaKey;
+  assetKey: string;
+  historyTitle?: string | null;
   positionX: number;
   positionY: number;
+  zIndex: number;
+  scale: number;
+  rotation: number;
+  placedByUser: boolean;
+  rewardPoints: number;
   level: number;
   createdAt: string;
+}
+
+export interface GardenArea {
+  key: GardenAreaKey;
+  label: string;
+  stageUnlock: number;
+  startX: number;
+  width: number;
+  accent: string;
+  backgroundImage: string;
+}
+
+export interface GardenAsset {
+  key: string;
+  label: string;
+  objectType: GardenObjectType;
+  sourceTypes: GardenSourceType[];
+  stageUnlock: number;
+  image: string;
+  width: number;
+  height: number;
+  anchorX: number;
+  anchorY: number;
+}
+
+export interface GardenUnlock {
+  stage: number;
+  points: number;
+  unlock: string;
+  areaKey: GardenAreaKey;
+  areaLabel: string;
+}
+
+export interface GardenNextUnlock extends GardenUnlock {
+  pointsRemaining: number;
 }
 
 export interface LoveJarNote {

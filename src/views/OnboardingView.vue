@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Clipboard, KeyRound, LogIn, Sprout, UserPlus } from '@lucide/vue';
+import { Clipboard, HeartHandshake, KeyRound, LogIn, Sprout, UserPlus } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
 import type { ContentPreference, RelationshipType } from '@/types/domain';
 import { useAuthStore } from '@/stores/authStore';
 import { localizeApiError } from '@/services/errorMessages';
 
+const rememberedEmailKey = 'herzgarten_remembered_email';
 const router = useRouter();
 const authStore = useAuthStore();
 const { t } = useI18n();
@@ -16,6 +17,7 @@ const mode = ref<'login' | 'register'>('register');
 const displayName = ref('');
 const email = ref('');
 const password = ref('');
+const rememberEmail = ref(true);
 const inviteCode = ref('');
 const relationshipType = ref<RelationshipType>('mixed');
 const contentPreference = ref<ContentPreference>('balanced');
@@ -24,6 +26,16 @@ const copied = ref(false);
 const authSubmitAttempted = ref(false);
 const joinSubmitAttempted = ref(false);
 const createSubmitAttempted = ref(false);
+const showGuestAd = computed(() => !authStore.isAuthenticated && mode.value === 'register');
+
+function saveRememberedEmail() {
+  const normalizedEmail = email.value.trim().toLowerCase();
+  if (rememberEmail.value && normalizedEmail) {
+    window.localStorage.setItem(rememberedEmailKey, normalizedEmail);
+    return;
+  }
+  window.localStorage.removeItem(rememberedEmailKey);
+}
 
 async function submitAuth() {
   formError.value = '';
@@ -33,6 +45,7 @@ async function submitAuth() {
     } else {
       await authStore.login(email.value, password.value);
     }
+    saveRememberedEmail();
   } catch (error) {
     formError.value = localizeApiError(error, 'errors.fallback.auth');
   }
@@ -65,6 +78,16 @@ watch(mode, () => {
   authSubmitAttempted.value = false;
 });
 
+onMounted(() => {
+  if (authStore.isAuthenticated) return;
+  const rememberedEmail = window.localStorage.getItem(rememberedEmailKey);
+  if (rememberedEmail) {
+    email.value = rememberedEmail;
+    rememberEmail.value = true;
+    mode.value = 'login';
+  }
+});
+
 async function copyInviteCode() {
   if (!authStore.couple?.inviteCode) return;
   await navigator.clipboard.writeText(authStore.couple.inviteCode);
@@ -77,15 +100,23 @@ async function copyInviteCode() {
 
 <template>
   <div class="view-grid onboarding-grid">
-    <section class="hero-panel">
+    <section v-if="authStore.isAuthenticated" class="hero-panel">
       <p class="eyebrow">{{ t('auth.onboarding') }}</p>
       <h1>{{ t('auth.welcomeTitle') }}</h1>
-      <p v-if="!authStore.isAuthenticated">{{ t('auth.introGuest') }}</p>
-      <p v-else-if="!authStore.hasCouple">{{ t('auth.introNoCouple') }}</p>
+      <p v-if="!authStore.hasCouple">{{ t('auth.introNoCouple') }}</p>
       <p v-else>{{ t('auth.introCouple') }}</p>
     </section>
 
-    <FeatureExplainer feature-key="onboarding" :icon="Sprout" :title="t('auth.howTitle')" :text="t('auth.howText')" />
+    <FeatureExplainer v-if="authStore.isAuthenticated" feature-key="onboarding" :icon="Sprout" :title="t('auth.howTitle')" :text="t('auth.howText')" />
+
+    <section v-if="showGuestAd" class="panel feature-explainer onboarding-ad" data-testid="onboarding-ad">
+      <HeartHandshake class="feature-explainer-icon" aria-hidden="true" />
+      <div>
+        <p class="eyebrow">{{ t('auth.adEyebrow') }}</p>
+        <h2>{{ t('auth.adTitle') }}</h2>
+        <p>{{ t('auth.adText') }}</p>
+      </div>
+    </section>
 
     <section v-if="!authStore.isAuthenticated" class="panel auth-panel">
       <div class="segmented-control" :aria-label="t('auth.modeLabel')">
@@ -105,6 +136,11 @@ async function copyInviteCode() {
 
         <label for="email">{{ t('common.email') }}</label>
         <input id="email" v-model="email" autocomplete="email" type="email" data-testid="auth-email" required />
+
+        <label class="remember-email-row">
+          <input v-model="rememberEmail" type="checkbox" data-testid="remember-email" />
+          <span>{{ t('auth.rememberEmail') }}</span>
+        </label>
 
         <label for="password">{{ t('common.password') }}</label>
         <input id="password" v-model="password" autocomplete="current-password" type="password" minlength="8" data-testid="auth-password" required />
