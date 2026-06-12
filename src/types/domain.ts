@@ -65,6 +65,7 @@ export interface Couple {
   contentPreference: ContentPreference;
   heartPoints: number;
   gardenStage: number;
+  memberCount?: number;
   createdAt: string;
 }
 

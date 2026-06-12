@@ -31,7 +31,7 @@ test('remembered email opens login tab and pre-fills email', async ({ page }) =>
 test('successful registration stores email in local storage', async ({ page }) => {
   const user = testUser('remember-email', testRunId());
   await registerViaUi(page, user);
-  await expect(page.evaluate(() => window.localStorage.getItem('herzgarten_remembered_email'))).resolves.toBe(user.email);
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem('herzgarten_remembered_email'))).toBe(user.email);
   await expect(page.getByTestId('feature-explainer-onboarding')).toBeVisible();
   await expect(page.getByTestId('nav-garden')).toBeVisible();
 });
