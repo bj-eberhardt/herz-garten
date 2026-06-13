@@ -1,11 +1,17 @@
-import type { Router } from 'express';
+import type { Request, Response, Router } from 'express';
 import { Router as createRouter } from 'express';
 import { requireAdminAuth, signAdminToken } from './adminAuth.js';
 import { config } from './config.js';
 import { handleError, sendApiError } from './errors.js';
 import { createRateLimiter } from './security/rateLimit.js';
 import { validateBody } from './validation.js';
-import { adminLoginBodySchema, categoryBodySchema, messageTemplateBodySchema } from './admin/bodySchemas.js';
+import {
+  adminCouplePreferencesBodySchema,
+  adminLoginBodySchema,
+  categoryBodySchema,
+  messageTemplateBodySchema,
+  preferenceBodySchema,
+} from './admin/bodySchemas.js';
 import type { ContentType } from './admin/support.repository.js';
 import { audit, buildAuditLogPayload } from './admin/audit/audit.service.js';
 import { deleteCategory, listCategories, saveCategory } from './admin/categories/categories.service.js';
@@ -14,6 +20,12 @@ import {
   MessageTemplateValidationException,
   saveMessageTemplate,
 } from './admin/messageTemplates/messageTemplates.service.js';
+import {
+  listPreferences,
+  preferenceValueExists,
+  savePreference,
+  type PreferenceKind,
+} from './admin/preferences.repository.js';
 import {
   buildOverview,
   getCoupleDetail,
@@ -29,6 +41,7 @@ import {
   saveContent,
   sendCsv,
   supportedLocales,
+  updateCouplePreferences,
   validateEditableContentBody
 } from './admin/support.repository.js';
 
@@ -128,6 +141,32 @@ export function adminRouter(): Router {
     }
   });
 
+  router.patch('/couples/:id/preferences', requireAdminAuth, validateBody(adminCouplePreferencesBodySchema), async (request, response) => {
+    try {
+      const relationshipType = normalizeText(request.body.relationshipType);
+      const contentPreference = normalizeText(request.body.contentPreference);
+      if (
+        !relationshipType ||
+        !contentPreference ||
+        !(await preferenceValueExists('relationshipModes', relationshipType, true)) ||
+        !(await preferenceValueExists('contentStyles', contentPreference, true))
+      ) {
+        response.status(400).json({ errorKey: 'admin.couplePreferencesInvalid', error: 'Paarraum-Einstellungen sind ungÃ¼ltig.' });
+        return;
+      }
+
+      const couple = await updateCouplePreferences(String(request.params.id), relationshipType, contentPreference);
+      if (!couple) {
+        response.status(404).json({ errorKey: 'couple.notFound', error: 'Paarraum nicht gefunden.' });
+        return;
+      }
+      await audit('update', 'couple', String(request.params.id), { relationshipType, contentPreference });
+      response.json({ couple });
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
   router.get('/audit-log', requireAdminAuth, async (_request, response) => {
     try {
       response.json(await buildAuditLogPayload());
@@ -173,6 +212,67 @@ export function adminRouter(): Router {
       response.json({ locales: await supportedLocales() });
     } catch (error) {
       handleError(response, error);
+    }
+  });
+
+  async function handlePreferenceList(kind: PreferenceKind, request: Request, response: Response) {
+    const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
+    response.json({ items: await listPreferences(kind, locale) });
+  }
+
+  router.get('/relationship-modes', requireAdminAuth, async (request, response) => {
+    try {
+      await handlePreferenceList('relationshipModes', request, response);
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.post('/relationship-modes', requireAdminAuth, validateBody(preferenceBodySchema), async (request, response) => {
+    try {
+      const id = await savePreference('relationshipModes', request.body);
+      await audit('create', 'relationship-mode', id, { value: request.body.value });
+      response.status(201).json({ id, items: await listPreferences('relationshipModes') });
+    } catch {
+      response.status(400).json({ errorKey: 'admin.preferenceInvalid', error: 'Taxonomie-Daten sind ungÃ¼ltig.' });
+    }
+  });
+
+  router.patch('/relationship-modes/:id', requireAdminAuth, validateBody(preferenceBodySchema), async (request, response) => {
+    try {
+      const id = await savePreference('relationshipModes', request.body, String(request.params.id));
+      await audit('update', 'relationship-mode', id, { value: request.body.value });
+      response.json({ id, items: await listPreferences('relationshipModes') });
+    } catch {
+      response.status(400).json({ errorKey: 'admin.preferenceInvalid', error: 'Taxonomie-Daten sind ungÃ¼ltig.' });
+    }
+  });
+
+  router.get('/content-styles', requireAdminAuth, async (request, response) => {
+    try {
+      await handlePreferenceList('contentStyles', request, response);
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.post('/content-styles', requireAdminAuth, validateBody(preferenceBodySchema), async (request, response) => {
+    try {
+      const id = await savePreference('contentStyles', request.body);
+      await audit('create', 'content-style', id, { value: request.body.value });
+      response.status(201).json({ id, items: await listPreferences('contentStyles') });
+    } catch {
+      response.status(400).json({ errorKey: 'admin.preferenceInvalid', error: 'Taxonomie-Daten sind ungÃ¼ltig.' });
+    }
+  });
+
+  router.patch('/content-styles/:id', requireAdminAuth, validateBody(preferenceBodySchema), async (request, response) => {
+    try {
+      const id = await savePreference('contentStyles', request.body, String(request.params.id));
+      await audit('update', 'content-style', id, { value: request.body.value });
+      response.json({ id, items: await listPreferences('contentStyles') });
+    } catch {
+      response.status(400).json({ errorKey: 'admin.preferenceInvalid', error: 'Taxonomie-Daten sind ungÃ¼ltig.' });
     }
   });
 

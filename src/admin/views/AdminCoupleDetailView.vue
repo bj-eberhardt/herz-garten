@@ -24,15 +24,62 @@ interface CoupleDetail {
   lastGardenMomentAt: string | null;
 }
 
+interface PreferenceItem {
+  value: string;
+  label: string;
+  active: boolean;
+}
+
 const route = useRoute();
 const couple = ref<CoupleDetail | null>(null);
+const relationshipModes = ref<PreferenceItem[]>([]);
+const contentStyles = ref<PreferenceItem[]>([]);
+const relationshipType = ref('');
+const contentPreference = ref('');
+const savingPreferences = ref(false);
+const preferenceMessage = ref('');
+const preferenceError = ref('');
 
 async function loadCouple() {
   const payload = await adminApiRequest<{ couple: CoupleDetail }>(`/api/admin/couples/${route.params.id}`);
   couple.value = payload.couple;
+  relationshipType.value = payload.couple.relationshipType;
+  contentPreference.value = payload.couple.contentPreference;
 }
 
-onMounted(loadCouple);
+async function loadPreferences() {
+  const [modes, styles] = await Promise.all([
+    adminApiRequest<{ items: PreferenceItem[] }>('/api/admin/relationship-modes'),
+    adminApiRequest<{ items: PreferenceItem[] }>('/api/admin/content-styles'),
+  ]);
+  relationshipModes.value = modes.items.filter((item) => item.active);
+  contentStyles.value = styles.items.filter((item) => item.active);
+}
+
+async function savePreferences() {
+  savingPreferences.value = true;
+  preferenceMessage.value = '';
+  preferenceError.value = '';
+  try {
+    const payload = await adminApiRequest<{ couple: CoupleDetail }>(`/api/admin/couples/${route.params.id}/preferences`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        relationshipType: relationshipType.value,
+        contentPreference: contentPreference.value,
+      }),
+    });
+    couple.value = payload.couple;
+    preferenceMessage.value = 'Einstellungen gespeichert.';
+  } catch {
+    preferenceError.value = 'Einstellungen konnten nicht gespeichert werden.';
+  } finally {
+    savingPreferences.value = false;
+  }
+}
+
+onMounted(async () => {
+  await Promise.all([loadCouple(), loadPreferences()]);
+});
 </script>
 
 <template>
@@ -88,6 +135,27 @@ onMounted(loadCouple);
             <strong>{{ couple.gardenObjectCount }}</strong>
           </article>
         </div>
+      </section>
+
+      <section class="admin-panel admin-form" data-testid="admin-couple-preferences">
+        <h2>Personalisierung</h2>
+        <label>
+          Beziehungsmodus
+          <select v-model="relationshipType" data-testid="admin-couple-relationship-type">
+            <option v-for="mode in relationshipModes" :key="mode.value" :value="mode.value">{{ mode.label }}</option>
+          </select>
+        </label>
+        <label>
+          Content-Stil
+          <select v-model="contentPreference" data-testid="admin-couple-content-preference">
+            <option v-for="style in contentStyles" :key="style.value" :value="style.value">{{ style.label }}</option>
+          </select>
+        </label>
+        <p v-if="preferenceMessage" class="success-note">{{ preferenceMessage }}</p>
+        <p v-if="preferenceError" class="form-error">{{ preferenceError }}</p>
+        <button class="primary-button" type="button" :disabled="savingPreferences" data-testid="admin-couple-preferences-save" @click="savePreferences">
+          {{ savingPreferences ? 'Speichere...' : 'Speichern' }}
+        </button>
       </section>
     </div>
   </section>

@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { withTransaction } from '../../db/transaction.js';
 import {
   deleteCoupleMembersForCouple,
@@ -7,7 +8,10 @@ import {
   exportCoupleData,
   findPartnerIdsForMembership,
   findUserMemberships,
+  getPasswordHashForUser,
   getProfilePreferences,
+  updateProfile,
+  updatePasswordHash,
   updateProfilePreferences,
 } from './account.repository.js';
 import {
@@ -22,6 +26,20 @@ export async function updateUserPreferences(userId: string, incomingPreferences:
   const currentPreferences = await getProfilePreferences(userId);
   const preferences = mergeUserPreferences(currentPreferences, incomingPreferences);
   return publicUser(await updateProfilePreferences(userId, preferences));
+}
+
+export async function updateUserProfile(userId: string, profile: { email?: string; displayName?: string }) {
+  return publicUser(await updateProfile(userId, profile));
+}
+
+export async function updateUserPassword(userId: string, currentPassword: string, newPassword: string) {
+  const currentPasswordHash = await getPasswordHashForUser(userId);
+  const valid = currentPasswordHash ? await bcrypt.compare(currentPassword, currentPasswordHash) : false;
+  if (!valid) return false;
+
+  const nextPasswordHash = await bcrypt.hash(newPassword, 12);
+  await updatePasswordHash(userId, nextPasswordHash);
+  return true;
 }
 
 export async function buildAccountExport(user: { id: string; email: string; displayName: string }, locale: string) {
@@ -67,7 +85,7 @@ export async function deleteAccount(user: { id: string; displayName: string }) {
   });
 }
 
-export async function getMePayload(userId: string, fallbackUser: { id: string; email: string; displayName: string }) {
-  const [profile, couple] = await Promise.all([getPublicUser(userId), getCurrentCouple(userId)]);
+export async function getMePayload(userId: string, fallbackUser: { id: string; email: string; displayName: string }, locale = 'de') {
+  const [profile, couple] = await Promise.all([getPublicUser(userId), getCurrentCouple(userId, locale)]);
   return { user: profile ?? fallbackUser, couple };
 }

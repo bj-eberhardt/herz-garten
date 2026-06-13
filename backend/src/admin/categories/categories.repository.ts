@@ -5,6 +5,7 @@ import {
   usageTableForContentType,
   type ContentType,
 } from '../contentTypes.js';
+import { preferenceValueExists } from '../preferences.repository.js';
 
 function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
@@ -22,6 +23,18 @@ function normalizeInteger(value: unknown, fallback: number) {
 function translationsFromBody(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return value as Record<string, Record<string, unknown>>;
+}
+
+function stringArrayFromBody(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map(normalizeText).filter(Boolean))];
+}
+
+async function validatePreferenceValues(kind: 'relationshipModes' | 'contentStyles', values: string[]) {
+  for (const value of values) {
+    if (!(await preferenceValueExists(kind, value, true))) return false;
+  }
+  return true;
 }
 
 export async function categoryExists(contentType: ContentType, value: string) {
@@ -53,6 +66,8 @@ export async function listCategories(type?: ContentType, locale = 'de') {
         c.label as "defaultLabel",
         c.active,
         c.sort_order as "sortOrder",
+        c.relationship_modes as "relationshipModes",
+        c.content_styles as "contentStyles",
         c.created_at as "createdAt",
         c.updated_at as "updatedAt",
         coalesce(json_object_agg(t.locale, json_build_object('label', t.label)) filter (where t.locale is not null), '{}'::json) as translations
@@ -81,21 +96,31 @@ export async function saveCategory(body: Record<string, unknown>, id: string = r
   const contentType = normalizeText(body.contentType);
   const value = normalizeText(body.value).toLowerCase().replaceAll(' ', '_');
   const label = normalizeText(body.label);
+  const relationshipModes = stringArrayFromBody(body.relationshipModes);
+  const contentStyles = stringArrayFromBody(body.contentStyles);
   if (!isContentType(contentType) || !/^[a-z0-9_-]+$/.test(value) || !label) {
     throw new Error('invalid category');
+  }
+  if (!(await validatePreferenceValues('relationshipModes', relationshipModes))) {
+    throw new Error('invalid relationship modes');
+  }
+  if (!(await validatePreferenceValues('contentStyles', contentStyles))) {
+    throw new Error('invalid content styles');
   }
 
   await pool.query(
     `
-      insert into content_categories (id, content_type, value, label, active, sort_order, updated_at)
-      values ($1, $2, $3, $4, $5, $6, now())
+      insert into content_categories (id, content_type, value, label, active, sort_order, relationship_modes, content_styles, updated_at)
+      values ($1, $2, $3, $4, $5, $6, $7, $8, now())
       on conflict (id) do update set
         label = excluded.label,
         active = excluded.active,
         sort_order = excluded.sort_order,
+        relationship_modes = excluded.relationship_modes,
+        content_styles = excluded.content_styles,
         updated_at = now()
     `,
-    [id, contentType, value, label, normalizeBoolean(body.active), normalizeInteger(body.sortOrder, 0)],
+    [id, contentType, value, label, normalizeBoolean(body.active), normalizeInteger(body.sortOrder, 0), relationshipModes, contentStyles],
   );
 
   const translations = translationsFromBody(body.translations);

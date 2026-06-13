@@ -69,6 +69,33 @@ const defaultLanguageHint = computed(() =>
     : 'Default-Sprache / Fallback. Die Basisfelder speichern den Fallback; Übersetzungen können ihn pro Sprache überschreiben.',
 );
 
+function replaceForm(nextForm: ContentItem) {
+  for (const key of Object.keys(form)) {
+    delete (form as unknown as Record<string, unknown>)[key];
+  }
+  Object.assign(form, nextForm);
+}
+
+function contentPayload() {
+  return {
+    text: form.text,
+    title: form.title,
+    description: form.description,
+    questionText: form.questionText,
+    category: form.category,
+    depthLevel: form.depthLevel,
+    longDistanceSuitable: form.longDistanceSuitable,
+    estimatedMinutes: form.estimatedMinutes,
+    effortLevel: form.effortLevel,
+    rewardPoints: form.rewardPoints,
+    rewardSeedType: form.rewardSeedType,
+    requiresBothPartners: form.requiresBothPartners,
+    active: form.active,
+    sortOrder: form.sortOrder,
+    translations: form.translations,
+  };
+}
+
 function emptyForm(type: ContentType): ContentItem {
   return {
     active: true,
@@ -97,7 +124,7 @@ function ensureTranslations() {
 }
 
 function resetForm(open = false) {
-  Object.assign(form, emptyForm(selectedType.value));
+  replaceForm(emptyForm(selectedType.value));
   form.category = currentCategories.value[0]?.value ?? '';
   ensureTranslations();
   errors.value = {};
@@ -110,7 +137,7 @@ async function openFormForNew() {
 }
 
 async function editItem(item: ContentItem) {
-  Object.assign(form, JSON.parse(JSON.stringify(item)));
+  replaceForm(JSON.parse(JSON.stringify(item)));
   ensureTranslations();
   showForm.value = true;
   errors.value = {};
@@ -187,12 +214,12 @@ async function saveItem() {
     const method = form.id ? 'PATCH' : 'POST';
     const payload = await adminApiRequest<{ items: ContentItem[] }>(path, {
       method,
-      body: JSON.stringify(form),
+      body: JSON.stringify(contentPayload()),
     });
     items.value = payload.items;
     resetForm(false);
   } catch {
-    errors.value = { form: 'Content-Daten konnten nicht gespeichert werden. Pruefe Pflichtfelder und Kategorie.' };
+    errors.value = { form: `${currentTypeLabel.value || 'Content'} konnte nicht gespeichert werden. Pruefe Pflichtfelder und Kategorie.` };
   } finally {
     saving.value = false;
   }
@@ -217,6 +244,7 @@ onMounted(async () => {
       <h1>Content</h1>
       <span>{{ currentTypeLabel }}</span>
     </div>
+    <p class="muted">Hier bearbeitest du einzelne Inhalte. Kategorien pflegst du unter Categories.</p>
 
     <div class="admin-tabs" role="tablist">
       <button v-for="type in contentTypes" :key="type.id" type="button" :class="{ active: selectedType === type.id }" @click="switchType(type.id)">
@@ -226,7 +254,7 @@ onMounted(async () => {
 
     <section v-if="showForm" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-content-form">
       <div class="admin-form-head">
-        <h2>{{ form.id ? 'Bearbeiten' : 'Neuer Eintrag' }}</h2>
+        <h2>{{ form.id ? `${currentTypeLabel} bearbeiten` : `Neuer ${currentTypeLabel}-Eintrag` }}</h2>
         <button class="secondary-button admin-small-button" type="button" @click="resetForm(false)">Schliessen</button>
       </div>
       <p v-if="errors.form" class="form-error">{{ errors.form }}</p>

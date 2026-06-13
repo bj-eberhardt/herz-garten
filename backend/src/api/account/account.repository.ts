@@ -20,6 +20,38 @@ export async function updateProfilePreferences(userId: string, preferences: Reco
   return result.rows[0];
 }
 
+export async function updateProfile(userId: string, profile: { email?: string; displayName?: string }) {
+  const result = await pool.query(
+    `
+      update profiles
+      set email = coalesce($2, email),
+          display_name = coalesce($3, display_name),
+          updated_at = now()
+      where id = $1
+      returning id, email, display_name as "displayName", preferences
+    `,
+    [userId, profile.email ?? null, profile.displayName ?? null],
+  );
+  return result.rows[0];
+}
+
+export async function getPasswordHashForUser(userId: string) {
+  const result = await pool.query('select password_hash as "passwordHash" from profiles where id = $1', [userId]);
+  return result.rows[0]?.passwordHash as string | undefined;
+}
+
+export async function updatePasswordHash(userId: string, passwordHash: string) {
+  await pool.query(
+    `
+      update profiles
+      set password_hash = $2,
+          updated_at = now()
+      where id = $1
+    `,
+    [userId, passwordHash],
+  );
+}
+
 export async function exportCoupleData(coupleId: string, locale: string) {
   const [members, answers, quests, gardenObjects, loveJarNotes, memories, knowMeQuestions, knowMeGuesses, notifications] =
     await Promise.all([

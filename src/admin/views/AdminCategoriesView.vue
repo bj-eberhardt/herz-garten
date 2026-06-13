@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import { Plus, Save, Trash2 } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
+import { ApiError } from '@/services/api';
 
 type ContentType = 'daily-questions' | 'quests' | 'know-me-catalog' | 'love-jar-templates' | 'memories';
 
@@ -18,16 +19,18 @@ interface CategoryItem {
   label: string;
   active: boolean;
   sortOrder: number;
+  relationshipModes: string[];
+  contentStyles: string[];
   usageCount?: number;
   translations: Record<string, Record<string, string>>;
 }
 
 const contentTypes: Array<{ id: ContentType; label: string }> = [
-  { id: 'daily-questions', label: 'Daily Questions' },
-  { id: 'quests', label: 'Quests' },
-  { id: 'know-me-catalog', label: 'Know Me' },
-  { id: 'love-jar-templates', label: 'Love Jar' },
-  { id: 'memories', label: 'Memories' },
+  { id: 'daily-questions', label: 'Daily-Question-Kategorien' },
+  { id: 'quests', label: 'Quest-Kategorien' },
+  { id: 'know-me-catalog', label: 'Know-Me-Kategorien' },
+  { id: 'love-jar-templates', label: 'Love-Jar-Kategorien' },
+  { id: 'memories', label: 'Memory-Kategorien' },
 ];
 
 const selectedType = ref<ContentType>('daily-questions');
@@ -40,6 +43,28 @@ const formAnchor = ref<HTMLElement | null>(null);
 const form = reactive<CategoryItem>(emptyForm('daily-questions'));
 
 const filteredItems = computed(() => items.value.filter((item) => item.contentType === selectedType.value));
+const relationshipModeOptions = ref<Array<{ value: string; label: string; active: boolean }>>([]);
+const contentStyleOptions = ref<Array<{ value: string; label: string; active: boolean }>>([]);
+
+function replaceForm(nextForm: CategoryItem) {
+  for (const key of Object.keys(form)) {
+    delete (form as unknown as Record<string, unknown>)[key];
+  }
+  Object.assign(form, nextForm);
+}
+
+function categoryPayload() {
+  return {
+    contentType: form.contentType,
+    value: form.value,
+    label: form.label,
+    active: form.active,
+    sortOrder: form.sortOrder,
+    relationshipModes: form.relationshipModes,
+    contentStyles: form.contentStyles,
+    translations: form.translations,
+  };
+}
 
 function emptyForm(contentType: ContentType): CategoryItem {
   return {
@@ -48,6 +73,8 @@ function emptyForm(contentType: ContentType): CategoryItem {
     label: '',
     active: true,
     sortOrder: 0,
+    relationshipModes: [],
+    contentStyles: [],
     translations: {},
   };
 }
@@ -60,7 +87,7 @@ function ensureTranslations() {
 }
 
 function resetForm(open = false) {
-  Object.assign(form, emptyForm(selectedType.value));
+  replaceForm(emptyForm(selectedType.value));
   ensureTranslations();
   error.value = '';
   showForm.value = open;
@@ -77,7 +104,7 @@ async function openNew() {
 }
 
 async function editCategory(category: CategoryItem) {
-  Object.assign(form, JSON.parse(JSON.stringify(category)));
+  replaceForm(JSON.parse(JSON.stringify(category)));
   ensureTranslations();
   showForm.value = true;
   error.value = '';
@@ -92,6 +119,15 @@ async function loadLocales() {
 async function loadCategories() {
   const payload = await adminApiRequest<{ items: CategoryItem[] }>('/api/admin/categories');
   items.value = payload.items;
+}
+
+async function loadPreferences() {
+  const [relationshipModes, contentStyles] = await Promise.all([
+    adminApiRequest<{ items: Array<{ value: string; label: string; active: boolean }> }>('/api/admin/relationship-modes'),
+    adminApiRequest<{ items: Array<{ value: string; label: string; active: boolean }> }>('/api/admin/content-styles'),
+  ]);
+  relationshipModeOptions.value = relationshipModes.items.filter((item) => item.active);
+  contentStyleOptions.value = contentStyles.items.filter((item) => item.active);
 }
 
 async function switchType(type: ContentType) {
@@ -110,12 +146,15 @@ async function saveCategory() {
     const method = form.id ? 'PATCH' : 'POST';
     const payload = await adminApiRequest<{ items: CategoryItem[] }>(path, {
       method,
-      body: JSON.stringify(form),
+      body: JSON.stringify(categoryPayload()),
     });
     items.value = payload.items;
     resetForm(false);
-  } catch {
-    error.value = 'Kategorie konnte nicht gespeichert werden. Der technische Wert muss eindeutig sein.';
+  } catch (caught) {
+    error.value =
+      caught instanceof ApiError && caught.serverMessage
+        ? caught.serverMessage
+        : 'Kategorie konnte nicht gespeichert werden. Pruefe technischen Wert, Label und Zuordnungen.';
   } finally {
     saving.value = false;
   }
@@ -134,7 +173,7 @@ async function deleteCategory(category: CategoryItem) {
 }
 
 onMounted(async () => {
-  await Promise.all([loadLocales(), loadCategories()]);
+  await Promise.all([loadLocales(), loadCategories(), loadPreferences()]);
   resetForm(false);
 });
 </script>
@@ -142,9 +181,10 @@ onMounted(async () => {
 <template>
   <section class="admin-view" data-testid="admin-categories">
     <div class="admin-heading">
-      <h1>Categories</h1>
+      <h1>Content-Kategorien</h1>
       <span>{{ filteredItems.length }}</span>
     </div>
+    <p class="muted">Hier pflegst du Kategorien fuer Inhalte. Einzelne Daily Questions bearbeitest du unter Content.</p>
 
     <div class="admin-tabs" role="tablist">
       <button v-for="type in contentTypes" :key="type.id" type="button" :class="{ active: selectedType === type.id }" @click="switchType(type.id)">
@@ -165,6 +205,20 @@ onMounted(async () => {
       </label>
       <label>Label<input v-model="form.label" data-testid="admin-category-label" /></label>
       <label>Sortierung<input v-model.number="form.sortOrder" type="number" /></label>
+      <label>
+        Passende Beziehungsmodi
+        <select v-model="form.relationshipModes" multiple data-testid="admin-category-relationship-modes">
+          <option v-for="mode in relationshipModeOptions" :key="mode.value" :value="mode.value">{{ mode.label }}</option>
+        </select>
+        <small>Keine Auswahl bedeutet: neutral / alle.</small>
+      </label>
+      <label>
+        Passende Content-Stile
+        <select v-model="form.contentStyles" multiple data-testid="admin-category-content-styles">
+          <option v-for="style in contentStyleOptions" :key="style.value" :value="style.value">{{ style.label }}</option>
+        </select>
+        <small>Keine Auswahl bedeutet: neutral / alle.</small>
+      </label>
       <label class="admin-checkbox"><input v-model="form.active" type="checkbox" /> Aktiv</label>
 
       <section class="admin-translation-box">
@@ -198,6 +252,7 @@ onMounted(async () => {
             <th>Wert</th>
             <th>Label</th>
             <th>Status</th>
+            <th>Passend fuer</th>
             <th>Nutzung</th>
             <th></th>
           </tr>
@@ -207,6 +262,11 @@ onMounted(async () => {
             <td><code>{{ category.value }}</code></td>
             <td>{{ category.label }}</td>
             <td>{{ category.active ? 'aktiv' : 'inaktiv' }}</td>
+            <td>
+              <span v-if="!category.relationshipModes.length && !category.contentStyles.length" class="muted">neutral / alle</span>
+              <span v-for="mode in category.relationshipModes" v-else :key="`mode-${mode}`" class="admin-chip">{{ mode }}</span>
+              <span v-for="style in category.contentStyles" :key="`style-${style}`" class="admin-chip">{{ style }}</span>
+            </td>
             <td>{{ category.usageCount ?? 0 }}</td>
             <td class="admin-actions">
               <button class="secondary-button admin-small-button" type="button" @click="editCategory(category)">Bearbeiten</button>

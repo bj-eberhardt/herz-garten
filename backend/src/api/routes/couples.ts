@@ -18,6 +18,10 @@ export function registerCoupleRoutes(router: Router) {
         sendApiError(response, 409, 'couple.alreadyConnected');
         return;
       }
+      if (result.status === 'invalidPreferences') {
+        sendApiError(response, 400, 'common.validation');
+        return;
+      }
 
       response.status(201).json({ couple: result.couple });
     } catch (error) {

@@ -10,6 +10,8 @@ const apiErrorKeys = [
   'auth.invalidCredentials',
   'auth.registrationInvalid',
   'auth.emailAlreadyRegistered',
+  'profile.updateInvalid',
+  'profile.passwordInvalid',
   'couple.alreadyConnected',
   'couple.inviteCodeRequired',
   'couple.inviteCodeNotFound',

@@ -8,10 +8,17 @@ import {
   insertCouple,
   insertCoupleMember,
 } from './couples.repository.js';
+import { preferenceValueExists } from '../../admin/preferences.repository.js';
 import { createUniqueInviteCode, getCurrentCouple, getPublicUser } from '../support.repository.js';
 
 export async function createCoupleForUser(userId: string, locale: string, relationshipType: string, contentPreference: string) {
   if (await getCurrentCouple(userId)) return { status: 'alreadyConnected' as const };
+  if (
+    !(await preferenceValueExists('relationshipModes', relationshipType, true)) ||
+    !(await preferenceValueExists('contentStyles', contentPreference, true))
+  ) {
+    return { status: 'invalidPreferences' as const };
+  }
 
   const coupleId = randomUUID();
   const code = await createUniqueInviteCode(locale);

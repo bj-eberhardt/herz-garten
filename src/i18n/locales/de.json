@@ -147,17 +147,22 @@
     "dailyQuestion": "Tagesfrage",
     "loveJarNote": "Love-Jar-Zettel",
     "knowMe": "Wie gut kennst du mich?",
+    "detail": {
+      "questionLabel": "Frage",
+      "answersLabel": "Antworten",
+      "descriptionLabel": "Beschreibung",
+      "noteLabel": "Zettel",
+      "categoryLabel": "Kategorie",
+      "authorLabel": "Von",
+      "authorValue": "von {name}"
+    },
     "grown": "Gewachsen",
     "doneWas": "Erledigt wurde",
-    "inLoveJar": "Im Love Jar lag",
-    "recordedWas": "Festgehalten wurde",
     "guessedCorrectlyWas": "Richtig eingeschätzt wurde",
     "correct": "Richtig:",
     "guessed": "Geraten:",
     "rewardPoints": "Belohnung: {count} Herzpunkte",
     "hiddenLoveJar": "Dieser Love-Jar-Zettel bleibt verborgen, bis er gezogen wurde.",
-    "loveJarMeta": "Von {author} · Kategorie {category}",
-    "knowMeSuccess": "Ihr kennt euch ein Stück besser. +12 Herzpunkte",
     "noDetails": "Für dieses Objekt sind noch keine Details hinterlegt.",
     "stageLabel": "Stufe {stage}",
     "unlockAt": "Ab Stufe {stage}",
@@ -191,10 +196,26 @@
     "celebration": {
       "default": "Dieser Gartenmoment gehört zu eurer gemeinsamen Geschichte.",
       "question": "Diese Blume ist gewachsen, weil ihr beide euch Zeit für dieselbe Frage genommen habt.",
-      "quest": "Dieses Objekt feiert eure abgeschlossene Quest: {title}.",
-      "loveJar": "Dieses Licht erinnert an einen kleinen Zettel, der in euren Love Jar gelegt wurde.",
-      "memory": "Dieser Stein bewahrt eure Erinnerung: {title}.",
+      "quest": "So ist {object} entstanden, weil ihr die Quest \"{title}\" gemeinsam abgeschlossen habt.",
+      "loveJar": "Dieses Licht erinnert an einen Zettel aus eurem Love Jar.",
+      "memory": "So bewahrt {object} eure Erinnerung.",
       "knowMe": "Diese besondere Blume ist gewachsen, weil ihr euch richtig eingeschätzt habt."
+    },
+    "assetPhrases": {
+      "conversation_flower": "diese Blume",
+      "heart_flower": "diese Herzblume",
+      "memory_tree": "dieser Erinnerungsbaum",
+      "memory_stone": "dieser Erinnerungsstein",
+      "warm_lantern": "dieses Licht",
+      "couple_bench": "diese Paarbank",
+      "quiet_pond": "dieser Teich",
+      "picnic_blanket": "diese Picknickdecke",
+      "wishing_well": "dieser Wunschbrunnen",
+      "date_pavilion": "dieser Date-Pavillon",
+      "distance_bridge": "diese Fernbeziehungs-Brücke",
+      "polaroid_frame": "dieses Polaroid",
+      "garden_decor": "diese Gartendeko",
+      "default": "dieser Gartenmoment"
     },
     "progress": {
       "dailyQuestions": "Tagesfragen",
@@ -358,6 +379,18 @@
     "relationshipMode": "Beziehungsmodus:",
     "contentStyle": "Content-Stil:",
     "privacyNote": "Keine öffentlichen Profile. Kein Beziehungsscore.",
+    "editName": "Namen bearbeiten",
+    "editEmail": "E-Mail bearbeiten",
+    "password": "Passwort:",
+    "editPassword": "Passwort bearbeiten",
+    "currentPassword": "Aktuelles Passwort",
+    "newPassword": "Neues Passwort",
+    "profileSaved": "Profil wurde gespeichert.",
+    "passwordSaved": "Passwort wurde gespeichert.",
+    "nameRequired": "Bitte gib einen Namen ein.",
+    "emailInvalid": "Bitte gib eine gültige E-Mail-Adresse ein.",
+    "currentPasswordRequired": "Bitte gib dein aktuelles Passwort ein.",
+    "passwordMinLength": "Das neue Passwort muss mindestens 8 Zeichen lang sein.",
     "hintSettingsEyebrow": "Hinweise",
     "hintSettingsTitle": "Erklärboxen anzeigen",
     "hintSettingsText": "Lege pro Bereich fest, ob die kurze „Was ist das?“-Box angezeigt werden soll. Ausgeblendete Hinweise kannst du hier jederzeit wieder aktivieren.",
@@ -384,7 +417,9 @@
     "privacyDeleteTitle": "Was passiert beim Konto löschen?",
     "privacyDeleteText": "Dein Konto wird dauerhaft entfernt. Eigene personenbezogene Inhalte und daraus entstandene Gartenobjekte werden bereinigt; leere Paarräume werden gelöscht.",
     "exportCreated": "Export wurde erstellt.",
-    "confirmLeave": "Paarraum wirklich verlassen?",
+    "confirmLeaveTitle": "Paarraum verlassen",
+    "confirmLeave": "Paarraum wirklich verlassen? Die Paarung wird sofort und unwiderruflich aufgehoben.",
+    "confirmDeleteTitle": "Konto löschen",
     "confirmDelete": "Konto wirklich dauerhaft löschen?",
     "exportData": "Daten exportieren",
     "logout": "Ausloggen",
@@ -403,6 +438,10 @@
       "invalidCredentials": "E-Mail oder Passwort stimmt nicht.",
       "registrationInvalid": "Bitte gib E-Mail, Namen und ein Passwort mit mindestens 8 Zeichen ein.",
       "emailAlreadyRegistered": "Diese E-Mail ist schon registriert."
+    },
+    "profile": {
+      "updateInvalid": "Bitte gib einen Namen und eine gültige E-Mail-Adresse ein.",
+      "passwordInvalid": "Das aktuelle Passwort stimmt nicht."
     },
     "couple": {
       "alreadyConnected": "Du bist bereits mit einem Paarraum verbunden.",
@@ -472,7 +511,9 @@
       "export": "Export fehlgeschlagen.",
       "leaveCouple": "Paarraum konnte nicht verlassen werden.",
       "deleteAccount": "Konto konnte nicht gelöscht werden.",
-      "preferences": "Profil-Einstellungen konnten nicht gespeichert werden."
+      "preferences": "Profil-Einstellungen konnten nicht gespeichert werden.",
+      "profile": "Profil konnte nicht gespeichert werden.",
+      "password": "Passwort konnte nicht gespeichert werden."
     }
   },
   "content": {

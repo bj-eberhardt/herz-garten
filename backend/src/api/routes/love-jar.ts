@@ -8,8 +8,9 @@ import { buildLoveJarPayload, buildLoveJarTemplatePayload, normalizeText, resolv
 
 export function registerLoveJarRoutes(router: Router) {
   router.get('/love-jar/templates', requireAuth, async (request, response) => {
+    const user = currentUser(request);
     try {
-      response.json(await buildLoveJarTemplatePayload(await resolveLocale(request)));
+      response.json(await buildLoveJarTemplatePayload(user.id, await resolveLocale(request)));
     } catch (error) {
       handleError(response, error);
     }

@@ -2,6 +2,7 @@ import type { Router } from 'express';
 import { Router as createRouter } from 'express';
 import { registerAccountRoutes } from './api/routes/account.js';
 import { registerAuthRoutes } from './api/routes/auth.js';
+import { registerConfigRoutes } from './api/routes/config.js';
 import { registerCoupleRoutes } from './api/routes/couples.js';
 import { registerGardenRoutes } from './api/routes/garden.js';
 import { registerKnowMeRoutes } from './api/routes/know-me.js';
@@ -15,6 +16,7 @@ export function apiRouter(): Router {
   const router = createRouter();
 
   registerAuthRoutes(router);
+  registerConfigRoutes(router);
   registerAccountRoutes(router);
   registerNotificationRoutes(router);
   registerCoupleRoutes(router);

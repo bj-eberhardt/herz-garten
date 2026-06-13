@@ -1,16 +1,22 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue';
-import { Sprout } from '@lucide/vue';
+import { CheckCircle2, Gem, Lamp, Sprout } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
 import GardenCanvas from '@/components/garden/GardenCanvas.vue';
+import GardenObjectDetailPanel from '@/components/garden/GardenObjectDetailPanel.vue';
+import KnowMeGardenDetail from '@/components/garden/KnowMeGardenDetail.vue';
+import LoveJarGardenDetail from '@/components/garden/LoveJarGardenDetail.vue';
+import MemoryGardenDetail from '@/components/garden/MemoryGardenDetail.vue';
+import QuestionGardenDetail from '@/components/garden/QuestionGardenDetail.vue';
+import QuestGardenDetail from '@/components/garden/QuestGardenDetail.vue';
 import { useCoupleStore } from '@/stores/coupleStore';
 import { useGardenStore } from '@/stores/gardenStore';
 
 const gardenStore = useGardenStore();
 const coupleStore = useCoupleStore();
 const { t, d } = useI18n();
-const detailPanel = ref<HTMLElement | null>(null);
+const detailPanel = ref<InstanceType<typeof GardenObjectDetailPanel> | null>(null);
 const gardenPanel = ref<HTMLElement | null>(null);
 const historyOpen = ref(false);
 const historyPage = ref(1);
@@ -47,14 +53,19 @@ const detailDate = computed(() => {
   return typeof rawDate === 'string' ? d(new Date(rawDate), 'long') : '';
 });
 
+const detailObjectPhrase = computed(() => {
+  const assetKey = gardenStore.selectedDetail?.object.assetKey;
+  return typeof assetKey === 'string' ? t(`garden.assetPhrases.${assetKey}`) : t('garden.assetPhrases.default');
+});
+
 const celebrationText = computed(() => {
   const source = gardenStore.selectedDetail?.source;
   const object = gardenStore.selectedDetail?.object;
   if (!source || !object) return t('garden.celebration.default');
   if (source.type === 'question') return t('garden.celebration.question');
-  if (source.type === 'quest') return t('garden.celebration.quest', { title: source.title });
+  if (source.type === 'quest') return t('garden.celebration.quest', { object: detailObjectPhrase.value, title: source.title });
   if (source.type === 'love_jar') return t('garden.celebration.loveJar');
-  if (source.type === 'memory') return t('garden.celebration.memory', { title: source.title });
+  if (source.type === 'memory') return t('garden.celebration.memory', { object: detailObjectPhrase.value, title: source.title });
   if (source.type === 'know_me') return t('garden.celebration.knowMe');
   return object.label;
 });
@@ -118,6 +129,20 @@ function historyTypeTitle(sourceType: string) {
   if (sourceType === 'know_me') return t('garden.history.types.knowMe');
   return t('garden.history.types.default');
 }
+
+const detailSourceTypeTitle = computed(() => {
+  const sourceType = gardenStore.selectedDetail?.object.sourceType;
+  return typeof sourceType === 'string' ? historyTypeTitle(sourceType) : t('garden.history.types.default');
+});
+
+const isQuestionDetail = computed(() => gardenStore.selectedDetail?.source?.type === 'question');
+const isKnowMeDetail = computed(() => gardenStore.selectedDetail?.source?.type === 'know_me');
+const isQuestDetail = computed(() => gardenStore.selectedDetail?.source?.type === 'quest');
+const isMemoryDetail = computed(() => gardenStore.selectedDetail?.source?.type === 'memory');
+const isLoveJarDetail = computed(() => gardenStore.selectedDetail?.source?.type === 'love_jar');
+const hasCompactGrowthNote = computed(
+  () => isQuestionDetail.value || isKnowMeDetail.value || isQuestDetail.value || isMemoryDetail.value || isLoveJarDetail.value,
+);
 
 function historyDateTime(createdAt: string) {
   return d(new Date(createdAt), 'shortDateTime');
@@ -217,85 +242,34 @@ onMounted(() => {
       </div>
     </section>
 
-    <section v-if="gardenStore.selectedDetail" ref="detailPanel" class="panel detail-panel" data-testid="garden-detail">
-      <div class="detail-header">
-        <div>
-          <p class="eyebrow">{{ gardenStore.selectedDetail.object.sourceType }}</p>
-          <h2>{{ detailTitle }}</h2>
-          <p class="muted" data-testid="garden-detail-date">{{ detailDate }}</p>
-        </div>
-        <button class="secondary-button inline-button" type="button" data-testid="garden-detail-close" @click="gardenStore.clearDetail">{{ t('common.close') }}</button>
-      </div>
-
-      <div class="celebration-panel" data-testid="garden-detail-celebration">
-        <span>{{ t('garden.grown') }}</span>
-        <p>{{ celebrationText }}</p>
-      </div>
-
-      <template v-if="gardenStore.selectedDetail.source?.type === 'question'">
-        <p class="detail-label">{{ t('garden.doneWas') }}</p>
-        <p>{{ gardenStore.selectedDetail.source.question }}</p>
-        <div class="answers">
-          <p v-for="answer in (gardenStore.selectedDetail.source.answers as any[])" :key="answer.createdAt">
-            <strong>{{ answer.displayName }}:</strong> {{ answer.answerText }}
-          </p>
-        </div>
+    <GardenObjectDetailPanel
+      v-if="gardenStore.selectedDetail"
+      ref="detailPanel"
+      :source-type-title="detailSourceTypeTitle"
+      :title="detailTitle"
+      :date="detailDate"
+      :celebration-text="celebrationText"
+      :reward-points="gardenStore.selectedDetail.object.rewardPoints"
+      :compact-growth="hasCompactGrowthNote"
+      @close="gardenStore.clearDetail"
+    >
+      <template v-if="isQuestDetail" #growth-icon>
+        <CheckCircle2 aria-hidden="true" />
+      </template>
+      <template v-else-if="isMemoryDetail" #growth-icon>
+        <Gem aria-hidden="true" />
+      </template>
+      <template v-else-if="isLoveJarDetail" #growth-icon>
+        <Lamp aria-hidden="true" />
       </template>
 
-      <template v-else-if="gardenStore.selectedDetail.source?.type === 'quest'">
-        <p class="detail-label">{{ t('garden.doneWas') }}</p>
-        <p>{{ gardenStore.selectedDetail.source.description }}</p>
-        <p class="success-note">{{ t('garden.rewardPoints', { count: gardenStore.selectedDetail.source.rewardPoints }) }}</p>
-      </template>
-
-      <template v-else-if="gardenStore.selectedDetail.source?.type === 'love_jar'">
-        <p class="detail-label">{{ t('garden.inLoveJar') }}</p>
-        <p>{{ gardenStore.selectedDetail.source.text ?? t('garden.hiddenLoveJar') }}</p>
-        <p class="muted">
-          {{
-            t('garden.loveJarMeta', {
-              author: gardenStore.selectedDetail.source.authorName,
-              category: gardenStore.selectedDetail.source.categoryLabel ?? gardenStore.selectedDetail.source.category,
-            })
-          }}
-        </p>
-      </template>
-
-      <template v-else-if="gardenStore.selectedDetail.source?.type === 'memory'">
-        <p class="detail-label">{{ t('garden.recordedWas') }}</p>
-        <p>{{ gardenStore.selectedDetail.source.description }}</p>
-        <p class="muted">
-          {{ gardenStore.selectedDetail.source.date }} -
-          {{ gardenStore.selectedDetail.source.categoryLabel ?? gardenStore.selectedDetail.source.category }} -
-          {{ gardenStore.selectedDetail.source.authorName }}
-        </p>
-      </template>
-
-      <template v-else-if="gardenStore.selectedDetail.source?.type === 'know_me'">
-        <p class="detail-label">{{ t('garden.guessedCorrectlyWas') }}</p>
-        <p>{{ gardenStore.selectedDetail.source.questionText }}</p>
-        <div class="answers">
-          <p>
-            <strong>{{ t('garden.correct') }}</strong>
-            {{
-              (gardenStore.selectedDetail.source.options as string[])[
-                gardenStore.selectedDetail.source.correctOptionIndex as number
-              ]
-            }}
-          </p>
-          <p>
-            <strong>{{ t('garden.guessed') }}</strong>
-            {{
-              (gardenStore.selectedDetail.source.options as string[])[
-                gardenStore.selectedDetail.source.selectedOptionIndex as number
-              ]
-            }}
-          </p>
-        </div>
-        <p class="success-note">{{ t('garden.knowMeSuccess') }}</p>
-      </template>
+      <QuestionGardenDetail v-if="isQuestionDetail && gardenStore.selectedDetail.source" :source="gardenStore.selectedDetail.source" />
+      <KnowMeGardenDetail v-else-if="isKnowMeDetail && gardenStore.selectedDetail.source" :source="gardenStore.selectedDetail.source" />
+      <QuestGardenDetail v-else-if="isQuestDetail && gardenStore.selectedDetail.source" :source="gardenStore.selectedDetail.source" />
+      <MemoryGardenDetail v-else-if="isMemoryDetail && gardenStore.selectedDetail.source" :source="gardenStore.selectedDetail.source" />
+      <LoveJarGardenDetail v-else-if="isLoveJarDetail && gardenStore.selectedDetail.source" :source="gardenStore.selectedDetail.source" />
 
       <p v-else class="muted">{{ t('garden.noDetails') }}</p>
-    </section>
+    </GardenObjectDetailPanel>
   </div>
 </template>

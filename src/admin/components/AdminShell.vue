@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink, RouterView, useRouter } from 'vue-router';
-import { ClipboardList, FileText, FolderTree, LayoutDashboard, LogOut, MessageSquare, Users, Workflow } from '@lucide/vue';
+import { ClipboardList, FileText, FolderTree, LayoutDashboard, LogOut, MessageSquare, Tags, Users, Workflow } from '@lucide/vue';
 import { useAdminStore } from '@/admin/stores/adminStore';
 import '@/admin/admin.css';
 
@@ -40,6 +40,10 @@ function logout() {
         <RouterLink to="/admin/categories" class="admin-nav-item">
           <FolderTree :size="18" aria-hidden="true" />
           Categories
+        </RouterLink>
+        <RouterLink to="/admin/taxonomies" class="admin-nav-item">
+          <Tags :size="18" aria-hidden="true" />
+          Taxonomien
         </RouterLink>
         <RouterLink to="/admin/messages" class="admin-nav-item">
           <MessageSquare :size="18" aria-hidden="true" />

@@ -152,6 +152,107 @@ test.describe('me and couples api', () => {
     expect(reloaded.user.preferences).toEqual(updated.user.preferences);
   });
 
+  test('updates profile name and email with validation', async ({ request }) => {
+    const runId = testRunId();
+    const userA = await registerByApi(request, testUser('api-profile-a', runId));
+    const userB = await registerByApi(request, testUser('api-profile-b', runId));
+    const updatedEmail = `api-profile-updated-${runId}@example.test`;
+
+    const updatedName = await expectJson<MePayload>(
+      await apiPatchRaw(request, '/api/me/profile', { displayName: '  Neuer Name  ' }, userA.token),
+    );
+    expectMePayload(updatedName);
+    expect(updatedName.user.displayName).toBe('Neuer Name');
+    expect(updatedName.user.email).toBe(userA.user.email);
+
+    const updatedProfile = await expectJson<MePayload>(
+      await apiPatchRaw(request, '/api/me/profile', { email: `  ${updatedEmail.toUpperCase()}  ` }, userA.token),
+    );
+    expect(updatedProfile.user.email).toBe(updatedEmail);
+    expect(updatedProfile.user.displayName).toBe('Neuer Name');
+
+    await expectApiError(await apiPatchRaw(request, '/api/me/profile', {}, userA.token), 400, 'profile.updateInvalid');
+    await expectApiError(
+      await apiPatchRaw(request, '/api/me/profile', { displayName: '   ' }, userA.token),
+      400,
+      'profile.updateInvalid',
+    );
+    await expectApiError(
+      await apiPatchRaw(request, '/api/me/profile', { email: 'keine-email' }, userA.token),
+      400,
+      'common.validation',
+    );
+    await expectApiError(
+      await apiPatchRaw(request, '/api/me/profile', { email: userB.user.email }, userA.token),
+      409,
+      'auth.emailAlreadyRegistered',
+    );
+
+    const reloaded = await expectJson<MePayload>(await apiGetRaw(request, '/api/me', userA.token));
+    expect(reloaded.user.email).toBe(updatedEmail);
+    expect(reloaded.user.displayName).toBe('Neuer Name');
+  });
+
+  test('updates password and requires the current password', async ({ request }) => {
+    const user = testUser('api-password', testRunId());
+    const registered = await registerByApi(request, user);
+    const nextPassword = 'new-password-123';
+
+    await expectApiError(
+      await apiPatchRaw(
+        request,
+        '/api/me/password',
+        { currentPassword: 'wrong-password', newPassword: nextPassword },
+        registered.token,
+      ),
+      400,
+      'profile.passwordInvalid',
+    );
+    await expectApiError(
+      await apiPatchRaw(
+        request,
+        '/api/me/password',
+        { currentPassword: user.password, newPassword: 'short' },
+        registered.token,
+      ),
+      400,
+      'common.validation',
+    );
+    await expectApiError(
+      await apiPatchRaw(request, '/api/me/password', { currentPassword: user.password }, registered.token),
+      400,
+      'common.validation',
+    );
+    await expectApiError(
+      await apiPatchRaw(
+        request,
+        '/api/me/password',
+        { currentPassword: user.password, newPassword: nextPassword, unexpected: true },
+        registered.token,
+      ),
+      400,
+      'common.validation',
+    );
+
+    const updateResponse = await apiPatchRaw(
+      request,
+      '/api/me/password',
+      { currentPassword: user.password, newPassword: nextPassword },
+      registered.token,
+    );
+    expect(updateResponse.status()).toBe(204);
+
+    await expectApiError(
+      await apiPostRaw(request, '/api/auth/login', { email: user.email, password: user.password }),
+      401,
+      'auth.invalidCredentials',
+    );
+    const loginPayload = await expectJson<AuthPayload>(
+      await apiPostRaw(request, '/api/auth/login', { email: user.email, password: nextPassword }),
+    );
+    expect(loginPayload.user.id).toBe(registered.user.id);
+  });
+
   test('deletes account and invalidates login access', async ({ request }) => {
     const runId = testRunId();
     const userA = testUser('api-delete-a', runId);

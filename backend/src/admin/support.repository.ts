@@ -296,6 +296,19 @@ export async function getCoupleDetail(id: string) {
   return result.rows[0] ?? null;
 }
 
+export async function updateCouplePreferences(id: string, relationshipType: string, contentPreference: string) {
+  await pool.query(
+    `
+      update couples
+      set relationship_type = $2,
+          content_preference = $3
+      where id = $1
+    `,
+    [id, relationshipType, contentPreference],
+  );
+  return getCoupleDetail(id);
+}
+
 export async function listDailyQuestions(request: Request) {
   const active = normalizeText(request.query.active);
   const search = normalizeText(request.query.search);

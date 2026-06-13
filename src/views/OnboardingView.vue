@@ -27,6 +27,25 @@ const authSubmitAttempted = ref(false);
 const joinSubmitAttempted = ref(false);
 const createSubmitAttempted = ref(false);
 const showGuestAd = computed(() => !authStore.isAuthenticated && mode.value === 'register');
+const relationshipOptions = computed(() =>
+  authStore.relationshipModes.length
+    ? authStore.relationshipModes
+    : [
+        { value: 'mixed', label: t('auth.relationship.mixed') },
+        { value: 'local', label: t('auth.relationship.local') },
+        { value: 'long_distance', label: t('auth.relationship.long_distance') },
+      ],
+);
+const contentStyleOptions = computed(() =>
+  authStore.contentStyles.length
+    ? authStore.contentStyles
+    : [
+        { value: 'balanced', label: t('auth.preference.balanced') },
+        { value: 'romantic', label: t('auth.preference.romantic') },
+        { value: 'playful', label: t('auth.preference.playful') },
+        { value: 'deep', label: t('auth.preference.deep') },
+      ],
+);
 
 function saveRememberedEmail() {
   const normalizedEmail = email.value.trim().toLowerCase();
@@ -79,6 +98,7 @@ watch(mode, () => {
 });
 
 onMounted(() => {
+  authStore.loadPreferenceOptions().catch(() => undefined);
   if (authStore.isAuthenticated) return;
   const rememberedEmail = window.localStorage.getItem(rememberedEmailKey);
   if (rememberedEmail) {
@@ -190,17 +210,12 @@ async function copyInviteCode() {
         <form class="join-form" :class="{ 'form-submitted': createSubmitAttempted }" data-testid="create-couple-form" @submit.prevent="createCouple">
           <label for="relationship-type">{{ t('auth.relationshipMode') }}</label>
           <select id="relationship-type" v-model="relationshipType" data-testid="relationship-type-select" required>
-            <option value="mixed">{{ t('auth.relationship.mixed') }}</option>
-            <option value="local">{{ t('auth.relationship.local') }}</option>
-            <option value="long_distance">{{ t('auth.relationship.long_distance') }}</option>
+            <option v-for="option in relationshipOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
           </select>
 
           <label for="content-preference">{{ t('auth.contentStyle') }}</label>
           <select id="content-preference" v-model="contentPreference" data-testid="content-preference-select" required>
-            <option value="balanced">{{ t('auth.preference.balanced') }}</option>
-            <option value="romantic">{{ t('auth.preference.romantic') }}</option>
-            <option value="playful">{{ t('auth.preference.playful') }}</option>
-            <option value="deep">{{ t('auth.preference.deep') }}</option>
+            <option v-for="option in contentStyleOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
           </select>
 
           <button class="primary-button" type="submit" data-testid="create-couple-submit" @click="createSubmitAttempted = true">

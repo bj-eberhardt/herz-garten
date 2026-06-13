@@ -39,6 +39,20 @@ export const preferencesBodySchema = z
   })
   .strict();
 
+export const profileBodySchema = z
+  .object({
+    email: z.string().trim().email().optional(),
+    displayName: trimmedString.optional(),
+  })
+  .strict();
+
+export const passwordBodySchema = z
+  .object({
+    currentPassword: trimmedString,
+    newPassword: trimmedString.pipe(z.string().min(8)),
+  })
+  .strict();
+
 export const createCoupleBodySchema = z
   .object({
     relationshipType: trimmedString.optional(),

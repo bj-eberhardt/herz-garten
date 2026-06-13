@@ -1,5 +1,5 @@
-export type RelationshipType = 'local' | 'long_distance' | 'mixed';
-export type ContentPreference = 'romantic' | 'playful' | 'deep' | 'balanced';
+export type RelationshipType = string;
+export type ContentPreference = string;
 export type QuestCategory = 'romance' | 'date' | 'humor' | 'memory' | 'teamwork' | 'long_distance';
 export type EffortLevel = 'low' | 'medium' | 'high';
 export type GardenObjectType = 'flower' | 'tree' | 'bench' | 'light' | 'stone' | 'pond' | 'decoration';
@@ -63,7 +63,9 @@ export interface Couple {
   partnerBId?: string;
   inviteCode: string;
   relationshipType: RelationshipType;
+  relationshipTypeLabel?: string;
   contentPreference: ContentPreference;
+  contentPreferenceLabel?: string;
   heartPoints: number;
   gardenStage: number;
   memberCount?: number;

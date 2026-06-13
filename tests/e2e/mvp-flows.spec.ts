@@ -369,11 +369,51 @@ test('notifications can be opened and marked read', async ({ browser, request })
 });
 
 test('settings expose export logout and leave couple flows', async ({ browser, request }) => {
-  const { contextA, contextB, pageA } = await setupPages(browser, request, 'settings');
+  const { contextA, contextB, pageA, partnerA } = await setupPages(browser, request, 'settings');
+  const updatedEmail = partnerA.user.email.replace('@', '+updated@');
+  const updatedPassword = 'new-password-123';
 
   await pageA.goto('/settings');
   await expect(pageA.getByTestId('privacy-details')).toContainText('Datenschutz auf einen Blick');
   await expect(pageA.getByTestId('privacy-details')).toContainText('Konto löschen');
+  await expect(pageA.getByTestId('settings-profile-panel')).toContainText('Gemischt');
+  await expect(pageA.getByTestId('settings-profile-panel')).toContainText('Ausgewogen');
+  await expect(pageA.getByTestId('settings-profile-panel')).not.toContainText('mixed');
+  await expect(pageA.getByTestId('settings-profile-panel')).not.toContainText('balanced');
+  await expect(pageA.getByTestId('settings-display-name-value')).toContainText(partnerA.user.displayName);
+  await pageA.getByTestId('settings-display-name-edit').click();
+  await pageA.getByTestId('settings-display-name-input').fill('   ');
+  await pageA.getByTestId('settings-display-name-save').click();
+  await expect(pageA.getByTestId('settings-display-name-error')).toContainText('Bitte gib einen Namen ein');
+  await pageA.getByTestId('settings-display-name-input').fill('Neuer Profilname');
+  await pageA.getByTestId('settings-display-name-save').click();
+  await expect(pageA.getByTestId('settings-display-name-value')).toContainText('Neuer Profilname');
+  await expect(pageA.getByTestId('settings-display-name-success')).toContainText('Profil wurde gespeichert');
+
+  await pageA.getByTestId('settings-email-edit').click();
+  await pageA.getByTestId('settings-email-input').fill('keine-email');
+  await pageA.getByTestId('settings-email-save').click();
+  await expect(pageA.getByTestId('settings-email-error')).toContainText('gültige E-Mail-Adresse');
+  await pageA.getByTestId('settings-email-input').fill(updatedEmail);
+  await pageA.getByTestId('settings-email-save').click();
+  await expect(pageA.getByTestId('settings-email-value')).toContainText(updatedEmail);
+  await expect(pageA.getByTestId('settings-email-success')).toContainText('Profil wurde gespeichert');
+
+  await pageA.getByTestId('settings-password-edit').click();
+  await pageA.getByTestId('settings-current-password-input').fill('password123');
+  await pageA.getByTestId('settings-new-password-input').fill('short');
+  await pageA.getByTestId('settings-password-save').click();
+  await expect(pageA.getByTestId('settings-password-error')).toContainText('mindestens 8 Zeichen');
+  await pageA.getByTestId('settings-new-password-input').fill(updatedPassword);
+  await pageA.getByTestId('settings-password-save').click();
+  await expect(pageA.getByTestId('settings-password-success')).toContainText('Passwort wurde gespeichert');
+  await expect(pageA.getByTestId('settings-password-success')).toHaveCount(0, { timeout: 7000 });
+
+  const meResponse = await apiGetRaw(request, '/api/me', partnerA.token);
+  expect(meResponse.ok()).toBeTruthy();
+  const mePayload = await meResponse.json();
+  expect(mePayload.user).toEqual(expect.objectContaining({ displayName: 'Neuer Profilname', email: updatedEmail }));
+
   const downloadPromise = pageA.waitForEvent('download');
   await pageA.getByTestId('settings-export').click();
   await downloadPromise;
@@ -381,6 +421,11 @@ test('settings expose export logout and leave couple flows', async ({ browser, r
   await pageA.getByTestId('settings-logout').click();
   await pageA.goto('/today');
   await expect(pageA).toHaveURL(/\/onboarding$/);
+  await pageA.getByTestId('auth-mode-login').click();
+  await pageA.getByTestId('auth-email').fill(updatedEmail);
+  await pageA.getByTestId('auth-password').fill(updatedPassword);
+  await pageA.getByTestId('auth-submit').click();
+  await expect(pageA.getByTestId('couple-code-panel')).toBeVisible();
 
   await contextA.close();
   await contextB.close();
@@ -420,8 +465,9 @@ test('settings allow deleting the account and remove login access', async ({ bro
   await authenticatePage(contextB, pageB, partnerB.token);
 
   await pageA.goto('/settings');
-  pageA.once('dialog', (dialog) => dialog.accept());
   await pageA.getByTestId('settings-delete-account').click();
+  await expect(pageA.getByTestId('settings-confirm-dialog')).toContainText('Konto wirklich dauerhaft');
+  await pageA.getByTestId('settings-confirm-accept').click();
   await expect(pageA).toHaveURL(/\/onboarding$/);
   await expect(pageA.getByTestId('auth-form')).toBeVisible();
   await expect(pageA.evaluate(() => window.localStorage.getItem('herzgarten_token'))).resolves.toBeNull();
@@ -556,8 +602,9 @@ test('settings allow leaving the couple room', async ({ browser, request }) => {
   const { contextA, contextB, pageA } = await setupPages(browser, request, 'leave');
 
   await pageA.goto('/settings');
-  pageA.once('dialog', (dialog) => dialog.accept());
   await pageA.getByTestId('settings-leave-couple').click();
+  await expect(pageA.getByTestId('settings-confirm-dialog')).toContainText('sofort und unwiderruflich');
+  await pageA.getByTestId('settings-confirm-accept').click();
   await expect(pageA).toHaveURL(/\/onboarding$/);
   await expect(pageA.getByTestId('join-couple-form')).toBeVisible();
 

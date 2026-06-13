@@ -27,7 +27,6 @@ export async function createLoveJarNoteForUser(
   await withTransaction(async (client) => {
     const noteId = randomUUID();
     await insertLoveJarNote(client, { id: noteId, coupleId: couple.id, authorId: user.id, ...input });
-    await createLoveJarLight(client, couple.id, noteId);
     const memberIds = await getCoupleMemberIds(client, couple.id);
     await createNotifications(client, {
       coupleId: couple.id,
@@ -53,6 +52,7 @@ export async function drawLoveJarNoteForUser(userId: string, locale: string) {
     const noteId = await drawPartnerLoveJarNote(client, couple.id, userId);
     if (!noteId) return { status: 'noUnreadNote' as const };
     await insertLoveJarDraw(client, couple.id, userId, noteId);
+    await createLoveJarLight(client, couple.id, noteId);
     return { status: 'drawn' as const };
   });
 

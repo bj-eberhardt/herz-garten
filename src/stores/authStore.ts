@@ -31,11 +31,19 @@ interface AuthResponse {
   user: AuthUser;
 }
 
+export interface PreferenceOption {
+  value: string;
+  label: string;
+  active?: boolean;
+}
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: getToken(),
     user: null as AuthUser | null,
     couple: null as (Couple & { memberCount?: number }) | null,
+    relationshipModes: [] as PreferenceOption[],
+    contentStyles: [] as PreferenceOption[],
     loading: false,
     error: '',
   }),
@@ -64,6 +72,11 @@ export const useAuthStore = defineStore('auth', {
       } finally {
         this.loading = false;
       }
+    },
+    async loadPreferenceOptions() {
+      const result = await apiRequest<{ relationshipModes: PreferenceOption[]; contentStyles: PreferenceOption[] }>('/api/config/preferences');
+      this.relationshipModes = result.relationshipModes;
+      this.contentStyles = result.contentStyles;
     },
     async register(displayName: string, email: string, password: string) {
       await this.authenticate('/api/auth/register', { displayName, email, password });
@@ -122,6 +135,20 @@ export const useAuthStore = defineStore('auth', {
       });
       this.user = result.user;
       this.couple = result.couple;
+    },
+    async updateProfile(profile: { email?: string; displayName?: string }) {
+      const result = await apiRequest<{ user: AuthUser; couple: (Couple & { memberCount?: number }) | null }>('/api/me/profile', {
+        method: 'PATCH',
+        body: JSON.stringify(profile),
+      });
+      this.user = result.user;
+      this.couple = result.couple;
+    },
+    async updatePassword(passwords: { currentPassword: string; newPassword: string }) {
+      await apiRequest<void>('/api/me/password', {
+        method: 'PATCH',
+        body: JSON.stringify(passwords),
+      });
     },
     async joinCouple(inviteCode: string) {
       const result = await apiRequest<{ couple: Couple & { memberCount: number } }>('/api/couples/join', {

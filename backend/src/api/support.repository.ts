@@ -21,7 +21,9 @@ export interface CurrentCouple {
   id: string;
   inviteCode: string;
   relationshipType: string;
+  relationshipTypeLabel?: string;
   contentPreference: string;
+  contentPreferenceLabel?: string;
   heartPoints: number;
   gardenStage: number;
   createdAt: Date | string;
@@ -369,14 +371,16 @@ export async function getPublicUser(userId: string) {
   return result.rows[0] ? publicUser(result.rows[0]) : null;
 }
 
-export async function getCurrentCouple(userId: string) {
+export async function getCurrentCouple(userId: string, locale = 'de') {
   const result = await pool.query<CurrentCouple>(
     `
       select
         c.id,
         c.invite_code as "inviteCode",
         c.relationship_type as "relationshipType",
+        coalesce(requested_mode.label, fallback_mode.label, mode.label, c.relationship_type) as "relationshipTypeLabel",
         c.content_preference as "contentPreference",
+        coalesce(requested_style.label, fallback_style.label, style.label, c.content_preference) as "contentPreferenceLabel",
         c.heart_points as "heartPoints",
         c.garden_stage as "gardenStage",
         c.created_at as "createdAt",
@@ -384,12 +388,18 @@ export async function getCurrentCouple(userId: string) {
       from couples c
       join couple_members own_membership on own_membership.couple_id = c.id
       join couple_members cm on cm.couple_id = c.id
+      left join relationship_modes mode on mode.value = c.relationship_type
+      left join relationship_mode_translations requested_mode on requested_mode.mode_id = mode.id and requested_mode.locale = $2
+      left join relationship_mode_translations fallback_mode on fallback_mode.mode_id = mode.id and fallback_mode.locale = 'de'
+      left join content_styles style on style.value = c.content_preference
+      left join content_style_translations requested_style on requested_style.style_id = style.id and requested_style.locale = $2
+      left join content_style_translations fallback_style on fallback_style.style_id = style.id and fallback_style.locale = 'de'
       where own_membership.user_id = $1
-      group by c.id
+      group by c.id, requested_mode.label, fallback_mode.label, mode.label, requested_style.label, fallback_style.label, style.label
       order by c.created_at desc
       limit 1
     `,
-    [userId],
+    [userId, locale],
   );
 
   return result.rows[0] ?? null;
@@ -475,9 +485,9 @@ export async function getOrCreateTodayInstance(client: Queryable, coupleId: stri
       select q.id
       from daily_questions q
       cross join couple_context c
+      left join content_categories category on category.content_type = 'daily-questions' and category.value = q.category
       left join unanswered_previous_questions upq on upq.question_id = q.id
       where q.active = true
-        and (c.relationship_type = 'long_distance' or q.long_distance_suitable = true)
         and not exists (
           select 1
           from daily_question_instances used
@@ -493,12 +503,10 @@ export async function getOrCreateTodayInstance(client: Queryable, coupleId: stri
         )
       order by
         case when upq.question_id is not null then 0 else 1 end,
-        case
-          when c.content_preference = 'romantic' and q.category in ('romance', 'gratitude', 'connection') then 0
-          when c.content_preference = 'playful' and q.category in ('humor', 'date', 'ritual') then 0
-          when c.content_preference = 'deep' and q.category in ('deep', 'trust', 'future', 'support') then 0
-          else 1
-        end,
+        case when c.relationship_type = any(coalesce(category.relationship_modes, '{}')) then 0 else 1 end,
+        case when c.content_preference = any(coalesce(category.content_styles, '{}')) then 0 else 1 end,
+        case when coalesce(cardinality(category.relationship_modes), 0) = 0 and coalesce(cardinality(category.content_styles), 0) = 0 then 0 else 1 end,
+        coalesce(category.sort_order, 9999),
         md5(q.id::text || $1 || $2)
       limit 1
     `,
@@ -814,9 +822,16 @@ export async function buildQuestPayload(userId: string, filters: QuestFilters = 
       left join content_category_translations requested_category on requested_category.category_id = category.id and requested_category.locale = $2
       left join content_category_translations fallback_category on fallback_category.category_id = category.id and fallback_category.locale = 'de'
       where ${whereClauses.join(' and ')}
-      order by coalesce(requested.title, fallback.title, q.title)
+      order by
+        ${filters.category || filters.mode ? '' : `
+        case when $${params.length + 1} = any(coalesce(category.relationship_modes, '{}')) then 0 else 1 end,
+        case when $${params.length + 2} = any(coalesce(category.content_styles, '{}')) then 0 else 1 end,
+        case when coalesce(cardinality(category.relationship_modes), 0) = 0 and coalesce(cardinality(category.content_styles), 0) = 0 then 0 else 1 end,
+        coalesce(category.sort_order, 9999),
+        `}
+        coalesce(requested.title, fallback.title, q.title)
     `,
-    params,
+    filters.category || filters.mode ? params : [...params, couple.relationshipType, couple.contentPreference],
   );
   const categoryResult = await pool.query<CategoryOptionRow>(
     `
@@ -827,9 +842,14 @@ export async function buildQuestPayload(userId: string, filters: QuestFilters = 
       left join content_category_translations requested on requested.category_id = c.id and requested.locale = $1
       left join content_category_translations fallback on fallback.category_id = c.id and fallback.locale = 'de'
       where c.content_type = 'quests' and c.active = true
-      order by c.sort_order, label
+      order by
+        case when $2 = any(coalesce(c.relationship_modes, '{}')) then 0 else 1 end,
+        case when $3 = any(coalesce(c.content_styles, '{}')) then 0 else 1 end,
+        case when coalesce(cardinality(c.relationship_modes), 0) = 0 and coalesce(cardinality(c.content_styles), 0) = 0 then 0 else 1 end,
+        c.sort_order,
+        label
     `,
-    [locale],
+    [locale, couple.relationshipType, couple.contentPreference],
   );
 
   return {
@@ -841,7 +861,7 @@ export async function buildQuestPayload(userId: string, filters: QuestFilters = 
   };
 }
 
-export async function buildContentCategoryPayload(contentType: string, locale = 'de') {
+export async function buildContentCategoryPayload(contentType: string, locale = 'de', couple?: Pick<CurrentCouple, 'relationshipType' | 'contentPreference'> | null) {
   const result = await pool.query<CategoryOptionRow>(
     `
       select
@@ -851,9 +871,14 @@ export async function buildContentCategoryPayload(contentType: string, locale = 
       left join content_category_translations requested on requested.category_id = c.id and requested.locale = $2
       left join content_category_translations fallback on fallback.category_id = c.id and fallback.locale = 'de'
       where c.content_type = $1 and c.active = true
-      order by c.sort_order, label
+      order by
+        case when $3 = any(coalesce(c.relationship_modes, '{}')) then 0 else 1 end,
+        case when $4 = any(coalesce(c.content_styles, '{}')) then 0 else 1 end,
+        case when coalesce(cardinality(c.relationship_modes), 0) = 0 and coalesce(cardinality(c.content_styles), 0) = 0 then 0 else 1 end,
+        c.sort_order,
+        label
     `,
-    [contentType, locale],
+    [contentType, locale, couple?.relationshipType ?? '', couple?.contentPreference ?? ''],
   );
   return result.rows;
 }
@@ -1085,7 +1110,7 @@ export async function buildMemoryPayload(userId: string, locale = 'de') {
 
   return {
     couple,
-    categories: await buildContentCategoryPayload('memories', locale),
+    categories: await buildContentCategoryPayload('memories', locale, couple),
     memories: result.rows.map(mapMemoryEntry),
   };
 }
@@ -1132,12 +1157,20 @@ export async function buildKnowMePayload(userId: string, locale = 'de') {
       select
         c.id,
         coalesce(requested.question_text, fallback.question_text, c.question_text) as "questionText",
-        coalesce(requested.category_label, fallback.category_label, c.category) as category
+        coalesce(requested.category_label, fallback.category_label, category_label.label, c.category) as category
       from know_me_catalog_questions c
       left join know_me_catalog_question_translations requested
         on requested.catalog_question_id = c.id and requested.locale = $3
       left join know_me_catalog_question_translations fallback
         on fallback.catalog_question_id = c.id and fallback.locale = 'de'
+      left join content_categories category on category.content_type = 'know-me-catalog' and category.value = c.category
+      left join content_category_translations requested_category
+        on requested_category.category_id = category.id and requested_category.locale = $3
+      left join content_category_translations fallback_category
+        on fallback_category.category_id = category.id and fallback_category.locale = 'de'
+      left join lateral (
+        select coalesce(requested_category.label, fallback_category.label, category.label) as label
+      ) category_label on true
       where c.active = true
         and not exists (
           select 1
@@ -1146,9 +1179,15 @@ export async function buildKnowMePayload(userId: string, locale = 'de') {
             and q.author_id = $2
             and q.catalog_question_id = c.id
         )
-      order by c.sort_order, coalesce(requested.question_text, fallback.question_text, c.question_text)
+      order by
+        case when $4 = any(coalesce(category.relationship_modes, '{}')) then 0 else 1 end,
+        case when $5 = any(coalesce(category.content_styles, '{}')) then 0 else 1 end,
+        case when coalesce(cardinality(category.relationship_modes), 0) = 0 and coalesce(cardinality(category.content_styles), 0) = 0 then 0 else 1 end,
+        coalesce(category.sort_order, 9999),
+        c.sort_order,
+        coalesce(requested.question_text, fallback.question_text, c.question_text)
     `,
-    [couple.id, userId, locale],
+    [couple.id, userId, locale, couple.relationshipType, couple.contentPreference],
   );
 
   return {
@@ -1514,7 +1553,8 @@ export async function buildLoveJarPayload(userId: string, locale = 'de') {
   };
 }
 
-export async function buildLoveJarTemplatePayload(locale = 'de') {
+export async function buildLoveJarTemplatePayload(userId: string, locale = 'de') {
+  const couple = await getCurrentCouple(userId, locale);
   const result = await pool.query<LoveJarTemplateRow>(
     `
       select
@@ -1531,13 +1571,19 @@ export async function buildLoveJarTemplatePayload(locale = 'de') {
       left join content_category_translations fallback_category
         on fallback_category.category_id = category.id and fallback_category.locale = 'de'
       where t.active = true
-      order by t.sort_order, t.text
+      order by
+        case when $2 = any(coalesce(category.relationship_modes, '{}')) then 0 else 1 end,
+        case when $3 = any(coalesce(category.content_styles, '{}')) then 0 else 1 end,
+        case when coalesce(cardinality(category.relationship_modes), 0) = 0 and coalesce(cardinality(category.content_styles), 0) = 0 then 0 else 1 end,
+        coalesce(category.sort_order, 9999),
+        t.sort_order,
+        t.text
     `,
-    [locale],
+    [locale, couple?.relationshipType ?? '', couple?.contentPreference ?? ''],
   );
 
   return {
-    categories: await buildContentCategoryPayload('love-jar-templates', locale),
+    categories: await buildContentCategoryPayload('love-jar-templates', locale, couple),
     templates: result.rows,
   };
 }
@@ -1547,7 +1593,7 @@ export async function createLoveJarLight(client: Queryable, coupleId: string, no
   const assetKey = 'warm_lantern';
   const placement = await nextGardenPlacement(client, coupleId, areaKey);
 
-  await client.query(
+  const insertResult = await client.query(
     `
       insert into garden_objects (
         id, couple_id, type, source_type, source_id, label, area_key, asset_key, position_x, position_y, z_index, reward_points, level
@@ -1557,6 +1603,8 @@ export async function createLoveJarLight(client: Queryable, coupleId: string, no
     `,
     [randomUUID(), coupleId, noteId, areaKey, assetKey, placement.positionX, placement.positionY, placement.zIndex],
   );
+  if ((insertResult.rowCount ?? 0) === 0) return;
+
   await client.query(
     `
       update couples

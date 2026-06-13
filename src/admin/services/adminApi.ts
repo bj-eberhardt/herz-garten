@@ -40,7 +40,8 @@ export async function adminApiRequest<T>(path: string, options: RequestInit = {}
   if (!response.ok) {
     const serverMessage = typeof payload?.error === 'string' ? payload.error : undefined;
     const errorKey = typeof payload?.errorKey === 'string' ? payload.errorKey : undefined;
-    throw new ApiError(errorKey ?? serverMessage ?? 'api.requestFailed', response.status, errorKey, undefined, serverMessage);
+    const params = payload?.params && typeof payload.params === 'object' ? payload.params : undefined;
+    throw new ApiError(errorKey ?? serverMessage ?? 'api.requestFailed', response.status, errorKey, params, serverMessage);
   }
 
   return payload as T;

@@ -3,6 +3,7 @@ import { z } from 'zod';
 const trimmedString = z.string().transform((value) => value.trim());
 const translationValueSchema = z.record(z.string(), z.unknown());
 const translationsSchema = z.record(z.string(), translationValueSchema).optional();
+const preferenceValuesSchema = z.array(trimmedString).optional();
 const adminContentFormBase = {
   text: trimmedString.optional(),
   title: trimmedString.optional(),
@@ -34,7 +35,26 @@ export const categoryBodySchema = z
     label: trimmedString.optional(),
     active: z.boolean().optional(),
     sortOrder: z.number().int().optional(),
+    relationshipModes: preferenceValuesSchema,
+    contentStyles: preferenceValuesSchema,
     translations: translationsSchema,
+  })
+  .strict();
+
+export const preferenceBodySchema = z
+  .object({
+    value: trimmedString.optional(),
+    label: trimmedString.optional(),
+    active: z.boolean().optional(),
+    sortOrder: z.number().int().optional(),
+    translations: translationsSchema,
+  })
+  .strict();
+
+export const adminCouplePreferencesBodySchema = z
+  .object({
+    relationshipType: trimmedString.optional(),
+    contentPreference: trimmedString.optional(),
   })
   .strict();
 
