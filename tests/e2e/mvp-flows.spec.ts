@@ -444,6 +444,8 @@ test('feature explainer boxes can be hidden and re-enabled in settings', async (
   await expect(todayToggle).not.toBeChecked();
   await todayToggle.check();
   await expect(todayToggle).toBeChecked();
+  await expect(pageA.getByTestId('settings-feature-explainer-today-success')).toContainText('Hinweis-Einstellung wurde gespeichert');
+  await expect(pageA.getByTestId('settings-feature-explainer-today-success')).toHaveCount(0, { timeout: 7000 });
 
   await pageA.goto('/today');
   await expect(pageA.getByTestId('feature-explainer-today')).toBeVisible();

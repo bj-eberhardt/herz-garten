@@ -1075,6 +1075,7 @@ textarea {
   margin: -2px 0 0;
 }
 
+.field-success,
 .profile-field-success {
   color: #4f6e3d;
   flex: 1 0 100%;
@@ -1163,6 +1164,11 @@ textarea {
   gap: 10px;
 }
 
+.toggle-field {
+  display: grid;
+  gap: 6px;
+}
+
 .toggle-row {
   align-items: center;
   background: #fff8f2;
@@ -1176,6 +1182,11 @@ textarea {
 
 .toggle-row span {
   font-weight: 800;
+}
+
+.toggle-feedback {
+  margin: 0;
+  padding-left: 14px;
 }
 
 .toggle-row input {
