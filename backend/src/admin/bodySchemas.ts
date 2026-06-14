@@ -71,6 +71,23 @@ export const messageTemplateBodySchema = z
   })
   .strict();
 
+export const gardenLevelBodySchema = z
+  .object({
+    name: trimmedString.pipe(z.string().min(1)),
+    pointsToNext: z.number().int().positive().nullable().optional(),
+    translations: z
+      .record(
+        z.string(),
+        z
+          .object({
+            name: trimmedString.optional(),
+          })
+          .strict(),
+      )
+      .optional(),
+  })
+  .strict();
+
 export const dailyQuestionBodySchema = z
   .object({
     ...adminContentFormBase,

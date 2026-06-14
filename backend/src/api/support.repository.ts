@@ -2,9 +2,15 @@ import { randomInt, randomUUID } from 'node:crypto';
 import type { Request } from 'express';
 import { pool } from '../db.js';
 import { type NotificationMessageKey, translateNotificationBackend } from '../i18n/messages.js';
-import { fallbackAreaKey, gardenAreas, gardenAssets, gardenStagePointStep, gardenUnlocks } from './garden/catalog.js';
+import { fallbackAreaKey, gardenAreas, gardenAssets } from './garden/catalog.js';
+import {
+  addCoupleHeartPoints,
+  gardenStageAfterReward,
+  gardenStageForPoints,
+  nextGardenUnlock,
+} from './garden/levels.repository.js';
 
-export { fallbackAreaKey, gardenAreas, gardenAssets, gardenStagePointStep, gardenUnlocks };
+export { fallbackAreaKey, gardenAreas, gardenAssets, gardenStageAfterReward, gardenStageForPoints, nextGardenUnlock };
 
 export interface Queryable {
   query: typeof pool.query;
@@ -171,6 +177,12 @@ export type GardenObjectDetailSource =
   | ({ type: 'love_jar' } & LoveJarDetailRow)
   | ({ type: 'memory' } & MemoryDetailRow)
   | ({ type: 'know_me' } & KnowMeDetailRow);
+
+export interface GardenObjectDetailPayload {
+  couple: CurrentCouple;
+  object: ReturnType<typeof mapGardenObject> | null;
+  source: GardenObjectDetailSource | null;
+}
 
 export interface MemoryEntryRow {
   id: string;
@@ -565,17 +577,6 @@ export function areaForStage(stage: number) {
   return gardenAreas.filter((area) => area.stageUnlock <= Math.max(1, stage));
 }
 
-export function gardenStageForPoints(points: number) {
-  return Math.max(1, Math.floor(points / gardenStagePointStep) + 1);
-}
-
-export async function gardenStageAfterReward(client: Queryable, coupleId: string, rewardPoints: number) {
-  const result = await client.query<{ heartPoints: number }>('select heart_points as "heartPoints" from couples where id = $1', [
-    coupleId,
-  ]);
-  return gardenStageForPoints(Number(result.rows[0]?.heartPoints ?? 0) + rewardPoints);
-}
-
 export function areaKeyForSource(sourceType: string, questCategory = '') {
   if (sourceType === 'love_jar') return 'light_meadow';
   if (sourceType === 'memory') return 'memory_tree';
@@ -620,17 +621,6 @@ export function highestUnlockedAreaForReward(coupleStage: number, sourceType: st
   const unlockedAreas = areaForStage(coupleStage);
   const targetArea = unlockedAreas.find((area) => area.key === targetAreaKey);
   return targetArea?.key ?? unlockedAreas[unlockedAreas.length - 1]?.key ?? fallbackAreaKey;
-}
-
-export function nextGardenUnlock(heartPoints: number) {
-  const currentStage = gardenStageForPoints(heartPoints);
-  const nextUnlock = gardenUnlocks.find((unlock) => unlock.stage > currentStage);
-  return nextUnlock
-    ? {
-        ...nextUnlock,
-        pointsRemaining: Math.max(0, nextUnlock.points - heartPoints),
-      }
-    : null;
 }
 
 export function objectTypeForAsset(assetKey: string) {
@@ -920,15 +910,7 @@ export async function applyQuestReward(client: Queryable, coupleId: string, coup
       rewardPoints,
     ],
   );
-  await client.query(
-    `
-      update couples
-      set heart_points = heart_points + $2,
-          garden_stage = greatest(1, floor((heart_points + $2) / ${gardenStagePointStep}) + 1)
-      where id = $1
-    `,
-    [coupleId, rewardPoints],
-  );
+  await addCoupleHeartPoints(client, coupleId, rewardPoints);
   await client.query('update couple_quests set reward_applied_at = now() where id = $1', [coupleQuestId]);
 }
 
@@ -1069,6 +1051,32 @@ function gardenSourceTypeForNotification(notification: NotificationRow) {
   return '';
 }
 
+async function buildKnowMeNotificationSource(coupleId: string, questionId: string) {
+  const result = await pool.query<KnowMeDetailRow>(
+    `
+      select
+        q.id,
+        q.question_text as "questionText",
+        q.options,
+        q.correct_option_index as "correctOptionIndex",
+        q.answered_at as "answeredAt",
+        q.created_at as "createdAt",
+        author.display_name as "authorName",
+        guesser.display_name as "guessUserName",
+        g.selected_option_index as "selectedOptionIndex",
+        g.is_correct as "isCorrect",
+        g.created_at as "guessCreatedAt"
+      from know_me_questions q
+      join profiles author on author.id = q.author_id
+      left join know_me_guesses g on g.question_id = q.id
+      left join profiles guesser on guesser.id = g.user_id
+      where q.id = $1 and q.couple_id = $2
+    `,
+    [questionId, coupleId],
+  );
+  return result.rows[0] ? { type: 'know_me' as const, ...result.rows[0] } : null;
+}
+
 export async function buildNotificationDetailPayload(userId: string, notificationId: string, locale = 'de') {
   const notificationResult = await pool.query<NotificationRow>(
     `
@@ -1094,7 +1102,8 @@ export async function buildNotificationDetailPayload(userId: string, notificatio
   const notification = notificationResult.rows[0];
   if (!notification) return null;
 
-  let gardenDetail: Awaited<ReturnType<typeof buildGardenObjectDetail>> | null = null;
+  let gardenDetail: GardenObjectDetailPayload | null = null;
+  const couple = notification.coupleId ? await getCurrentCouple(userId, locale) : null;
   const gardenSourceType = gardenSourceTypeForNotification(notification);
   if (notification.coupleId && notification.sourceId && gardenSourceType) {
     const objectResult = await pool.query<{ id: string }>(
@@ -1110,6 +1119,14 @@ export async function buildNotificationDetailPayload(userId: string, notificatio
     const objectId = objectResult.rows[0]?.id;
     if (objectId) {
       gardenDetail = await buildGardenObjectDetail(userId, objectId, locale);
+    }
+
+    if (!gardenDetail && notification.sourceType === 'know_me' && couple?.id === notification.coupleId) {
+      gardenDetail = {
+        couple,
+        object: null,
+        source: await buildKnowMeNotificationSource(notification.coupleId, notification.sourceId),
+      };
     }
   }
 
@@ -1286,15 +1303,7 @@ export async function createMemoryStone(client: Queryable, coupleId: string, mem
     [randomUUID(), coupleId, memoryId, title, areaKey, assetKey, placement.positionX, placement.positionY, placement.zIndex],
   );
 
-  await client.query(
-    `
-      update couples
-      set heart_points = heart_points + 8,
-          garden_stage = greatest(1, floor((heart_points + 8) / ${gardenStagePointStep}) + 1)
-      where id = $1
-    `,
-    [coupleId],
-  );
+  await addCoupleHeartPoints(client, coupleId, 8);
 
   return result.rows[0]?.id as string | undefined;
 }
@@ -1314,15 +1323,7 @@ export async function createKnowMeFlower(client: Queryable, coupleId: string, qu
     `,
     [randomUUID(), coupleId, questionId, areaKey, assetKey, placement.positionX, placement.positionY, placement.zIndex],
   );
-  await client.query(
-    `
-      update couples
-      set heart_points = heart_points + 12,
-          garden_stage = greatest(1, floor((heart_points + 12) / ${gardenStagePointStep}) + 1)
-      where id = $1
-    `,
-    [coupleId],
-  );
+  await addCoupleHeartPoints(client, coupleId, 12);
   await client.query('update know_me_questions set reward_applied_at = now() where id = $1', [questionId]);
 }
 
@@ -1676,15 +1677,7 @@ export async function createLoveJarLight(client: Queryable, coupleId: string, no
   );
   if ((insertResult.rowCount ?? 0) === 0) return;
 
-  await client.query(
-    `
-      update couples
-      set heart_points = heart_points + 5,
-          garden_stage = greatest(1, floor((heart_points + 5) / ${gardenStagePointStep}) + 1)
-      where id = $1
-    `,
-    [coupleId],
-  );
+  await addCoupleHeartPoints(client, coupleId, 5);
 }
 
 const inviteCodeWords: Record<string, string[]> = {

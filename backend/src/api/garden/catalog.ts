@@ -1,5 +1,3 @@
-export const gardenStagePointStep = 200;
-
 export const gardenAreas = [
   { key: 'heart_bed', label: 'Herzbeet', stageUnlock: 1, startX: 0, width: 520, accent: '#f08a82', backgroundImage: '/garden-backgrounds/heart-bed.png' },
   { key: 'flower_meadow', label: 'Blumenwiese', stageUnlock: 2, startX: 520, width: 520, accent: '#e7a86f', backgroundImage: '/garden-backgrounds/flower-meadow.png' },
@@ -12,33 +10,6 @@ export const gardenAreas = [
   { key: 'wishing_well', label: 'Wunschbrunnen', stageUnlock: 9, startX: 4360, width: 560, accent: '#8b90a8', backgroundImage: '/garden-backgrounds/wishing-well-area.png' },
   { key: 'garden_fest', label: 'Gartenfest', stageUnlock: 10, startX: 4920, width: 600, accent: '#d89d52', backgroundImage: '/garden-backgrounds/garden-fest.png' },
 ];
-
-export const gardenUnlocks = gardenAreas.map((area) => ({
-  stage: area.stageUnlock,
-  points: (area.stageUnlock - 1) * gardenStagePointStep,
-  unlock:
-    area.stageUnlock === 1
-      ? 'Herzbeet, Startwiese, Samenplatz'
-      : area.stageUnlock === 2
-        ? 'Blumenwiese und neue Blumenvarianten'
-        : area.stageUnlock === 3
-          ? 'Paarbank, kleine Wege und Deko'
-          : area.stageUnlock === 4
-            ? 'Erinnerungsbaum und Polaroid-Orte'
-            : area.stageUnlock === 5
-              ? 'Love-Jar-Lichter und Lichterketten'
-              : area.stageUnlock === 6
-                ? 'Teich der Ruhe und Wasserpflanzen'
-                : area.stageUnlock === 7
-                  ? 'Picknickplatz, Decken und Koerbe'
-                  : area.stageUnlock === 8
-                    ? 'Sternenhimmel und Fernbeziehungs-Bruecke'
-                    : area.stageUnlock === 9
-                      ? 'Wunschbrunnen und Wunschlichter'
-                      : 'Gartenfest, Pavillon und Festdeko',
-  areaKey: area.key,
-  areaLabel: area.label,
-}));
 
 export const gardenAssets = [
   {

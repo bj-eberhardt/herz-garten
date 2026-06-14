@@ -48,6 +48,18 @@ test.describe('admin ui', () => {
     await page.getByRole('link', { name: 'Categories' }).click();
     await expect(page.getByTestId('admin-categories')).toBeVisible();
     await expect(page.getByTestId('admin-preference-new')).toHaveCount(0);
+    await page.getByRole('link', { name: 'Garden' }).click();
+    await expect(page.getByTestId('admin-garden')).toBeVisible();
+    await expect(page.locator('.admin-table')).toContainText('Heart Bed');
+    await page.getByTestId('admin-garden-level-new').click();
+    await expect(page.getByTestId('admin-garden-level-form')).toBeVisible();
+    await page.getByTestId('admin-garden-level-name').fill(`UI Garten ${runId}`);
+    await page.getByTestId('admin-garden-level-points').fill('175');
+    await page.getByTestId('admin-garden-level-save').click();
+    await expect(page.getByTestId('admin-garden-level-form')).toHaveCount(0);
+    await expect(page.locator('.admin-table')).toContainText(`UI Garten ${runId}`);
+    await page.getByTestId('admin-garden-level-delete').last().click();
+    await expect(page.locator('.admin-table')).not.toContainText(`UI Garten ${runId}`);
     await page.getByRole('link', { name: 'Taxonomien' }).click();
     await expect(page.getByTestId('admin-taxonomies')).toBeVisible();
     await expect(page.getByTestId('admin-preference-new')).toBeVisible();

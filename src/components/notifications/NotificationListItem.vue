@@ -31,6 +31,23 @@ const body = computed(() =>
   props.notification.bodyKey ? t(props.notification.bodyKey, props.notification.params ?? {}) : props.notification.body,
 );
 const createdAt = computed(() => d(new Date(props.notification.createdAt), 'shortDateTime'));
+const knowMeAnswerDetail = computed(() => {
+  const params = props.notification.params ?? {};
+  if (props.notification.type !== 'know_me_answered') return null;
+  if (
+    typeof params.questionText !== 'string' ||
+    typeof params.correctAnswer !== 'string' ||
+    typeof params.guessedAnswer !== 'string'
+  ) {
+    return null;
+  }
+
+  return {
+    questionText: params.questionText,
+    correctAnswer: params.correctAnswer,
+    guessedAnswer: params.guessedAnswer,
+  };
+});
 </script>
 
 <template>
@@ -58,6 +75,20 @@ const createdAt = computed(() => d(new Date(props.notification.createdAt), 'shor
       </span>
       <strong>{{ title }}</strong>
       <small>{{ body }}</small>
+      <span v-if="knowMeAnswerDetail" class="notification-knowme-inline" data-testid="notification-knowme-inline">
+        <span>
+          <b>{{ t('garden.detail.questionLabel') }}:</b>
+          {{ knowMeAnswerDetail.questionText }}
+        </span>
+        <span>
+          <b>{{ t('garden.correct') }}</b>
+          {{ knowMeAnswerDetail.correctAnswer }}
+        </span>
+        <span>
+          <b>{{ t('garden.guessed') }}</b>
+          {{ knowMeAnswerDetail.guessedAnswer }}
+        </span>
+      </span>
       <time>{{ createdAt }}</time>
     </span>
 

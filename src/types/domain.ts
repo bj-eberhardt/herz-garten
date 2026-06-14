@@ -161,6 +161,7 @@ export interface GardenAsset {
 export interface GardenUnlock {
   stage: number;
   points: number;
+  name?: string;
   unlock: string;
   areaKey: GardenAreaKey;
   areaLabel: string;

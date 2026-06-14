@@ -186,6 +186,7 @@ onMounted(() => {
       <GardenCanvas
         :objects="gardenStore.objects"
         :areas="gardenStore.areas"
+        :unlocks="gardenStore.unlocks"
         :assets="gardenStore.assetCatalog"
         :garden-stage="coupleStore.couple.gardenStage"
         :heart-points="coupleStore.couple.heartPoints"

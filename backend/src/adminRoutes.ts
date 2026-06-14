@@ -9,6 +9,7 @@ import {
   adminCouplePreferencesBodySchema,
   adminLoginBodySchema,
   categoryBodySchema,
+  gardenLevelBodySchema,
   messageTemplateBodySchema,
   preferenceBodySchema,
 } from './admin/bodySchemas.js';
@@ -44,6 +45,23 @@ import {
   updateCouplePreferences,
   validateEditableContentBody
 } from './admin/support.repository.js';
+import {
+  deleteGardenLevel,
+  GardenLevelValidationError,
+  listGardenLevels,
+  saveGardenLevel,
+  type GardenLevelRow,
+} from './api/garden/levels.repository.js';
+
+export interface AdminGardenLevelItem extends GardenLevelRow {}
+
+export interface AdminGardenLevelsResponse {
+  items: AdminGardenLevelItem[];
+}
+
+export interface AdminGardenLevelMutationResponse extends AdminGardenLevelsResponse {
+  id?: string;
+}
 
 const adminAuthRateLimit = createRateLimiter({
   keyPrefix: 'admin-auth',
@@ -201,6 +219,75 @@ export function adminRouter(): Router {
           error: 'Message-Template ist ungültig.',
           validationErrors: error.errors,
         });
+        return;
+      }
+      handleError(response, error);
+    }
+  });
+
+  router.get('/garden/levels', requireAdminAuth, async (request, response) => {
+    try {
+      const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
+      const payload: AdminGardenLevelsResponse = { items: await listGardenLevels(locale) };
+      response.json(payload);
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.post('/garden/levels', requireAdminAuth, validateBody(gardenLevelBodySchema), async (request, response) => {
+    try {
+      const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
+      const result = await saveGardenLevel(request.body, undefined, locale);
+      await audit('create', 'garden-level', result.id, { name: request.body.name });
+      const payload: AdminGardenLevelMutationResponse = result;
+      response.status(201).json(payload);
+    } catch (error) {
+      if (error instanceof GardenLevelValidationError) {
+        response.status(400).json({ errorKey: 'admin.gardenLevelInvalid', error: error.message });
+        return;
+      }
+      handleError(response, error);
+    }
+  });
+
+  router.patch('/garden/levels/:id', requireAdminAuth, validateBody(gardenLevelBodySchema), async (request, response) => {
+    try {
+      const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
+      const result = await saveGardenLevel(request.body, String(request.params.id), locale);
+      await audit('update', 'garden-level', result.id, { name: request.body.name });
+      const payload: AdminGardenLevelMutationResponse = result;
+      response.json(payload);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'garden level not found') {
+        response.status(404).json({ errorKey: 'admin.gardenLevelNotFound', error: 'Garden-Level nicht gefunden.' });
+        return;
+      }
+      if (error instanceof GardenLevelValidationError) {
+        response.status(400).json({ errorKey: 'admin.gardenLevelInvalid', error: error.message });
+        return;
+      }
+      handleError(response, error);
+    }
+  });
+
+  router.delete('/garden/levels/:id', requireAdminAuth, async (request, response) => {
+    try {
+      const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
+      const result = await deleteGardenLevel(String(request.params.id), locale);
+      if (result.status === 'not_found') {
+        response.status(404).json({ errorKey: 'admin.gardenLevelNotFound', error: 'Garden-Level nicht gefunden.' });
+        return;
+      }
+      if (result.status === 'invalid') {
+        response.status(400).json({ errorKey: 'admin.gardenLevelInvalid', error: 'Stufe 1 kann nicht geloescht werden.' });
+        return;
+      }
+      await audit('delete', 'garden-level', String(request.params.id));
+      response.json({ items: result.items });
+    } catch (error) {
+      if (error instanceof GardenLevelValidationError) {
+        response.status(400).json({ errorKey: 'admin.gardenLevelInvalid', error: error.message });
         return;
       }
       handleError(response, error);

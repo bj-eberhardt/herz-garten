@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import { Home, Info, Lock, Move } from '@lucide/vue';
-import type { GardenArea, GardenAreaKey, GardenAsset, GardenObject } from '@/types/domain';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { ChevronLeft, ChevronRight, Home, Info, Lock, Move } from '@lucide/vue';
+import type { GardenArea, GardenAreaKey, GardenAsset, GardenObject, GardenUnlock } from '@/types/domain';
 import { i18n } from '@/i18n';
 import GardenObjectSprite from './GardenObjectSprite.vue';
 
 const props = defineProps<{
   objects: GardenObject[];
   areas: GardenArea[];
+  unlocks: GardenUnlock[];
   assets: GardenAsset[];
   gardenStage: number;
   heartPoints: number;
@@ -34,6 +35,10 @@ const activeAreaKey = ref<GardenAreaKey | 'all'>('all');
 const viewport = ref<HTMLElement | null>(null);
 const areaElements = ref<Record<string, HTMLElement | null>>({});
 const draftPlacements = ref<Record<string, { areaKey: GardenAreaKey; positionX: number; positionY: number; zIndex: number }>>({});
+const canScrollLeft = ref(false);
+const canScrollRight = ref(false);
+const scrollDrag = ref<{ pointerId: number; startX: number; startLeft: number; dragged: boolean } | null>(null);
+const suppressClickAfterScrollDrag = ref(false);
 
 const assetByKey = computed(() => new Map(props.assets.map((asset) => [asset.key, asset])));
 const unlockedAreas = computed(() => props.areas.filter((area) => area.stageUnlock <= props.gardenStage));
@@ -65,7 +70,7 @@ const legendItems = computed(() => {
 });
 
 function unlockPoints(area: GardenArea) {
-  return Math.max(0, (area.stageUnlock - 1) * 200);
+  return Math.max(0, props.unlocks.find((unlock) => unlock.stage === area.stageUnlock)?.points ?? 0);
 }
 
 function remainingPoints(area: GardenArea) {
@@ -89,6 +94,80 @@ function scrollToArea(areaKey: GardenAreaKey) {
 
 function scrollHome() {
   viewport.value?.scrollTo({ left: 0, behavior: 'smooth' });
+}
+
+function updateScrollButtons() {
+  const element = viewport.value;
+  if (!element) {
+    canScrollLeft.value = false;
+    canScrollRight.value = false;
+    return;
+  }
+
+  const maxScrollLeft = Math.max(0, element.scrollWidth - element.clientWidth);
+  canScrollLeft.value = element.scrollLeft > 8;
+  canScrollRight.value = element.scrollLeft < maxScrollLeft - 8;
+}
+
+function scrollOneArea(direction: -1 | 1) {
+  const element = viewport.value;
+  if (!element) return;
+
+  const currentLeft = element.scrollLeft;
+  const sortedAreas = [...props.areas].sort((left, right) => left.startX - right.startX);
+  const targetArea =
+    direction > 0
+      ? sortedAreas.find((area) => area.startX > currentLeft + 32)
+      : [...sortedAreas].reverse().find((area) => area.startX < currentLeft - 32);
+
+  const targetLeft = targetArea ? targetArea.startX - 24 : direction > 0 ? element.scrollWidth : 0;
+  element.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
+}
+
+function beginScrollDrag(event: PointerEvent) {
+  if (!viewport.value) return;
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+  if (event.target instanceof Element && event.target.closest('button, a, input, textarea, select')) return;
+
+  scrollDrag.value = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startLeft: viewport.value.scrollLeft,
+    dragged: false,
+  };
+  viewport.value.setPointerCapture(event.pointerId);
+}
+
+function moveScrollDrag(event: PointerEvent) {
+  const drag = scrollDrag.value;
+  const element = viewport.value;
+  if (!drag || !element || drag.pointerId !== event.pointerId) return;
+
+  const deltaX = event.clientX - drag.startX;
+  if (Math.abs(deltaX) > 4) drag.dragged = true;
+  if (!drag.dragged) return;
+
+  element.scrollLeft = drag.startLeft - deltaX;
+  event.preventDefault();
+}
+
+function endScrollDrag(event: PointerEvent) {
+  const drag = scrollDrag.value;
+  const element = viewport.value;
+  if (!drag || drag.pointerId !== event.pointerId) return;
+
+  if (element?.hasPointerCapture(event.pointerId)) element.releasePointerCapture(event.pointerId);
+  suppressClickAfterScrollDrag.value = drag.dragged;
+  scrollDrag.value = null;
+  window.setTimeout(() => {
+    suppressClickAfterScrollDrag.value = false;
+  }, 0);
+}
+
+function cancelClickAfterScrollDrag(event: MouseEvent) {
+  if (!suppressClickAfterScrollDrag.value) return;
+  event.preventDefault();
+  event.stopPropagation();
 }
 
 function beginDrag(object: GardenObject, event: PointerEvent) {
@@ -135,6 +214,17 @@ watch(
     if (object) scrollToArea(object.areaKey);
   },
 );
+
+watch(worldWidth, () => window.setTimeout(updateScrollButtons, 0));
+
+onMounted(() => {
+  updateScrollButtons();
+  window.addEventListener('resize', updateScrollButtons);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateScrollButtons);
+});
 </script>
 
 <template>
@@ -190,48 +280,79 @@ watch(
       <span v-if="legendItems.length === 0" class="muted">{{ i18n.global.t('garden.legendEmpty') }}</span>
     </div>
 
-    <div ref="viewport" class="garden-scrollport">
-      <div class="garden-world" :style="{ width: `${worldWidth}px` }">
-        <section
-          v-for="area in areas"
-          :key="area.key"
-          :ref="(element) => setAreaRef(area.key, element)"
-          class="garden-area"
-          :class="{ 'garden-area--locked': area.stageUnlock > gardenStage }"
-          :style="{
-            left: `${area.startX}px`,
-            width: `${area.width}px`,
-            '--area-accent': area.accent,
-            '--area-background': `url(${area.backgroundImage})`,
-          }"
-          :aria-label="area.label"
-        >
-          <div class="garden-area-sky"></div>
-          <div class="garden-area-ground"></div>
-          <div class="garden-area-path"></div>
-          <div class="garden-area-label">
-            <strong>{{ area.label }}</strong>
-            <span>{{ i18n.global.t('garden.stageLabel', { stage: area.stageUnlock }) }}</span>
-          </div>
-          <div v-if="area.stageUnlock > gardenStage" class="garden-lock" data-testid="garden-locked-area">
-            <Lock :size="18" />
-            <span>
-              {{ i18n.global.t('garden.unlockAtPoints', { stage: area.stageUnlock, points: unlockPoints(area), remaining: remainingPoints(area) }) }}
-            </span>
-          </div>
+    <div class="garden-scroll-shell" :class="{ 'is-dragging': scrollDrag?.dragged }">
+      <button
+        v-if="canScrollLeft"
+        class="garden-scroll-arrow garden-scroll-arrow--left"
+        type="button"
+        aria-label="Ein Beet nach links"
+        @click="scrollOneArea(-1)"
+      >
+        <ChevronLeft :size="24" />
+      </button>
+      <div
+        ref="viewport"
+        class="garden-scrollport"
+        @scroll="updateScrollButtons"
+        @click.capture="cancelClickAfterScrollDrag"
+        @pointerdown="beginScrollDrag"
+        @pointermove="moveScrollDrag"
+        @pointerup="endScrollDrag"
+        @pointercancel="endScrollDrag"
+      >
+        <div class="garden-world" :style="{ width: `${worldWidth}px` }">
+          <section
+            v-for="area in areas"
+            :key="area.key"
+            :ref="(element) => setAreaRef(area.key, element)"
+            class="garden-area"
+            :class="{ 'garden-area--locked': area.stageUnlock > gardenStage }"
+            :style="{
+              left: `${area.startX}px`,
+              width: `${area.width}px`,
+              '--area-accent': area.accent,
+              '--area-background': `url(${area.backgroundImage})`,
+            }"
+            :aria-label="area.label"
+          >
+            <div class="garden-area-sky"></div>
+            <div class="garden-area-ground"></div>
+            <div class="garden-area-path"></div>
+            <div class="garden-area-label">
+              <strong>{{ area.label }}</strong>
+              <span>{{ i18n.global.t('garden.stageLabel', { stage: area.stageUnlock }) }}</span>
+            </div>
+            <div v-if="area.stageUnlock > gardenStage" class="garden-lock" data-testid="garden-locked-area">
+              <Lock :size="18" />
+              <span>
+                {{
+                  i18n.global.t('garden.unlockAtPoints', { stage: area.stageUnlock, points: unlockPoints(area), remaining: remainingPoints(area) })
+                }}
+              </span>
+            </div>
 
-          <GardenObjectSprite
-            v-for="object in filteredObjects.filter((item) => item.areaKey === area.key)"
-            :key="object.id"
-            :object="displayObject(object)"
-            :asset="assetByKey.get(object.assetKey)"
-            :editing="editing"
-            :selected="selectedObjectId === object.id"
-            @select="$emit('select', object.id)"
-            @drag-start="beginDrag(object, $event)"
-          />
-        </section>
+            <GardenObjectSprite
+              v-for="object in filteredObjects.filter((item) => item.areaKey === area.key)"
+              :key="object.id"
+              :object="displayObject(object)"
+              :asset="assetByKey.get(object.assetKey)"
+              :editing="editing"
+              :selected="selectedObjectId === object.id"
+              @select="$emit('select', object.id)"
+              @drag-start="beginDrag(object, $event)"
+            />
+          </section>
+        </div>
       </div>
+      <button
+        v-if="canScrollRight"
+        class="garden-scroll-arrow garden-scroll-arrow--right"
+        type="button"
+        aria-label="Ein Beet nach rechts"
+        @click="scrollOneArea(1)"
+      >
+        <ChevronRight :size="24" />
+      </button>
     </div>
 
     <div class="garden-minimap" aria-hidden="true">

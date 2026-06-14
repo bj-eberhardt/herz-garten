@@ -2,21 +2,19 @@ import {
   fallbackAreaKey,
   gardenAreas,
   gardenAssets,
-  gardenStagePointStep,
-  gardenUnlocks,
 } from './catalog.js';
 import { listGardenObjects, updateGardenObjectPlacement, type GardenPlacementUpdate } from './garden.repository.js';
 import { mapGardenObject } from './garden.mapper.js';
 import { buildGardenObjectDetail, buildGardenProgress, type CurrentCouple } from '../support.repository.js';
+import {
+  gardenUnlocksForLocale,
+  nextGardenUnlock,
+} from './levels.repository.js';
 
 export const gardenObjectIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function areaForStage(stage: number) {
   return gardenAreas.filter((area) => area.stageUnlock <= Math.max(1, stage));
-}
-
-export function gardenStageForPoints(points: number) {
-  return Math.max(1, Math.floor(points / gardenStagePointStep) + 1);
 }
 
 export function areaKeyForSource(sourceType: string, questCategory = '') {
@@ -41,17 +39,6 @@ export function highestUnlockedAreaForReward(coupleStage: number, sourceType: st
   return targetArea?.key ?? unlockedAreas[unlockedAreas.length - 1]?.key ?? fallbackAreaKey;
 }
 
-export function nextGardenUnlock(heartPoints: number) {
-  const currentStage = gardenStageForPoints(heartPoints);
-  const nextUnlock = gardenUnlocks.find((unlock) => unlock.stage > currentStage);
-  return nextUnlock
-    ? {
-        ...nextUnlock,
-        pointsRemaining: Math.max(0, nextUnlock.points - heartPoints),
-      }
-    : null;
-}
-
 export function clampNumber(value: unknown, min: number, max: number, fallback: number) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
@@ -67,16 +54,17 @@ export interface GardenPlacementBody {
   rotation?: unknown;
 }
 
-export async function buildGardenPayload(couple: CurrentCouple) {
+export async function buildGardenPayload(couple: CurrentCouple, locale = 'de') {
   const objects = await listGardenObjects(couple.id);
+  const unlocks = await gardenUnlocksForLocale(locale);
   return {
     couple,
     objects: objects.map(mapGardenObject),
     areas: gardenAreas,
-    unlocks: gardenUnlocks,
+    unlocks,
     availableAssets: gardenAssets.filter((asset) => asset.stageUnlock <= Math.max(1, couple.gardenStage)),
     assetCatalog: gardenAssets,
-    nextUnlock: nextGardenUnlock(couple.heartPoints),
+    nextUnlock: await nextGardenUnlock(couple.heartPoints, locale),
     progress: await buildGardenProgress(couple.id),
   };
 }

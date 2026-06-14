@@ -63,6 +63,14 @@ test('daily question reveal creates notifications and a garden detail', async ({
 
   await pageA.getByTestId('nav-garden').click();
   await expect(pageA.getByTestId('garden-progress')).toBeVisible();
+  await expect
+    .poll(() =>
+      pageA.evaluate(() => Math.max(0, document.documentElement.scrollWidth - window.innerWidth)),
+    )
+    .toBeLessThanOrEqual(1);
+  await expect
+    .poll(() => pageA.evaluate(() => document.querySelector('.garden-scrollport')!.scrollWidth > document.querySelector('.garden-scrollport')!.clientWidth))
+    .toBeTruthy();
   await expect(pageA.getByTestId('garden-progress')).toContainText('Tagesfragen');
   await expect(pageA.getByTestId('garden-locked-area').first()).toContainText('200 Punkte');
   await expect(pageA.getByTestId('garden-object').first()).toHaveAttribute('title', /10 Punkte/);
@@ -204,6 +212,7 @@ test('know me game notifies partner and rewards correct guesses', async ({ brows
   await openNotifications(pageB);
   await expect(pageB.getByTestId('notification-item').first()).toContainText('Kennst-du-mich');
   await pageB.getByTestId('notification-item').first().click();
+  await pageB.getByTestId('notification-detail-cta').click();
   await expect(pageB).toHaveURL(/\/know-me$/);
 
   await pageB
@@ -215,6 +224,17 @@ test('know me game notifies partner and rewards correct guesses', async ({ brows
   await pageB.getByTestId('know-me-guess-submit').click();
   await expect(pageB.getByTestId('know-me-history-card').first()).toContainText('Treffer');
   await expect(pageB.getByTestId('know-me-history-card').first()).toContainText('Schokolade');
+
+  await openNotifications(pageA);
+  const answeredNotification = pageA.getByTestId('notification-item').first();
+  await expect(answeredNotification).toContainText('Kennst-du-mich');
+  await expect(answeredNotification.getByTestId('notification-knowme-inline')).toContainText('Was ist mein heimlicher Lieblingssnack?');
+  await expect(answeredNotification.getByTestId('notification-knowme-inline')).toContainText('Schokolade');
+  await answeredNotification.click();
+  await expect(pageA.getByTestId('notification-detail')).toContainText('Was ist mein heimlicher Lieblingssnack?');
+  await expect(pageA.getByTestId('notification-detail')).toContainText('Richtig:');
+  await expect(pageA.getByTestId('notification-detail')).toContainText('Geraten:');
+  await expect(pageA.getByTestId('notification-detail')).toContainText('Schokolade');
 
   await pageB.getByTestId('nav-garden').click();
   await pageB.getByTestId('garden-object').first().click();
@@ -642,6 +662,7 @@ test('settings allow deleting the account and remove login access', async ({ bro
   await expect(pageB.getByTestId('notification-item').first()).toContainText('Paarung wurde getrennt');
   await expect(pageB.getByTestId('notification-item').first()).toContainText('neu paaren');
   await pageB.getByTestId('notification-item').first().click();
+  await pageB.getByTestId('notification-detail-cta').click();
   await expect(pageB).toHaveURL(/\/onboarding$/);
   await expect(pageB.getByTestId('join-couple-form')).toBeVisible();
 

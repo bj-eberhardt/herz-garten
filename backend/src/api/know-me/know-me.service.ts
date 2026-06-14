@@ -92,7 +92,13 @@ export async function guessKnowMeQuestionForUser(
       type: 'know_me_answered',
       titleKey: isCorrect ? 'notifications.titles.knowMeAnsweredHit' : 'notifications.titles.knowMeAnsweredMiss',
       bodyKey: isCorrect ? 'notifications.bodies.knowMeAnsweredHit' : 'notifications.bodies.knowMeAnsweredMiss',
-      params: { name: user.displayName },
+      params: {
+        name: user.displayName,
+        questionText: question.questionText,
+        correctAnswer: question.options[question.correctOptionIndex],
+        guessedAnswer: question.options[selectedOptionIndex],
+        isCorrect,
+      },
       sourceType: 'know_me',
       sourceId: question.id,
     });

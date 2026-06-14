@@ -25,7 +25,8 @@ export function registerGardenRoutes(router: Router) {
     }
 
     try {
-      response.json(await buildGardenPayload(couple));
+      const locale = await resolveLocale(request);
+      response.json(await buildGardenPayload(couple, locale));
     } catch (error) {
       handleError(response, error);
     }

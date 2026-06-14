@@ -29,6 +29,7 @@ const meta = computed(() => notificationMeta(props.notification));
 const source = computed(() => props.detail?.gardenDetail?.source ?? null);
 const object = computed(() => props.detail?.gardenDetail?.object ?? null);
 const hasGardenDetail = computed(() => Boolean(source.value && object.value));
+const hasSourceDetail = computed(() => Boolean(source.value));
 const sourceType = computed(() => (typeof source.value?.type === 'string' ? source.value.type : ''));
 const fallbackText = computed(() =>
   props.notification.bodyKey ? t(props.notification.bodyKey, props.notification.params ?? {}) : props.notification.body,
@@ -49,7 +50,7 @@ const fallbackText = computed(() =>
         <p>{{ hasGardenDetail ? t('notifications.detail.gardenContext') : fallbackText }}</p>
       </div>
 
-      <div v-if="hasGardenDetail && source" class="notification-source-detail">
+      <div v-if="hasSourceDetail && source" class="notification-source-detail">
         <QuestionGardenDetail v-if="sourceType === 'question'" :source="source" />
         <QuestGardenDetail v-else-if="sourceType === 'quest'" :source="source" />
         <LoveJarGardenDetail v-else-if="sourceType === 'love_jar'" :source="source" />

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Queryable } from '../support.repository.js';
-import { gardenStagePointStep } from '../garden/catalog.js';
+import { addCoupleHeartPoints } from '../garden/levels.repository.js';
 
 export async function upsertDailyAnswer(
   client: Queryable,
@@ -66,15 +66,7 @@ export async function insertDailyGardenReward(
 }
 
 export async function addDailyRewardPoints(client: Queryable, coupleId: string) {
-  await client.query(
-    `
-      update couples
-      set heart_points = heart_points + 10,
-          garden_stage = greatest(1, floor((heart_points + 10) / ${gardenStagePointStep}) + 1)
-      where id = $1
-    `,
-    [coupleId],
-  );
+  await addCoupleHeartPoints(client, coupleId, 10);
 }
 
 export async function markDailyRewardApplied(client: Queryable, instanceId: string) {
