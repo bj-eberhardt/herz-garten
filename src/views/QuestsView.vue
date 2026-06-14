@@ -3,7 +3,8 @@ import { computed, onMounted } from 'vue';
 import { HeartHandshake } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
-import QuestCard from '@/components/quests/QuestCard.vue';
+import QuestFilters from '@/components/quests/QuestFilters.vue';
+import QuestSection from '@/components/quests/QuestSection.vue';
 import { useAuthStore } from '@/stores/authStore';
 import { useQuestStore } from '@/stores/questStore';
 
@@ -38,121 +39,42 @@ const completedQuests = computed(() =>
     <p v-if="questStore.error" class="form-error">{{ questStore.error }}</p>
     <p v-if="questStore.loading" class="muted">{{ t('quests.loading') }}</p>
 
-    <section class="panel quest-filters" data-testid="quest-filters">
-      <div class="quest-filter-field">
-        <label for="quest-category-filter">{{ t('quests.filters.category') }}</label>
-        <select
-          id="quest-category-filter"
-          v-model="questStore.filters.category"
-          data-testid="quest-filter-category"
-          @change="questStore.loadQuests()"
-        >
-          <option value="all">{{ t('quests.filters.all') }}</option>
-          <option v-for="category in questStore.categories" :key="category.value" :value="category.value">
-            {{ category.label }}
-          </option>
-        </select>
-      </div>
+    <QuestFilters />
 
-      <div class="quest-filter-field">
-        <label for="quest-effort-filter">{{ t('quests.filters.effort') }}</label>
-        <select
-          id="quest-effort-filter"
-          v-model="questStore.filters.effortLevel"
-          data-testid="quest-filter-effort"
-          @change="questStore.loadQuests()"
-        >
-          <option value="all">{{ t('quests.filters.all') }}</option>
-          <option value="low">{{ t('quests.filters.low') }}</option>
-          <option value="medium">{{ t('quests.filters.medium') }}</option>
-          <option value="high">{{ t('quests.filters.high') }}</option>
-        </select>
-      </div>
+    <QuestSection
+      v-if="activeQuests.length"
+      :quests="activeQuests"
+      :eyebrow="t('quests.sections.activeEyebrow')"
+      :title="t('quests.sections.activeTitle')"
+      :current-user-id="authStore.user?.id"
+      :loading="questStore.loading"
+      variant="active"
+      test-id="quests-active-section"
+      @action="questStore.primaryAction"
+    />
 
-      <div class="quest-filter-field">
-        <label for="quest-duration-filter">{{ t('quests.filters.duration') }}</label>
-        <select
-          id="quest-duration-filter"
-          v-model="questStore.filters.maxMinutes"
-          data-testid="quest-filter-duration"
-          @change="questStore.loadQuests()"
-        >
-          <option value="all">{{ t('quests.filters.all') }}</option>
-          <option value="5">{{ t('quests.filters.upToMinutes', { count: 5 }) }}</option>
-          <option value="10">{{ t('quests.filters.upToMinutes', { count: 10 }) }}</option>
-          <option value="15">{{ t('quests.filters.upToMinutes', { count: 15 }) }}</option>
-          <option value="30">{{ t('quests.filters.upToMinutes', { count: 30 }) }}</option>
-        </select>
-      </div>
+    <QuestSection
+      :quests="openQuests"
+      :eyebrow="t('quests.sections.openEyebrow')"
+      :title="t('quests.sections.openTitle')"
+      :empty-text="t('quests.sections.emptyOpen')"
+      :current-user-id="authStore.user?.id"
+      :loading="questStore.loading"
+      test-id="quests-open-section"
+      @action="questStore.primaryAction"
+    />
 
-      <div class="quest-filter-field">
-        <label for="quest-mode-filter">{{ t('quests.filters.mode') }}</label>
-        <select
-          id="quest-mode-filter"
-          v-model="questStore.filters.mode"
-          data-testid="quest-filter-mode"
-          @change="questStore.loadQuests()"
-        >
-          <option value="all">{{ t('quests.filters.all') }}</option>
-          <option value="together">{{ t('quests.filters.together') }}</option>
-          <option value="solo">{{ t('quests.filters.solo') }}</option>
-          <option value="long_distance">{{ t('quests.filters.long_distance') }}</option>
-        </select>
-      </div>
-    </section>
-
-    <section v-if="activeQuests.length" class="quest-section" data-testid="quests-active-section">
-      <div class="section-heading">
-        <p class="eyebrow">{{ t('quests.sections.activeEyebrow') }}</p>
-        <h2>{{ t('quests.sections.activeTitle') }}</h2>
-      </div>
-      <div class="card-grid">
-        <QuestCard
-          v-for="quest in activeQuests"
-          :key="quest.id"
-          :quest="quest"
-          :button-label="questStore.buttonLabel(quest, authStore.user?.id)"
-          :disabled="questStore.buttonDisabled(quest, authStore.user?.id)"
-          variant="active"
-          @action="questStore.primaryAction"
-        />
-      </div>
-    </section>
-
-    <section class="quest-section" data-testid="quests-open-section">
-      <div class="section-heading">
-        <p class="eyebrow">{{ t('quests.sections.openEyebrow') }}</p>
-        <h2>{{ t('quests.sections.openTitle') }}</h2>
-      </div>
-      <p v-if="!openQuests.length" class="muted">{{ t('quests.sections.emptyOpen') }}</p>
-      <div v-else class="card-grid">
-        <QuestCard
-          v-for="quest in openQuests"
-          :key="quest.id"
-          :quest="quest"
-          :button-label="questStore.buttonLabel(quest, authStore.user?.id)"
-          :disabled="questStore.buttonDisabled(quest, authStore.user?.id)"
-          @action="questStore.primaryAction"
-        />
-      </div>
-    </section>
-
-    <section v-if="completedQuests.length" class="quest-section" data-testid="quests-completed-section">
-      <div class="section-heading">
-        <p class="eyebrow">{{ t('quests.sections.completedEyebrow') }}</p>
-        <h2>{{ t('quests.sections.completedTitle') }}</h2>
-      </div>
-      <div class="card-grid compact-grid">
-        <QuestCard
-          v-for="quest in completedQuests"
-          :key="quest.id"
-          :quest="quest"
-          :button-label="questStore.buttonLabel(quest, authStore.user?.id)"
-          :disabled="questStore.buttonDisabled(quest, authStore.user?.id)"
-          variant="completed"
-          @action="questStore.primaryAction"
-        />
-      </div>
-    </section>
+    <QuestSection
+      v-if="completedQuests.length"
+      :quests="completedQuests"
+      :eyebrow="t('quests.sections.completedEyebrow')"
+      :title="t('quests.sections.completedTitle')"
+      :current-user-id="authStore.user?.id"
+      :loading="questStore.loading"
+      variant="completed"
+      grid-class="compact-grid"
+      test-id="quests-completed-section"
+      @action="questStore.primaryAction"
+    />
   </div>
 </template>

@@ -85,6 +85,13 @@ test('know me marks missing question and first two answers', async ({ browser })
   await expectRequiredFeedback(page.getByTestId('know-me-question-input'));
   await expectRequiredFeedback(page.getByTestId('know-me-option-0'));
   await expectRequiredFeedback(page.getByTestId('know-me-option-1'));
+  await expect
+    .poll(async () => {
+      const optionOneHeight = await page.getByTestId('know-me-option-1').evaluate((element) => element.closest('label')?.getBoundingClientRect().height ?? 0);
+      const optionTwoHeight = await page.getByTestId('know-me-option-2').evaluate((element) => element.closest('label')?.getBoundingClientRect().height ?? 0);
+      return optionOneHeight <= optionTwoHeight + 2;
+    })
+    .toBe(true);
   await expect(page.getByTestId('know-me-own-card')).toHaveCount(0);
 
   await context.close();

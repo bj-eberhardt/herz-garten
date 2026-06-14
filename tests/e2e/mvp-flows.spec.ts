@@ -1,5 +1,6 @@
 import { expect, test, type APIRequestContext, type Browser, type Page } from '@playwright/test';
-import { apiGet, apiPost, authenticatePage, setupCoupleByApi } from './helpers/api';
+import { apiGet, apiPatchRaw, apiPost, authenticatePage, setupCoupleByApi } from './helpers/api';
+import { expectJson } from './helpers/apiAssertions';
 import { testRunId, testUser } from './helpers/testUsers';
 
 const apiBaseURL = process.env.E2E_API_URL ?? 'http://localhost:3001';
@@ -34,6 +35,12 @@ async function apiGetRaw(request: APIRequestContext, path: string, token: string
   return request.get(`${apiBaseURL}${path}`, {
     headers: { Authorization: `Bearer ${token}`, ...headers },
   });
+}
+
+async function adminLogin(request: APIRequestContext) {
+  const response = await request.post(`${apiBaseURL}/api/admin/auth/login`, { data: { password: 'admin' } });
+  const payload = await expectJson<{ token: string }>(response);
+  return payload.token;
 }
 
 test('daily question reveal creates notifications and a garden detail', async ({ browser, request }) => {
@@ -252,6 +259,148 @@ test('know me catalog suggestions can be selected and are hidden per author afte
 
   await contextA.close();
   await contextB.close();
+});
+
+test('know me catalog suggestions use backend taxonomy order and filter in the UI', async ({ browser, request }) => {
+  const runId = testRunId().replaceAll('-', '_');
+  const adminToken = await adminLogin(request);
+  const relationshipValue = `km_rel_${runId}`;
+  const styleValue = `km_style_${runId}`;
+  const preferredCategory = `km_preferred_${runId}`;
+  const neutralCategory = `km_neutral_${runId}`;
+  const preferredQuestion = `Taxonomy Preferred Alpha ${runId}`;
+  const neutralQuestion = `Taxonomy Neutral Beta ${runId}`;
+
+  await expectJson(
+    await apiPostRaw(
+      request,
+      '/api/admin/relationship-modes',
+      {
+        value: relationshipValue,
+        label: `KM Relationship ${runId}`,
+        active: true,
+        sortOrder: 1,
+      },
+      adminToken,
+    ),
+    201,
+  );
+  await expectJson(
+    await apiPostRaw(
+      request,
+      '/api/admin/content-styles',
+      {
+        value: styleValue,
+        label: `KM Style ${runId}`,
+        active: true,
+        sortOrder: 1,
+      },
+      adminToken,
+    ),
+    201,
+  );
+  await expectJson(
+    await apiPostRaw(
+      request,
+      '/api/admin/categories',
+      {
+        contentType: 'know-me-catalog',
+        value: preferredCategory,
+        label: `KM Preferred ${runId}`,
+        active: true,
+        sortOrder: 99,
+        relationshipModes: [relationshipValue],
+        contentStyles: [styleValue],
+      },
+      adminToken,
+    ),
+    201,
+  );
+  await expectJson(
+    await apiPostRaw(
+      request,
+      '/api/admin/categories',
+      {
+        contentType: 'know-me-catalog',
+        value: neutralCategory,
+        label: `KM Neutral ${runId}`,
+        active: true,
+        sortOrder: 1,
+      },
+      adminToken,
+    ),
+    201,
+  );
+  await expectJson(
+    await apiPostRaw(
+      request,
+      '/api/admin/content/know-me-catalog',
+      {
+        questionText: preferredQuestion,
+        category: preferredCategory,
+        active: true,
+        sortOrder: 99,
+      },
+      adminToken,
+    ),
+    201,
+  );
+  await expectJson(
+    await apiPostRaw(
+      request,
+      '/api/admin/content/know-me-catalog',
+      {
+        questionText: neutralQuestion,
+        category: neutralCategory,
+        active: true,
+        sortOrder: 1,
+      },
+      adminToken,
+    ),
+    201,
+  );
+
+  const setup = await setupCoupleByApi(
+    request,
+    testUser('knowme-taxonomy-a', runId),
+    testUser('knowme-taxonomy-b', runId),
+  );
+  const couples = await apiGet<{ items: Array<{ id: string; inviteCode: string }> }>(
+    request,
+    `/api/admin/couples?search=${setup.inviteCode}`,
+    adminToken,
+  );
+  const coupleId = couples.items[0].id;
+  await expectJson(
+    await apiPatchRaw(
+      request,
+      `/api/admin/couples/${coupleId}/preferences`,
+      { relationshipType: relationshipValue, contentPreference: styleValue },
+      adminToken,
+    ),
+  );
+
+  const apiPayload = await apiGet<{
+    catalogQuestions: Array<{ questionText: string }>;
+  }>(request, '/api/know-me', setup.partnerA.token);
+  expect(apiPayload.catalogQuestions.findIndex((question) => question.questionText === preferredQuestion)).toBeLessThan(
+    apiPayload.catalogQuestions.findIndex((question) => question.questionText === neutralQuestion),
+  );
+
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await authenticatePage(context, page, setup.partnerA.token);
+  await page.goto('/know-me');
+  await page.getByTestId('know-me-question-input').click();
+  await expect(page.getByTestId('know-me-catalog-suggestions')).toBeVisible();
+  await expect(page.getByTestId('know-me-catalog-suggestion').first()).toContainText(preferredQuestion);
+
+  await page.getByTestId('know-me-question-input').fill(`Neutral Beta ${runId}`);
+  await expect(page.getByTestId('know-me-catalog-suggestion')).toHaveCount(1);
+  await expect(page.getByTestId('know-me-catalog-suggestion').first()).toContainText(neutralQuestion);
+  await expect(page.getByTestId('know-me-catalog-suggestion').filter({ hasText: preferredQuestion })).toHaveCount(0);
+
+  await context.close();
 });
 
 test('know me wrong guess is resolved without garden reward', async ({ browser, request }) => {
