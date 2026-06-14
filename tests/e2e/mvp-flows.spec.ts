@@ -351,6 +351,9 @@ test('notifications can be opened and marked read', async ({ browser, request })
   await expect(pageB.getByTestId('notification-badge')).toBeVisible();
   await pageB.getByTestId('nav-notifications').click();
   await pageB.getByTestId('notification-item').first().click();
+  await expect(pageB.getByTestId('notification-detail')).toBeVisible();
+  await expect(pageB.getByTestId('notification-badge')).toBeHidden();
+  await pageB.getByTestId('notification-detail-cta').click();
   await expect(pageB).toHaveURL(/\/love-jar$/);
 
   await pageA.goto('/memories');

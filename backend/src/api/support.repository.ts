@@ -1049,6 +1049,77 @@ export async function buildNotificationPayload(userId: string) {
   };
 }
 
+function routeForNotification(notification: NotificationRow) {
+  if (notification.sourceType === 'account_deletion') return '/onboarding';
+  if (notification.type === 'daily_revealed' || notification.type === 'quest_completed') return '/garden';
+  if (notification.sourceType === 'today') return '/today';
+  if (notification.sourceType === 'quest') return '/quests';
+  if (notification.sourceType === 'love_jar') return '/love-jar';
+  if (notification.sourceType === 'know_me') return '/know-me';
+  if (notification.sourceType === 'memory') return '/memories';
+  return '/garden';
+}
+
+function gardenSourceTypeForNotification(notification: NotificationRow) {
+  if (notification.sourceType === 'today' && notification.type === 'daily_revealed') return 'question';
+  if (notification.sourceType === 'quest') return 'quest';
+  if (notification.sourceType === 'love_jar') return 'love_jar';
+  if (notification.sourceType === 'know_me') return 'know_me';
+  if (notification.sourceType === 'memory') return 'memory';
+  return '';
+}
+
+export async function buildNotificationDetailPayload(userId: string, notificationId: string, locale = 'de') {
+  const notificationResult = await pool.query<NotificationRow>(
+    `
+      select
+        id,
+        couple_id as "coupleId",
+        user_id as "userId",
+        type,
+        title,
+        body,
+        title_key as "titleKey",
+        body_key as "bodyKey",
+        params,
+        source_type as "sourceType",
+        source_id as "sourceId",
+        read_at as "readAt",
+        created_at as "createdAt"
+      from notifications
+      where id = $1 and user_id = $2
+    `,
+    [notificationId, userId],
+  );
+  const notification = notificationResult.rows[0];
+  if (!notification) return null;
+
+  let gardenDetail: Awaited<ReturnType<typeof buildGardenObjectDetail>> | null = null;
+  const gardenSourceType = gardenSourceTypeForNotification(notification);
+  if (notification.coupleId && notification.sourceId && gardenSourceType) {
+    const objectResult = await pool.query<{ id: string }>(
+      `
+        select id
+        from garden_objects
+        where couple_id = $1 and source_type = $2 and source_id = $3
+        order by created_at desc
+        limit 1
+      `,
+      [notification.coupleId, gardenSourceType, notification.sourceId],
+    );
+    const objectId = objectResult.rows[0]?.id;
+    if (objectId) {
+      gardenDetail = await buildGardenObjectDetail(userId, objectId, locale);
+    }
+  }
+
+  return {
+    notification: mapNotification(notification),
+    targetRoute: routeForNotification(notification),
+    gardenDetail,
+  };
+}
+
 export async function buildMemoryPayload(userId: string, locale = 'de') {
   const couple = await getCurrentCouple(userId);
   if (!couple) {

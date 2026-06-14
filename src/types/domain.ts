@@ -212,6 +212,16 @@ export interface NotificationItem {
   createdAt: string;
 }
 
+export interface NotificationDetailPayload {
+  notification: NotificationItem;
+  targetRoute: string;
+  gardenDetail: {
+    couple: Couple;
+    object: GardenObject | null;
+    source: Record<string, unknown> | null;
+  } | null;
+}
+
 export interface KnowMeGuess {
   id: string;
   userId: string;

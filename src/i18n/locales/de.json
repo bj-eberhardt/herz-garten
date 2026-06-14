@@ -345,7 +345,7 @@
     "empty": "Noch keine Hinweise. Sobald im Paarraum etwas auf dich wartet, erscheint es hier.",
     "titles": {
       "dailyAnswerWaiting": "Antwort wartet",
-      "dailyRevealed": "Eure Antworten sind sichtbar",
+      "dailyRevealed": "Tagesfrage freigeschaltet",
       "questWaitingConfirmation": "Quest wartet auf dich",
       "questCompleted": "Quest abgeschlossen",
       "loveJarNote": "Ein neuer Zettel wartet",
@@ -357,7 +357,7 @@
     },
     "bodies": {
       "dailyAnswerWaiting": "{name} hat die Tagesfrage beantwortet. Jetzt fehlst noch du.",
-      "dailyRevealed": "Ihr habt beide geantwortet. Eine neue Blume ist gewachsen.",
+      "dailyRevealed": "Ihr habt beide die Tagesfrage beantwortet. Eure Antworten sind sichtbar und eine neue Blume ist gewachsen.",
       "questWaitingConfirmation": "{name} hat \"{title}\" bestätigt. Wenn es für dich auch passt, kannst du sie abschließen.",
       "questCompleted": "Eure Quest \"{title}\" hat euren Garten wachsen lassen.",
       "loveJarNote": "{name} hat etwas in euren Love Jar gelegt.",
@@ -366,6 +366,38 @@
       "knowMeAnsweredHit": "{name} hat dich richtig eingeschätzt. Eine besondere Blume ist gewachsen.",
       "knowMeAnsweredMiss": "{name} hat geraten. Nicht getroffen, aber ein neuer Gesprächsanlass.",
       "coupleDisconnected": "{name} hat das Konto gelöscht. Eure Paarung wurde deshalb getrennt. Du kannst dich jetzt neu paaren."
+    },
+    "states": {
+      "unread": "Ungelesen",
+      "read": "Gelesen",
+      "actionNeeded": "Aktion nötig",
+      "informational": "Info"
+    },
+    "features": {
+      "today": "Tagesfrage",
+      "quest": "Quest",
+      "loveJar": "Love Jar",
+      "memory": "Moment",
+      "knowMe": "Kennst-du-mich",
+      "account": "Konto",
+      "garden": "Garten"
+    },
+    "actions": {
+      "answer": "Antworten",
+      "checkQuest": "Quest prüfen",
+      "answerQuestion": "Frage beantworten",
+      "viewNote": "Zettel ansehen",
+      "viewGarden": "Im Garten ansehen",
+      "viewMemory": "Zur Erinnerung",
+      "viewGame": "Zum Spiel",
+      "reconnect": "Neu verbinden",
+      "open": "Öffnen"
+    },
+    "detail": {
+      "loading": "Details werden geladen...",
+      "gardenContext": "Dieser Hinweis gehört zu einem Gartenmoment. Die Details stehen direkt darunter.",
+      "noSource": "Für diesen Hinweis sind keine weiteren Quelldaten verfügbar.",
+      "noGardenObject": "Dieser Hinweis führt dich direkt zum passenden Bereich."
     }
   },
   "settings": {
@@ -547,4 +579,3 @@
     ]
   }
 }
-

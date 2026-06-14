@@ -1,38 +1,45 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { Bell, CheckCheck } from '@lucide/vue';
+import { Bell } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
-import { useNotificationStore } from '@/stores/notificationStore';
+import NotificationList from '@/components/notifications/NotificationList.vue';
+import NotificationToolbar from '@/components/notifications/NotificationToolbar.vue';
 import { useAuthStore } from '@/stores/authStore';
+import { useNotificationStore } from '@/stores/notificationStore';
 import type { NotificationItem } from '@/types/domain';
 
 const router = useRouter();
 const notificationStore = useNotificationStore();
 const authStore = useAuthStore();
 const { t } = useI18n();
+const activeNotificationId = ref('');
 
 onMounted(() => {
   notificationStore.loadNotifications();
 });
 
-async function openNotification(notification: NotificationItem) {
+async function toggleNotification(notification: NotificationItem) {
+  if (activeNotificationId.value === notification.id) {
+    activeNotificationId.value = '';
+    return;
+  }
+
+  activeNotificationId.value = notification.id;
+  await notificationStore.loadDetail(notification.id);
+
   if (!notification.readAt) {
     await notificationStore.markRead(notification.id);
   }
   if (notification.sourceType === 'account_deletion') {
     await authStore.refreshMe();
   }
-  await router.push(notificationStore.targetRoute(notification));
 }
 
-function notificationTitle(notification: NotificationItem) {
-  return notification.titleKey ? t(notification.titleKey, notification.params ?? {}) : notification.title;
-}
-
-function notificationBody(notification: NotificationItem) {
-  return notification.bodyKey ? t(notification.bodyKey, notification.params ?? {}) : notification.body;
+async function navigateToNotification(notification: NotificationItem) {
+  const targetRoute = notificationStore.details[notification.id]?.targetRoute ?? notificationStore.targetRoute(notification);
+  await router.push(targetRoute);
 }
 </script>
 
@@ -45,22 +52,11 @@ function notificationBody(notification: NotificationItem) {
 
     <FeatureExplainer feature-key="notifications" :icon="Bell" :title="t('notifications.howTitle')" :text="t('notifications.howText')" />
 
-    <section class="panel notification-toolbar">
-      <div>
-        <h2>{{ t('notifications.unread', notificationStore.unreadCount, { named: { count: notificationStore.unreadCount } }) }}</h2>
-        <p class="muted">{{ t('notifications.hint') }}</p>
-      </div>
-      <button
-        class="secondary-button inline-button"
-        type="button"
-        :disabled="notificationStore.loading || notificationStore.unreadCount === 0"
-        data-testid="notifications-read-all"
-        @click="notificationStore.markAllRead"
-      >
-        <CheckCheck :size="18" aria-hidden="true" />
-        {{ t('notifications.readAll') }}
-      </button>
-    </section>
+    <NotificationToolbar
+      :unread-count="notificationStore.unreadCount"
+      :loading="notificationStore.loading"
+      @read-all="notificationStore.markAllRead"
+    />
 
     <p v-if="notificationStore.error" class="form-error">{{ notificationStore.error }}</p>
     <p v-if="notificationStore.loading" class="muted">{{ t('notifications.loading') }}</p>
@@ -69,22 +65,15 @@ function notificationBody(notification: NotificationItem) {
       {{ t('notifications.empty') }}
     </section>
 
-    <section v-else class="notification-list">
-      <button
-        v-for="notification in notificationStore.notifications"
-        :key="notification.id"
-        class="notification-item"
-        :class="{ unread: !notification.readAt }"
-        type="button"
-        data-testid="notification-item"
-        @click="openNotification(notification)"
-      >
-        <Bell :size="18" aria-hidden="true" />
-        <span>
-          <strong>{{ notificationTitle(notification) }}</strong>
-          <small>{{ notificationBody(notification) }}</small>
-        </span>
-      </button>
-    </section>
+    <NotificationList
+      v-else
+      :notifications="notificationStore.notifications"
+      :active-notification-id="activeNotificationId"
+      :details="notificationStore.details"
+      :detail-loading-id="notificationStore.detailLoadingId"
+      :detail-error="notificationStore.detailError"
+      @toggle="toggleNotification"
+      @navigate="navigateToNotification"
+    />
   </div>
 </template>

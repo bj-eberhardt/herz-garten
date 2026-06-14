@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { apiGetRaw, apiPostRaw, registerByApi, setupCoupleByApi } from '../helpers/api';
+import { apiDeleteRaw, apiGetRaw, apiPostRaw, registerByApi, setupCoupleByApi } from '../helpers/api';
 import {
   expectApiError,
   expectJson,
   expectNotificationsPayload,
   type NotificationsPayload,
 } from '../helpers/apiAssertions';
+import type { NotificationDetailPayload } from '../../../src/types/domain';
 import { testRunId, testUser } from '../helpers/testUsers';
 
 test.describe('notifications api', () => {
@@ -43,6 +44,53 @@ test.describe('notifications api', () => {
     );
     expectNotificationsPayload(readOne);
     expect(readOne.notifications.find((item) => item.id === notification!.id)?.readAt).toEqual(expect.any(String));
+  });
+
+  test('returns notification details for garden and fallback sources', async ({ request }) => {
+    const runId = testRunId();
+    const { partnerA, partnerB } = await setupCoupleByApi(
+      request,
+      testUser('api-notifications-detail-a', runId),
+      testUser('api-notifications-detail-b', runId),
+    );
+
+    await expectJson(
+      await apiPostRaw(request, '/api/memories', { title: 'Detail moment', description: 'Source detail', date: '2026-06-09' }, partnerA.token),
+      201,
+    );
+
+    const listed = await expectJson<NotificationsPayload>(await apiGetRaw(request, '/api/notifications', partnerB.token));
+    const memoryNotification = listed.notifications.find((item) => item.type === 'memory_created');
+    expect(memoryNotification).toBeTruthy();
+
+    const detail = await expectJson<NotificationDetailPayload>(
+      await apiGetRaw(request, `/api/notifications/${memoryNotification!.id}/detail`, partnerB.token),
+    );
+    expect(detail.notification.id).toBe(memoryNotification!.id);
+    expect(detail.targetRoute).toBe('/memories');
+    expect(detail.gardenDetail).toEqual(
+      expect.objectContaining({
+        object: expect.objectContaining({ sourceType: 'memory', sourceId: memoryNotification!.sourceId }),
+        source: expect.objectContaining({ type: 'memory', title: 'Detail moment' }),
+      }),
+    );
+
+    await expectApiError(
+      await apiGetRaw(request, `/api/notifications/${memoryNotification!.id}/detail`, partnerA.token),
+      404,
+      'notification.notFound',
+    );
+
+    await apiDeleteRaw(request, '/api/me', partnerA.token);
+    const afterDelete = await expectJson<NotificationsPayload>(await apiGetRaw(request, '/api/notifications', partnerB.token));
+    const accountNotification = afterDelete.notifications.find((item) => item.type === 'couple_disconnected');
+    expect(accountNotification).toBeTruthy();
+
+    const accountDetail = await expectJson<NotificationDetailPayload>(
+      await apiGetRaw(request, `/api/notifications/${accountNotification!.id}/detail`, partnerB.token),
+    );
+    expect(accountDetail.targetRoute).toBe('/onboarding');
+    expect(accountDetail.gardenDetail).toBeNull();
   });
 
   test('marks all notifications read', async ({ request }) => {

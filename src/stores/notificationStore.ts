@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { apiRequest } from '@/services/api';
 import { localizeApiError } from '@/services/errorMessages';
-import type { NotificationItem } from '@/types/domain';
+import type { NotificationDetailPayload, NotificationItem } from '@/types/domain';
 
 interface NotificationPayload {
   notifications: NotificationItem[];
@@ -10,6 +10,7 @@ interface NotificationPayload {
 
 function routeForNotification(notification: NotificationItem) {
   if (notification.sourceType === 'account_deletion') return '/onboarding';
+  if (notification.type === 'daily_revealed' || notification.type === 'quest_completed') return '/garden';
   if (notification.sourceType === 'today') return '/today';
   if (notification.sourceType === 'quest') return '/quests';
   if (notification.sourceType === 'love_jar') return '/love-jar';
@@ -21,6 +22,9 @@ function routeForNotification(notification: NotificationItem) {
 export const useNotificationStore = defineStore('notifications', {
   state: () => ({
     notifications: [] as NotificationItem[],
+    details: {} as Record<string, NotificationDetailPayload>,
+    detailLoadingId: '',
+    detailError: '',
     unreadCount: 0,
     loading: false,
     error: '',
@@ -57,6 +61,24 @@ export const useNotificationStore = defineStore('notifications', {
           method: 'POST',
         }),
       );
+    },
+    async loadDetail(notificationId: string) {
+      if (this.details[notificationId]) return this.details[notificationId];
+
+      this.detailLoadingId = notificationId;
+      this.detailError = '';
+      try {
+        const detail = await apiRequest<NotificationDetailPayload>(`/api/notifications/${notificationId}/detail`);
+        this.details[notificationId] = detail;
+        return detail;
+      } catch (error) {
+        this.detailError = localizeApiError(error, 'errors.fallback.notificationsLoad');
+        throw error;
+      } finally {
+        if (this.detailLoadingId === notificationId) {
+          this.detailLoadingId = '';
+        }
+      }
     },
     targetRoute(notification: NotificationItem) {
       return routeForNotification(notification);
