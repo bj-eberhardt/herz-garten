@@ -43,19 +43,21 @@ export async function acceptQuestForCouple(coupleId: string, questId: string) {
   );
 }
 
-export async function findActiveQuestForCompletion(client: Queryable, questId: string) {
+export async function findActiveQuestForCompletion(client: Queryable, questId: string, locale = 'de') {
   const result = await client.query<ActiveQuestForCompletion>(
     `
       select
-        id,
-        title,
-        category,
-        reward_points as "rewardPoints",
-        requires_both_partners as "requiresBothPartners"
-      from quests
-      where id = $1 and coalesce(active, true) = true
+        q.id,
+        coalesce(requested.title, fallback.title, q.title) as title,
+        q.category,
+        q.reward_points as "rewardPoints",
+        q.requires_both_partners as "requiresBothPartners"
+      from quests q
+      left join quest_translations requested on requested.quest_id = q.id and requested.locale = $2
+      left join quest_translations fallback on fallback.quest_id = q.id and fallback.locale = 'de'
+      where q.id = $1 and coalesce(q.active, true) = true
     `,
-    [questId],
+    [questId, locale],
   );
   return result.rows[0] ?? null;
 }

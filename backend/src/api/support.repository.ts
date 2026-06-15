@@ -1670,7 +1670,7 @@ export async function createLoveJarLight(client: Queryable, coupleId: string, no
       insert into garden_objects (
         id, couple_id, type, source_type, source_id, label, area_key, asset_key, position_x, position_y, z_index, reward_points, level
       )
-      values ($1, $2, 'light', 'love_jar', $3, 'Love-Jar-Licht', $4, $5, $6, $7, $8, 5, 1)
+      values ($1, $2, 'light', 'love_jar', $3, 'Liebesglas-Licht', $4, $5, $6, $7, $8, 5, 1)
       on conflict do nothing
     `,
     [randomUUID(), coupleId, noteId, areaKey, assetKey, placement.positionX, placement.positionY, placement.zIndex],

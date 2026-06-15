@@ -25,6 +25,11 @@ const AdminUsersView = () => import('@/admin/views/AdminUsersView.vue');
 
 const router = createRouter({
   history: createWebHistory(),
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition;
+    if (to.fullPath !== from.fullPath) return { top: 0, left: 0 };
+    return false;
+  },
   routes: [
     { path: '/', redirect: '/today' },
     { path: '/onboarding', name: 'onboarding', component: OnboardingView },

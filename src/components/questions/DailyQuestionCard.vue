@@ -32,7 +32,7 @@ async function submitAnswer() {
       </p>
     </div>
 
-    <p v-else-if="dailyQuestionStore.answeredByCurrentUser" class="muted" data-testid="today-waiting-status">
+    <p v-else-if="dailyQuestionStore.answeredByCurrentUser" class="success-note" data-testid="today-waiting-status">
       {{ t('today.waitingStatus') }}
     </p>
 

@@ -1,0 +1,1 @@
+export const FIELD_SUCCESS_VISIBLE_MS = 5000;

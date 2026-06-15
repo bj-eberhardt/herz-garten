@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import { Plus } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import KnowMeCatalogCombobox from '@/components/knowMe/KnowMeCatalogCombobox.vue';
 import KnowMeOptionFields from '@/components/knowMe/KnowMeOptionFields.vue';
+import { FIELD_SUCCESS_VISIBLE_MS } from '@/constants/timing';
 import { useKnowMeStore } from '@/stores/knowMeStore';
 
 const knowMeStore = useKnowMeStore();
@@ -12,6 +13,8 @@ const questionText = ref('');
 const selectedCatalogQuestionId = ref<string | null>(null);
 const options = ref(['', '', '', '']);
 const createSubmitAttempted = ref(false);
+const successMessage = ref('');
+let successTimeout: ReturnType<typeof window.setTimeout> | undefined;
 
 const filledOptions = computed(() => options.value.map((option) => option.trim()).filter(Boolean));
 const canCreate = computed(
@@ -24,17 +27,31 @@ const canCreate = computed(
 async function submitRound() {
   createSubmitAttempted.value = true;
   if (!canCreate.value) return;
-  await knowMeStore.createRound({
-    questionText: questionText.value.trim(),
-    options: filledOptions.value,
-    correctOptionIndex: 0,
-    catalogQuestionId: selectedCatalogQuestionId.value,
-  });
+  try {
+    await knowMeStore.createRound({
+      questionText: questionText.value.trim(),
+      options: filledOptions.value,
+      correctOptionIndex: 0,
+      catalogQuestionId: selectedCatalogQuestionId.value,
+    });
+  } catch {
+    return;
+  }
   questionText.value = '';
   selectedCatalogQuestionId.value = null;
   options.value = ['', '', '', ''];
   createSubmitAttempted.value = false;
+  successMessage.value = t('knowMe.createSuccess');
+  if (successTimeout) window.clearTimeout(successTimeout);
+  successTimeout = window.setTimeout(() => {
+    successMessage.value = '';
+    successTimeout = undefined;
+  }, FIELD_SUCCESS_VISIBLE_MS);
 }
+
+onBeforeUnmount(() => {
+  if (successTimeout) window.clearTimeout(successTimeout);
+});
 </script>
 
 <template>
@@ -67,5 +84,6 @@ async function submitRound() {
       <Plus :size="18" aria-hidden="true" />
       {{ t('knowMe.sendQuestion') }}
     </button>
+    <p v-if="successMessage" class="success-note" data-testid="know-me-create-success">{{ successMessage }}</p>
   </form>
 </template>

@@ -62,7 +62,7 @@ export const gardenAssets = [
   },
   {
     key: 'warm_lantern',
-    label: 'Love-Jar-Licht',
+    label: 'Liebesglas-Licht',
     objectType: 'light',
     sourceTypes: ['love_jar', 'quest'],
     stageUnlock: 5,

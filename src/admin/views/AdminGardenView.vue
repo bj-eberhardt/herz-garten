@@ -212,6 +212,10 @@ onMounted(async () => {
         </div>
       </section>
 
+      <p v-if="!form.id" class="admin-warning" data-testid="admin-garden-level-asset-warning">
+        {{ t('admin.garden.assetWarning') }}
+      </p>
+
       <button class="primary-button" type="button" :disabled="saving" data-testid="admin-garden-level-save" @click="saveLevel">
         <Save :size="18" aria-hidden="true" />
         {{ saving ? t('admin.common.saving') : t('admin.common.save') }}

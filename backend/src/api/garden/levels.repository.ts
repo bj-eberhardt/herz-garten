@@ -76,14 +76,6 @@ export function calculateGardenStage(points: number, levels: Array<{ stage: numb
   return stage;
 }
 
-function highestAreaKeyForStage(stage: number) {
-  return (
-    gardenAreas
-      .filter((area) => area.stageUnlock <= Math.max(1, stage))
-      .sort((left, right) => right.stageUnlock - left.stageUnlock)[0]?.key ?? fallbackAreaKey
-  );
-}
-
 export async function listGardenLevels(locale = 'de', client: Queryable = pool) {
   const result = await client.query(
     `
@@ -170,50 +162,88 @@ async function upsertTranslations(client: Queryable, levelId: string, translatio
 }
 
 async function recalculateCoupleStages(client: Queryable, levels: GardenLevelRow[]) {
-  const couplesResult = await client.query<{ id: string; heartPoints: number }>('select id, heart_points as "heartPoints" from couples');
-  for (const couple of couplesResult.rows) {
-    const stage = calculateGardenStage(Number(couple.heartPoints ?? 0), levels);
-    await client.query('update couples set garden_stage = $2 where id = $1', [couple.id, stage]);
-  }
+  const levelThresholds = JSON.stringify(levels.map((level) => ({ stage: level.stage, minimum_points: level.minimumPoints })));
+  await client.query(
+    `
+      with level_thresholds as (
+        select stage, minimum_points
+        from json_to_recordset($1::json) as level_thresholds(stage int, minimum_points int)
+      )
+      update couples c
+      set garden_stage = coalesce(
+        (
+          select max(stage)
+          from level_thresholds
+          where minimum_points <= greatest(0, floor(coalesce(c.heart_points, 0)))::int
+        ),
+        1
+      )
+    `,
+    [levelThresholds],
+  );
 }
 
 async function rebalanceGardenObjects(client: Queryable, levels: GardenLevelRow[]) {
-  const objectsResult = await client.query<{
-    id: string;
-    coupleId: string;
-    rewardPoints: number | string | null;
-  }>(
+  const levelThresholds = JSON.stringify(levels.map((level) => ({ stage: level.stage, minimum_points: level.minimumPoints })));
+  const areaThresholds = JSON.stringify(gardenAreas.map((area) => ({ stage_unlock: area.stageUnlock, area_key: area.key })));
+
+  await client.query(
     `
-      select
-        id,
-        couple_id as "coupleId",
-        reward_points as "rewardPoints"
-      from garden_objects
-      order by couple_id, created_at, id
+      with level_thresholds as (
+        select stage, minimum_points
+        from json_to_recordset($1::json) as level_thresholds(stage int, minimum_points int)
+      ),
+      area_thresholds as (
+        select stage_unlock, area_key
+        from json_to_recordset($2::json) as area_thresholds(stage_unlock int, area_key text)
+      ),
+      object_points as (
+        select
+          id,
+          sum(greatest(0, coalesce(reward_points, 0))) over (
+            partition by couple_id
+            order by created_at, id
+            rows between unbounded preceding and current row
+          ) as running_points
+        from garden_objects
+      ),
+      object_stages as (
+        select
+          object_points.id,
+          coalesce(
+            (
+              select max(stage)
+              from level_thresholds
+              where minimum_points <= object_points.running_points
+            ),
+            1
+          ) as target_stage
+        from object_points
+      ),
+      object_areas as (
+        select
+          object_stages.id,
+          coalesce(
+            (
+              select area_key
+              from area_thresholds
+              where stage_unlock <= greatest(1, object_stages.target_stage)
+              order by stage_unlock desc
+              limit 1
+            ),
+            $3
+          ) as target_area_key
+        from object_stages
+      )
+      update garden_objects go
+      set
+        area_key = object_areas.target_area_key,
+        placed_by_user = false
+      from object_areas
+      where go.id = object_areas.id
     `,
+    [levelThresholds, areaThresholds, fallbackAreaKey],
   );
-
-  let currentCoupleId = '';
-  let runningPoints = 0;
-  for (const object of objectsResult.rows) {
-    if (object.coupleId !== currentCoupleId) {
-      currentCoupleId = object.coupleId;
-      runningPoints = 0;
-    }
-
-    runningPoints += Math.max(0, Number(object.rewardPoints ?? 0));
-    const targetStage = calculateGardenStage(runningPoints, levels);
-    const targetAreaKey = highestAreaKeyForStage(targetStage);
-    await client.query(
-      `
-        update garden_objects
-        set area_key = $2,
-            placed_by_user = false
-        where id = $1
-      `,
-      [object.id, targetAreaKey],
-    );
-  }
 }
 
 async function recalculateGardens(client: Queryable) {

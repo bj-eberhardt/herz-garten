@@ -8,13 +8,13 @@ import FeatureExplainerSettingsPanel from '@/components/settings/FeatureExplaine
 import PrivacyDetailsPanel from '@/components/settings/PrivacyDetailsPanel.vue';
 import ProfileSettingsPanel from '@/components/settings/ProfileSettingsPanel.vue';
 import SettingsConfirmDialog from '@/components/settings/SettingsConfirmDialog.vue';
+import { FIELD_SUCCESS_VISIBLE_MS } from '@/constants/timing';
 import { featureExplainerKeys, useAuthStore } from '@/stores/authStore';
 import { localizeApiError } from '@/services/errorMessages';
 import type { FeatureExplainerKey } from '@/types/domain';
 
 type ProfileField = 'displayName' | 'email' | 'password';
 type ConfirmAction = 'leaveCouple' | 'deleteAccount';
-const FIELD_SUCCESS_VISIBLE_MS = 5000;
 
 const router = useRouter();
 const authStore = useAuthStore();

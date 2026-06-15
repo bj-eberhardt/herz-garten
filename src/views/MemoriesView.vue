@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Plus, Images } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
 import MemoryTimeline from '@/components/memories/MemoryTimeline.vue';
+import { FIELD_SUCCESS_VISIBLE_MS } from '@/constants/timing';
 import type { MemoryCategory } from '@/types/domain';
 import { useMemoryStore } from '@/stores/memoryStore';
 
@@ -14,6 +15,8 @@ const description = ref('');
 const date = ref(new Date().toISOString().slice(0, 10));
 const category = ref<MemoryCategory>('everyday');
 const submitAttempted = ref(false);
+const successMessage = ref('');
+let successTimeout: ReturnType<typeof window.setTimeout> | undefined;
 const fallbackCategories = computed(() => [
   { value: 'everyday', label: t('memories.categories.everyday') },
   { value: 'date', label: t('memories.categories.date') },
@@ -25,17 +28,27 @@ const fallbackCategories = computed(() => [
 const categoryOptions = computed(() => (memoryStore.categories.length ? memoryStore.categories : fallbackCategories.value));
 
 async function submitMemory() {
-  await memoryStore.addMemory({
-    title: title.value,
-    description: description.value,
-    date: date.value,
-    category: category.value,
-  });
+  try {
+    await memoryStore.addMemory({
+      title: title.value,
+      description: description.value,
+      date: date.value,
+      category: category.value,
+    });
+  } catch {
+    return;
+  }
   title.value = '';
   description.value = '';
   date.value = new Date().toISOString().slice(0, 10);
   category.value = 'everyday';
   submitAttempted.value = false;
+  successMessage.value = t('memories.saveSuccess');
+  if (successTimeout) window.clearTimeout(successTimeout);
+  successTimeout = window.setTimeout(() => {
+    successMessage.value = '';
+    successTimeout = undefined;
+  }, FIELD_SUCCESS_VISIBLE_MS);
 }
 
 onMounted(() => {
@@ -46,6 +59,10 @@ watch(categoryOptions, (options) => {
   if (options.length && !options.some((option) => option.value === category.value)) {
     category.value = options[0].value;
   }
+});
+
+onBeforeUnmount(() => {
+  if (successTimeout) window.clearTimeout(successTimeout);
 });
 </script>
 
@@ -81,6 +98,7 @@ watch(categoryOptions, (options) => {
         <Plus :size="18" aria-hidden="true" />
         {{ memoryStore.loading ? t('common.saving') : t('common.save') }}
       </button>
+      <p v-if="successMessage" class="success-note" data-testid="memory-save-success">{{ successMessage }}</p>
     </form>
 
     <p v-if="!memoryStore.loading && memoryStore.memories.length === 0" class="muted" data-testid="memory-empty">{{ t('memories.empty') }}</p>

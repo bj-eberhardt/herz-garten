@@ -38,6 +38,7 @@ const canScrollLeft = ref(false);
 const canScrollRight = ref(false);
 const scrollDrag = ref<{ pointerId: number; startX: number; startLeft: number; dragged: boolean } | null>(null);
 const suppressClickAfterScrollDrag = ref(false);
+const hasAutoScrolledToLatestArea = ref(false);
 
 const assetByKey = computed(() => new Map(props.assets.map((asset) => [asset.key, asset])));
 const unlockedAreas = computed(() => props.areas.filter((area) => area.stageUnlock <= props.gardenStage));
@@ -85,6 +86,14 @@ function scrollToArea(areaKey: GardenAreaKey) {
   const area = props.areas.find((item) => item.key === areaKey);
   if (!viewport.value || !area) return;
   viewport.value.scrollTo({ left: Math.max(0, area.startX - 24), behavior: 'smooth' });
+}
+
+function scrollToLatestUnlockedArea() {
+  if (hasAutoScrolledToLatestArea.value || !viewport.value || !unlockedAreas.value.length) return;
+  const latestArea = unlockedAreas.value[unlockedAreas.value.length - 1];
+  viewport.value.scrollTo({ left: Math.max(0, latestArea.startX - 24), behavior: 'auto' });
+  hasAutoScrolledToLatestArea.value = true;
+  window.setTimeout(updateScrollButtons, 0);
 }
 
 function scrollHome() {
@@ -212,8 +221,15 @@ watch(
 
 watch(worldWidth, () => window.setTimeout(updateScrollButtons, 0));
 
+watch(
+  () => [props.areas.length, props.gardenStage],
+  () => window.setTimeout(scrollToLatestUnlockedArea, 0),
+  { immediate: true },
+);
+
 onMounted(() => {
   updateScrollButtons();
+  scrollToLatestUnlockedArea();
   window.addEventListener('resize', updateScrollButtons);
 });
 
@@ -269,6 +285,16 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="garden-scroll-shell" :class="{ 'is-dragging': scrollDrag?.dragged }">
+      <button
+        class="secondary-button inline-button garden-mobile-edit-toggle"
+        :class="{ active: editing }"
+        type="button"
+        data-testid="garden-edit-toggle-mobile"
+        @click="editing = !editing"
+      >
+        <Move :size="18" />
+        {{ editing ? i18n.global.t('garden.toolbar.done') : i18n.global.t('garden.toolbar.edit') }}
+      </button>
       <button
         v-if="canScrollLeft"
         class="garden-scroll-arrow garden-scroll-arrow--left"

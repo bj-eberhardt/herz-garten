@@ -30,7 +30,7 @@ export async function completeQuest(user: { id: string; displayName: string }, q
   if (!couple) return { status: 'notConnected' as const };
 
   const result = await withTransaction(async (client) => {
-    const quest = await findActiveQuestForCompletion(client, questId);
+    const quest = await findActiveQuestForCompletion(client, questId, locale);
     if (!quest) return { status: 'notFound' as const };
 
     const coupleQuestId = (await ensureCoupleQuest(client, couple.id, questId)).id;
