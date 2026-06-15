@@ -215,14 +215,14 @@ export function adminRouter(): Router {
       const key = String(request.params.key);
       const result = await saveMessageTemplate(key, request.body);
       if (result.status === 'notFound') {
-        sendAdminError(response, 404, 'admin.messageTemplateNotFound', 'Message-Template nicht gefunden.');
+        sendAdminError(response, 404, 'admin.messageTemplateNotFound', 'Nachrichtenvorlage nicht gefunden.');
         return;
       }
       await audit('update', 'message-template', null, { key });
       response.json({ items: result.items });
     } catch (error) {
       if (error instanceof MessageTemplateValidationException) {
-        sendAdminError(response, 400, 'admin.messageTemplateInvalid', 'Message-Template ist ungültig.', {
+        sendAdminError(response, 400, 'admin.messageTemplateInvalid', 'Nachrichtenvorlage ist ungültig.', {
           validationErrors: error.errors,
         });
         return;
@@ -266,7 +266,7 @@ export function adminRouter(): Router {
       response.json(payload);
     } catch (error) {
       if (error instanceof Error && error.message === 'garden level not found') {
-        sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Garden-Level nicht gefunden.');
+        sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Gartenstufe nicht gefunden.');
         return;
       }
       if (error instanceof GardenLevelValidationError) {
@@ -282,7 +282,7 @@ export function adminRouter(): Router {
       const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
       const result = await deleteGardenLevel(String(request.params.id), locale);
       if (result.status === 'not_found') {
-        sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Garden-Level nicht gefunden.');
+        sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Gartenstufe nicht gefunden.');
         return;
       }
       if (result.status === 'invalid') {
@@ -374,7 +374,7 @@ export function adminRouter(): Router {
       const type = normalizeText(request.query.type);
       const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
       if (type && !isContentType(type)) {
-        sendAdminError(response, 404, 'content.notFound', 'Content-Typ nicht gefunden.');
+        sendAdminError(response, 404, 'content.notFound', 'Inhaltstyp nicht gefunden.');
         return;
       }
       response.json({ items: await listCategories(type ? (type as ContentType) : undefined, locale) });
@@ -427,7 +427,7 @@ export function adminRouter(): Router {
     try {
       const type = String(request.params.type);
       if (!isEditableContentType(type)) {
-        sendAdminError(response, 404, 'content.notFound', 'Content-Typ nicht gefunden.');
+        sendAdminError(response, 404, 'content.notFound', 'Inhaltstyp nicht gefunden.');
         return;
       }
       response.json({ items: await listContent(type, request) });
@@ -440,14 +440,14 @@ export function adminRouter(): Router {
     try {
       const type = String(request.params.type);
       if (!isEditableContentType(type)) {
-        sendAdminError(response, 404, 'content.notFound', 'Content-Typ nicht gefunden.');
+        sendAdminError(response, 404, 'content.notFound', 'Inhaltstyp nicht gefunden.');
         return;
       }
       const id = await saveContent(type, request.body);
       await audit('create', type, id, { fields: Object.keys(request.body ?? {}) });
       response.status(201).json({ id, items: await listContent(type, request) });
     } catch (error) {
-      sendAdminError(response, 400, 'admin.contentInvalid', 'Content-Daten sind ungültig.');
+      sendAdminError(response, 400, 'admin.contentInvalid', 'Inhaltsdaten sind ungültig.');
     }
   });
 
@@ -455,14 +455,14 @@ export function adminRouter(): Router {
     try {
       const type = String(request.params.type);
       if (!isEditableContentType(type)) {
-        sendAdminError(response, 404, 'content.notFound', 'Content-Typ nicht gefunden.');
+        sendAdminError(response, 404, 'content.notFound', 'Inhaltstyp nicht gefunden.');
         return;
       }
       const id = await saveContent(type, request.body, String(request.params.id));
       await audit('update', type, id, { fields: Object.keys(request.body ?? {}) });
       response.json({ id, items: await listContent(type, request) });
     } catch (error) {
-      sendAdminError(response, 400, 'admin.contentInvalid', 'Content-Daten sind ungültig.');
+      sendAdminError(response, 400, 'admin.contentInvalid', 'Inhaltsdaten sind ungültig.');
     }
   });
 

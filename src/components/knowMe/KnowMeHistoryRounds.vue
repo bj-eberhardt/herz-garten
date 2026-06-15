@@ -18,15 +18,19 @@ function optionLabel(round: KnowMeRound, index?: number | null) {
       <p class="eyebrow">{{ t('knowMe.playedEyebrow') }}</p>
       <h2>{{ t('knowMe.playedTitle') }}</h2>
     </div>
-    <article v-for="round in knowMeStore.answeredRounds" :key="round.id" class="quest-card" data-testid="know-me-history-card">
+    <article v-for="round in knowMeStore.answeredRounds" :key="round.id" class="quest-card know-me-history-card" data-testid="know-me-history-card">
       <p class="eyebrow">{{ round.guess?.isCorrect ? t('knowMe.hit') : t('knowMe.resolved') }}</p>
       <h2>{{ round.questionText }}</h2>
-      <p>
-        <strong>{{ t('knowMe.correct') }}</strong> {{ optionLabel(round, round.correctOptionIndex) }}
-      </p>
-      <p v-if="round.guess">
-        <strong>{{ t('knowMe.guessed') }}</strong> {{ optionLabel(round, round.guess.selectedOptionIndex) }}
-      </p>
+      <dl class="know-me-history-details">
+        <div>
+          <dt>{{ t('knowMe.correct') }}</dt>
+          <dd>{{ optionLabel(round, round.correctOptionIndex) }}</dd>
+        </div>
+        <div v-if="round.guess">
+          <dt>{{ t('knowMe.guessed') }}</dt>
+          <dd>{{ optionLabel(round, round.guess.selectedOptionIndex) }}</dd>
+        </div>
+      </dl>
       <p class="success-note" v-if="round.guess?.isCorrect">
         <Sparkles :size="18" aria-hidden="true" />
         {{ t('knowMe.success') }}

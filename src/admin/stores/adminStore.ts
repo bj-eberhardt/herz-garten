@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { adminApiRequest, clearAdminToken, getAdminToken, setAdminToken } from '@/admin/services/adminApi';
+import { translate } from '@/i18n';
 
 interface AdminMePayload {
   admin: boolean;
@@ -52,7 +53,7 @@ export const useAdminStore = defineStore('admin', {
         this.usesDefaultAdminPassword = payload.usesDefaultAdminPassword;
         this.bootstrapped = true;
       } catch {
-        this.error = 'Admin-Passwort ist ungültig.';
+        this.error = translate('admin.auth.invalidPassword');
         throw new Error(this.error);
       } finally {
         this.loading = false;

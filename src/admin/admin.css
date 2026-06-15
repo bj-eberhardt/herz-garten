@@ -129,6 +129,17 @@
   background: transparent;
 }
 
+.admin-message-table-header,
+.admin-message-toolbar {
+  width: 100%;
+}
+
+.admin-message-search-input {
+  flex: 1 1 520px;
+  max-width: 720px;
+  min-width: min(100%, 320px);
+}
+
 .admin-panel,
 .admin-login-panel,
 .admin-metric,
@@ -245,6 +256,10 @@
   padding: 6px 9px;
 }
 
+.admin-back-link {
+  justify-self: start;
+}
+
 .admin-small-button:disabled,
 .danger-button:disabled {
   cursor: default;
@@ -257,6 +272,48 @@
 .admin-translation-row {
   display: grid;
   gap: 12px;
+}
+
+.admin-member-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-member-card {
+  background: #f8faf6;
+  border: 1px solid #d8dfd3;
+  border-radius: 8px;
+  color: inherit;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  text-decoration: none;
+}
+
+.admin-member-card:hover,
+.admin-member-card:focus-visible {
+  border-color: #9dbb8d;
+  box-shadow: 0 10px 24px rgba(36, 48, 43, 0.08);
+}
+
+.admin-member-name {
+  color: #24302b;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.admin-member-email {
+  color: #5d6b63;
+  overflow-wrap: anywhere;
+}
+
+.admin-member-meta {
+  align-items: center;
+  color: #5d6b63;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  gap: 8px;
 }
 
 .admin-tabs {

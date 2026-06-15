@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue';
-import { CheckCircle2, Gem, Lamp, Sprout } from '@lucide/vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { CheckCircle2, ChevronDown, Flower2, Gem, HeartHandshake, HelpCircle, History, Images, Lamp, Sprout } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
 import GardenCanvas from '@/components/garden/GardenCanvas.vue';
@@ -71,21 +71,64 @@ const celebrationText = computed(() => {
 });
 
 const progressItems = computed(() => [
-  { label: t('garden.progress.dailyQuestions'), value: gardenStore.progress.answeredQuestionCount, detail: t('garden.progress.dailyQuestionsDetail') },
-  { label: t('garden.progress.quests'), value: gardenStore.progress.completedQuestCount, detail: t('garden.progress.questsDetail') },
+  {
+    label: t('garden.progress.dailyQuestions'),
+    value: gardenStore.progress.answeredQuestionCount,
+    detail: t('garden.progress.dailyQuestionsDetail'),
+    icon: Flower2,
+    tone: 'rose',
+  },
+  { label: t('garden.progress.quests'), value: gardenStore.progress.completedQuestCount, detail: t('garden.progress.questsDetail'), icon: CheckCircle2, tone: 'green' },
   {
     label: t('garden.progress.loveJar'),
     value: gardenStore.progress.drawnLoveJarNoteCount,
     detail: t('garden.progress.loveJarDetail', { count: gardenStore.progress.loveJarNoteCount }),
+    icon: Lamp,
+    tone: 'gold',
   },
-  { label: t('garden.progress.memories'), value: gardenStore.progress.memoryCount, detail: t('garden.progress.memoriesDetail') },
+  { label: t('garden.progress.memories'), value: gardenStore.progress.memoryCount, detail: t('garden.progress.memoriesDetail'), icon: Images, tone: 'teal' },
   {
     label: t('garden.progress.knowMe'),
     value: gardenStore.progress.knowMeHitCount,
     detail: t('garden.progress.knowMeDetail', { count: gardenStore.progress.knowMeRoundCount }),
+    icon: HelpCircle,
+    tone: 'violet',
   },
-  { label: t('garden.progress.gardenObjects'), value: gardenStore.progress.gardenObjectCount, detail: t('garden.progress.gardenObjectsDetail') },
+  {
+    label: t('garden.progress.gardenObjects'),
+    value: gardenStore.progress.gardenObjectCount,
+    detail: t('garden.progress.gardenObjectsDetail'),
+    icon: HeartHandshake,
+    tone: 'clay',
+  },
 ]);
+
+const sortedUnlocks = computed(() => [...gardenStore.unlocks].sort((left, right) => left.stage - right.stage));
+
+const currentUnlockPoints = computed(() => {
+  const heartPoints = Number(coupleStore.couple.heartPoints ?? 0);
+  const reachedUnlock = [...sortedUnlocks.value].reverse().find((unlock) => unlock.points <= heartPoints);
+  return reachedUnlock?.points ?? 0;
+});
+
+const levelProgressPercent = computed(() => {
+  const nextUnlock = gardenStore.nextUnlock;
+  const heartPoints = Number(coupleStore.couple.heartPoints ?? 0);
+  if (!nextUnlock) return 100;
+  const levelSpan = Math.max(1, nextUnlock.points - currentUnlockPoints.value);
+  return Math.min(100, Math.max(0, Math.round(((heartPoints - currentUnlockPoints.value) / levelSpan) * 100)));
+});
+
+const levelProgressStyle = computed(() => ({ '--level-progress': `${levelProgressPercent.value}%` }));
+
+const levelMarkers = computed(() => {
+  const heartPoints = Number(coupleStore.couple.heartPoints ?? 0);
+  return sortedUnlocks.value.map((unlock) => ({
+    ...unlock,
+    active: unlock.points <= heartPoints,
+    current: unlock.stage === coupleStore.couple.gardenStage,
+  }));
+});
 
 const selectedObjectId = computed(() => gardenStore.selectedDetail?.object.id);
 const assetByKey = computed(() => new Map(gardenStore.assetCatalog.map((asset) => [asset.key, asset])));
@@ -111,14 +154,22 @@ const levelProgressText = computed(() => {
 
 async function selectGardenObject(objectId: string) {
   await gardenStore.loadObjectDetail(objectId);
+  historyOpen.value = false;
   await nextTick();
   detailPanel.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function openHistoryObject(objectId: string) {
   await gardenStore.loadObjectDetail(objectId);
+  historyOpen.value = false;
   await nextTick();
   gardenPanel.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function toggleHistory() {
+  const nextOpen = !historyOpen.value;
+  historyOpen.value = nextOpen;
+  if (nextOpen) gardenStore.clearDetail();
 }
 
 function historyTypeTitle(sourceType: string) {
@@ -155,6 +206,13 @@ function changeHistoryPage(delta: number) {
 onMounted(() => {
   gardenStore.loadGarden();
 });
+
+watch(
+  () => gardenStore.selectedDetail,
+  (selectedDetail) => {
+    if (selectedDetail) historyOpen.value = false;
+  },
+);
 </script>
 
 <template>
@@ -168,16 +226,50 @@ onMounted(() => {
     <p v-if="gardenStore.loading" class="muted">{{ t('garden.loading') }}</p>
 
     <section class="garden-progress panel" data-testid="garden-progress">
-      <div>
-        <p class="eyebrow">{{ t('garden.progressEyebrow') }}</p>
-        <h2>{{ t('garden.progressTitle') }}</h2>
-        <p class="garden-level-progress" data-testid="garden-level-progress">{{ levelProgressText }}</p>
+      <div class="garden-progress-hero">
+        <div class="garden-progress-copy">
+          <p class="eyebrow">{{ t('garden.progressEyebrow') }}</p>
+          <h2>{{ t('garden.progressTitle') }}</h2>
+          <p class="garden-level-progress" data-testid="garden-level-progress">{{ levelProgressText }}</p>
+        </div>
+
+        <div class="garden-stage-card">
+          <span class="garden-stage-label">{{ t('garden.progress.currentStage') }}</span>
+          <strong>{{ coupleStore.couple.gardenStage }}</strong>
+          <span>{{ t('garden.progress.heartPoints', coupleStore.couple.heartPoints, { named: { count: coupleStore.couple.heartPoints } }) }}</span>
+        </div>
       </div>
+
+      <div class="garden-level-card" :style="levelProgressStyle">
+        <div class="garden-level-card__top">
+          <span>{{ gardenStore.nextUnlock ? t('garden.progress.nextArea') : t('garden.progress.allAreas') }}</span>
+          <strong>{{ gardenStore.nextUnlock?.areaLabel ?? t('garden.progress.blooming') }}</strong>
+        </div>
+        <div class="garden-level-meter" aria-hidden="true">
+          <span></span>
+        </div>
+        <div class="garden-level-card__bottom">
+          <span>{{ levelProgressPercent }}%</span>
+          <span v-if="gardenStore.nextUnlock">{{ t('garden.progress.remainingPoints', { count: gardenStore.nextUnlock.pointsRemaining }) }}</span>
+          <span v-else>{{ t('garden.progress.completeHint') }}</span>
+        </div>
+        <div v-if="levelMarkers.length" class="garden-level-markers" aria-hidden="true">
+          <span v-for="marker in levelMarkers" :key="marker.stage" :class="{ active: marker.active, current: marker.current }">
+            {{ marker.stage }}
+          </span>
+        </div>
+      </div>
+
       <div class="progress-grid">
-        <article v-for="item in progressItems" :key="item.label" class="progress-tile" data-testid="garden-progress-item">
-          <strong>{{ item.value }}</strong>
-          <span>{{ item.label }}</span>
-          <small>{{ item.detail }}</small>
+        <article v-for="item in progressItems" :key="item.label" class="progress-tile" :class="`progress-tile--${item.tone}`" data-testid="garden-progress-item">
+          <span class="progress-tile-icon">
+            <component :is="item.icon" aria-hidden="true" />
+          </span>
+          <span class="progress-tile-copy">
+            <strong>{{ item.value }}</strong>
+            <span>{{ item.label }}</span>
+            <small>{{ item.detail }}</small>
+          </span>
         </article>
       </div>
     </section>
@@ -196,8 +288,10 @@ onMounted(() => {
       />
     </section>
 
-    <button class="history-link" type="button" data-testid="garden-history-toggle" @click="historyOpen = !historyOpen">
-      {{ historyOpen ? t('garden.history.hide') : t('garden.history.show') }}
+    <button class="history-link" :class="{ open: historyOpen }" type="button" data-testid="garden-history-toggle" @click="toggleHistory">
+      <History aria-hidden="true" />
+      <span>{{ historyOpen ? t('garden.history.hide') : t('garden.history.show') }}</span>
+      <ChevronDown class="history-link-chevron" aria-hidden="true" />
     </button>
 
     <section v-if="historyOpen" class="panel garden-history" data-testid="garden-history">

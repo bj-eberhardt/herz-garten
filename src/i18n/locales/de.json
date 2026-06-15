@@ -22,7 +22,7 @@
     "main": "Hauptnavigation",
     "garden": "Garten",
     "today": "Heute",
-    "quests": "Quests",
+    "quests": "Aufgaben",
     "knowMe": "Spiel",
     "loveJar": "Love Jar",
     "memories": "Momente",
@@ -38,7 +38,7 @@
     "introNoCouple": "Dein Konto ist bereit. Verbinde dich jetzt nachträglich mit dem Partnercode oder lege euren gemeinsamen Garten an.",
     "introCouple": "Teilt euren Paar-Code, damit dein Partner jederzeit nachträglich beitreten kann.",
     "howTitle": "Was ist das?",
-    "howText": "Herzgarten ist euer geschützter Paarraum. Erst wenn beide im selben Raum sind, werden Fragen, Quests, Zettel, Erinnerungen und Gartenmomente miteinander geteilt.",
+    "howText": "Herzgarten ist euer geschützter Paarraum. Erst wenn beide im selben Raum sind, werden Fragen, Aufgaben, Zettel, Erinnerungen und Gartenmomente miteinander geteilt.",
     "adEyebrow": "Für euch beide",
     "adTitle": "Lasst kleine Momente sichtbar wachsen.",
     "adText": "Herzgarten verwandelt Fragen, Komplimente, Erinnerungen und gemeinsame Aufgaben in einen wachsenden Garten. Ihr baut keinen Score auf, sondern einen geschützten Ort für eure Beziehung.",
@@ -87,11 +87,11 @@
     "sendAnswer": "Antwort senden"
   },
   "quests": {
-    "eyebrow": "Quests",
+    "eyebrow": "Aufgaben",
     "title": "Sanfte Aufgaben für mehr Nähe.",
     "howTitle": "Was ist das?",
-    "howText": "Quests sind kleine gemeinsame Aufgaben. Ihr könnt eine Quest annehmen und später abschließen; bei vielen Quests zählt der Abschluss erst, wenn beide ihn bestätigen.",
-    "loading": "Quests werden geladen...",
+    "howText": "Aufgaben sind kleine gemeinsame Impulse. Ihr könnt eine Aufgabe annehmen und später abschließen; bei vielen Aufgaben zählt der Abschluss erst, wenn beide ihn bestätigen.",
+    "loading": "Aufgaben werden geladen...",
     "filters": {
       "category": "Kategorie",
       "effort": "Aufwand",
@@ -117,13 +117,13 @@
       "openEyebrow": "Offen",
       "openTitle": "Neue Vorschläge",
       "completedEyebrow": "Abgeschlossen",
-      "completedTitle": "Erledigte Quests",
-      "emptyOpen": "Keine offenen Quests im Moment."
+      "completedTitle": "Erledigte Aufgaben",
+      "emptyOpen": "Keine offenen Aufgaben im Moment."
     },
     "status": {
       "bothConfirm": "Beide Partner bestätigen den Abschluss.",
       "ready": "Bereit zum Abschließen.",
-      "completed": "Diese Quest hat bereits Gartenpunkte erzeugt."
+      "completed": "Diese Aufgabe hat bereits Gartenpunkte erzeugt."
     },
     "actions": {
       "completed": "Abgeschlossen",
@@ -136,7 +136,7 @@
     "eyebrow": "Herzgarten",
     "title": "Eure gemeinsamen Momente werden sichtbar.",
     "howTitle": "Was ist das?",
-    "howText": "Der Garten zeigt, was ihr gemeinsam erlebt habt. Antworten, Quests, Love-Jar-Zettel, Erinnerungen und Spieltreffer lassen neue Objekte wachsen.",
+    "howText": "Der Garten zeigt, was ihr gemeinsam erlebt habt. Antworten, Aufgaben, Love-Jar-Zettel, Erinnerungen und Spieltreffer lassen neue Objekte wachsen.",
     "loading": "Garten wird geladen...",
     "canvasLabel": "Herzgarten",
     "progressEyebrow": "Fortschritt",
@@ -196,7 +196,7 @@
     "celebration": {
       "default": "Dieser Gartenmoment gehört zu eurer gemeinsamen Geschichte.",
       "question": "Diese Blume ist gewachsen, weil ihr beide euch Zeit für dieselbe Frage genommen habt.",
-      "quest": "So ist {object} entstanden, weil ihr die Quest \"{title}\" gemeinsam abgeschlossen habt.",
+      "quest": "So ist {object} entstanden, weil ihr die Aufgabe \"{title}\" gemeinsam abgeschlossen habt.",
       "loveJar": "Dieses Licht erinnert an einen Zettel aus eurem Love Jar.",
       "memory": "So bewahrt {object} eure Erinnerung.",
       "knowMe": "Diese besondere Blume ist gewachsen, weil ihr euch richtig eingeschätzt habt."
@@ -220,7 +220,7 @@
     "progress": {
       "dailyQuestions": "Tagesfragen",
       "dailyQuestionsDetail": "gemeinsam freigeschaltet",
-      "quests": "Quests",
+      "quests": "Aufgaben",
       "questsDetail": "abgeschlossen",
       "loveJar": "Love Jar",
       "loveJarDetail": "{count} Zettel im Glas",
@@ -229,7 +229,14 @@
       "knowMe": "Kennst du mich",
       "knowMeDetail": "{count} gespielte Fragen",
       "gardenObjects": "Gartenobjekte",
-      "gardenObjectsDetail": "sichtbare Momente"
+      "gardenObjectsDetail": "sichtbare Momente",
+      "currentStage": "Aktuelle Stufe",
+      "heartPoints": "{count} Herzpunkt | {count} Herzpunkte",
+      "nextArea": "Nächster Bereich",
+      "allAreas": "Alle Bereiche",
+      "blooming": "Euer Garten blüht",
+      "remainingPoints": "noch {count} Punkt | noch {count} Punkte",
+      "completeHint": "Ihr könnt weiter Momente sammeln."
     }
   },
   "knowMe": {
@@ -337,7 +344,7 @@
     "eyebrow": "Benachrichtigungen",
     "title": "Kleine Hinweise aus eurem Herzgarten.",
     "howTitle": "Was ist das?",
-    "howText": "Hier landen Hinweise, wenn im Paarraum etwas auf dich wartet: Antworten, Quest-Bestätigungen, neue Zettel, Erinnerungen oder Spielrunden.",
+    "howText": "Hier landen Hinweise, wenn im Paarraum etwas auf dich wartet: Antworten, Aufgaben-Bestätigungen, neue Zettel, Erinnerungen oder Spielrunden.",
     "unread": "keine ungelesenen Hinweise | ein ungelesener Hinweis | {count} ungelesene Hinweise",
     "hint": "Hier landen nur sanfte In-App-Hinweise, keine Push-Nachrichten.",
     "readAll": "Alle gelesen",
@@ -346,8 +353,8 @@
     "titles": {
       "dailyAnswerWaiting": "Antwort wartet",
       "dailyRevealed": "Tagesfrage freigeschaltet",
-      "questWaitingConfirmation": "Quest wartet auf dich",
-      "questCompleted": "Quest abgeschlossen",
+      "questWaitingConfirmation": "Aufgabe wartet auf dich",
+      "questCompleted": "Aufgabe abgeschlossen",
       "loveJarNote": "Ein neuer Zettel wartet",
       "memoryCreated": "Neue Erinnerung",
       "knowMeQuestion": "Eine Kennst-du-mich-Frage wartet",
@@ -359,7 +366,7 @@
       "dailyAnswerWaiting": "{name} hat die Tagesfrage beantwortet. Jetzt fehlst noch du.",
       "dailyRevealed": "Ihr habt beide die Tagesfrage beantwortet. Eure Antworten sind sichtbar und eine neue Blume ist gewachsen.",
       "questWaitingConfirmation": "{name} hat \"{title}\" bestätigt. Wenn es für dich auch passt, kannst du sie abschließen.",
-      "questCompleted": "Eure Quest \"{title}\" hat euren Garten wachsen lassen.",
+      "questCompleted": "Eure Aufgabe \"{title}\" hat euren Garten wachsen lassen.",
       "loveJarNote": "{name} hat etwas in euren Love Jar gelegt.",
       "memoryCreated": "{name} hat \"{title}\" in eure Timeline gelegt.",
       "knowMeQuestion": "{name} hat eine Frage über sich gestellt. Was schätzt du?",
@@ -375,7 +382,7 @@
     },
     "features": {
       "today": "Tagesfrage",
-      "quest": "Quest",
+      "quest": "Aufgabe",
       "loveJar": "Love Jar",
       "memory": "Moment",
       "knowMe": "Kennst-du-mich",
@@ -384,7 +391,7 @@
     },
     "actions": {
       "answer": "Antworten",
-      "checkQuest": "Quest prüfen",
+      "checkQuest": "Aufgabe prüfen",
       "answerQuestion": "Frage beantworten",
       "viewNote": "Zettel ansehen",
       "viewGarden": "Im Garten ansehen",
@@ -430,7 +437,7 @@
     "featureExplainers": {
       "onboarding": "Onboarding",
       "today": "Heute",
-      "quests": "Quests",
+      "quests": "Aufgaben",
       "garden": "Garten",
       "knowMe": "Spiel",
       "loveJar": "Love Jar",
@@ -443,7 +450,7 @@
     "privacyPrivateTitle": "Was bleibt privat?",
     "privacyPrivateText": "Dein Konto, deine E-Mail-Adresse und deine persönlichen Aktionen sind nicht öffentlich sichtbar. Es gibt keine Profile außerhalb eures Paarraums.",
     "privacyPartnerTitle": "Was sieht dein Partner?",
-    "privacyPartnerText": "Dein Partner sieht geteilte Antworten, Quests, Erinnerungen, Love-Jar-Einträge und Spielantworten, sobald sie für euren Paarraum freigegeben sind.",
+    "privacyPartnerText": "Dein Partner sieht geteilte Antworten, Aufgaben, Erinnerungen, Love-Jar-Einträge und Spielantworten, sobald sie für euren Paarraum freigegeben sind.",
     "privacyLeaveTitle": "Was passiert beim Paarraum verlassen?",
     "privacyLeaveText": "Dein Konto bleibt bestehen, aber die Verbindung zum aktuellen Paarraum wird entfernt. Du kannst danach einen neuen Paarraum erstellen oder einem anderen beitreten.",
     "privacyDeleteTitle": "Was passiert beim Konto löschen?",
@@ -488,8 +495,8 @@
       "noActiveQuestion": "Gerade ist keine aktive Tagesfrage verfügbar."
     },
     "quest": {
-      "notFound": "Diese Quest konnten wir nicht finden.",
-      "invalidAction": "Diese Quest kann gerade nicht aktualisiert werden."
+      "notFound": "Diese Aufgabe konnten wir nicht finden.",
+      "invalidAction": "Diese Aufgabe kann gerade nicht aktualisiert werden."
     },
     "knowMe": {
       "invalidCatalogQuestionId": "Der ausgewählte Fragenvorschlag ist ungültig.",
@@ -527,8 +534,8 @@
       "joinCouple": "Paar-Code konnte nicht genutzt werden.",
       "todayLoad": "Tagesfrage konnte nicht geladen werden.",
       "todayAnswer": "Antwort konnte nicht gespeichert werden.",
-      "questsLoad": "Quests konnten nicht geladen werden.",
-      "questUpdate": "Quest konnte nicht aktualisiert werden.",
+      "questsLoad": "Aufgaben konnten nicht geladen werden.",
+      "questUpdate": "Aufgabe konnte nicht aktualisiert werden.",
       "gardenLoad": "Garten konnte nicht geladen werden.",
       "gardenObject": "Gartenobjekt konnte nicht geladen werden.",
       "loveJarLoad": "Love Jar konnte nicht geladen werden.",
@@ -546,6 +553,258 @@
       "preferences": "Profil-Einstellungen konnten nicht gespeichert werden.",
       "profile": "Profil konnte nicht gespeichert werden.",
       "password": "Passwort konnte nicht gespeichert werden."
+    }
+  },
+  "admin": {
+    "common": {
+      "active": "Aktiv",
+      "activeLower": "aktiv",
+      "all": "Alle",
+      "allCategories": "Alle Kategorien",
+      "category": "Kategorie",
+      "close": "Schliessen",
+      "code": "Code",
+      "created": "Erstellt",
+      "deactivate": "Deaktivieren",
+      "delete": "Löschen",
+      "description": "Beschreibung",
+      "details": "Details",
+      "edit": "Bearbeiten",
+      "filter": "Filtern",
+      "inactive": "Inaktiv",
+      "inactiveLower": "inaktiv",
+      "label": "Label",
+      "loading": "Lade...",
+      "name": "Name",
+      "new": "Neu",
+      "none": "keine",
+      "points": "Punkte",
+      "reactivate": "Reaktivieren",
+      "save": "Speichern",
+      "saving": "Speichere...",
+      "search": "Suche",
+      "searchAction": "Suchen",
+      "sortOrder": "Sortierung",
+      "standard": "Standard",
+      "status": "Status",
+      "technicalValue": "Technischer Wert",
+      "descriptionPlaceholder": "Beschreibung {locale}",
+      "labelPlaceholder": "Label {locale}",
+      "namePlaceholder": "Name {locale}",
+      "questionPlaceholder": "Frage {locale}",
+      "textPlaceholder": "Text {locale}",
+      "titlePlaceholder": "Titel {locale}",
+      "translations": "Übersetzungen",
+      "value": "Wert"
+    },
+    "auth": {
+      "brand": "Herzgarten",
+      "invalidPassword": "Administrationspasswort ist ungültig.",
+      "login": "Anmelden",
+      "password": "Passwort",
+      "checking": "Prüfe..."
+    },
+    "shell": {
+      "brand": "Administration",
+      "navLabel": "Administration",
+      "defaultPasswordWarning": "Achtung: Standard-Passwort aktiv",
+      "logout": "Abmelden",
+      "nav": {
+        "dashboard": "Übersicht",
+        "users": "Nutzer",
+        "couples": "Paarräume",
+        "content": "Inhalte",
+        "garden": "Garten",
+        "categories": "Kategorien",
+        "taxonomies": "Taxonomien",
+        "messages": "Nachrichten",
+        "auditLog": "Protokoll"
+      }
+    },
+    "dashboard": {
+      "title": "Übersicht",
+      "users": "Nutzer",
+      "couples": "Paarräume",
+      "points": "Punkte",
+      "dailyQuestions": "Tagesfragen",
+      "quests": "Aufgaben",
+      "knowMe": "Kennst-du-mich",
+      "loveJar": "Liebesglas"
+    },
+    "users": {
+      "title": "Nutzer",
+      "couples": "Paarräume",
+      "pointsInline": "{count} Punkte"
+    },
+    "couples": {
+      "title": "Paarräume",
+      "members": "Mitglieder",
+      "progress": "Fortschritt",
+      "levelInline": "{points} · Stufe {stage}",
+      "progressInline": "{quests} Aufgaben · {loveJar} Liebesglas · {memories} Erinnerungen · {knowMe} Kennst-du-mich"
+    },
+    "coupleDetail": {
+      "backToCouples": "Zurück zur Suche",
+      "members": "Mitglieder",
+      "progress": "Fortschritt",
+      "personalization": "Personalisierung",
+      "relationshipMode": "Beziehungsmodus",
+      "contentStyle": "Inhaltsstil",
+      "settingsSaved": "Einstellungen gespeichert.",
+      "settingsSaveError": "Einstellungen konnten nicht gespeichert werden.",
+      "dailyQuestions": "Tagesfragen",
+      "answers": "Antworten",
+      "quests": "Aufgaben",
+      "loveJar": "Liebesglas",
+      "drawn": "Gezogen",
+      "total": "gesamt",
+      "dailyQuestionsWithAnswers": "{questions} ({answers})",
+      "dailyQuestionsTitle": "Tagesfragen: {questions}, Antworten: {answers}",
+      "loveJarDrawnOfTotal": "{drawn} ({total})",
+      "loveJarTitle": "Gezogene Zettel: {drawn}, gesamte Zettel: {total}",
+      "knowMeHitsOfRounds": "{hits} ({rounds})",
+      "knowMeTitle": "Treffer: {hits}, gespielte Runden: {rounds}",
+      "memories": "Erinnerungen",
+      "knowMe": "Kennst-du-mich",
+      "objects": "Gartenobjekte",
+      "memberRoleLabel": "Rolle",
+      "memberJoinedAt": "Beigetreten am {date}",
+      "roles": {
+        "owner": "Ersteller",
+        "partner": "Mitglied",
+        "unknown": "Unbekannt"
+      }
+    },
+    "auditLog": {
+      "title": "Protokoll",
+      "time": "Zeit",
+      "action": "Aktion",
+      "resource": "Ressource",
+      "metadata": "Metadaten"
+    },
+    "content": {
+      "title": "Inhalte",
+      "help": "Hier bearbeitest du einzelne Inhalte. Kategorien pflegst du unter Kategorien.",
+      "filterPlaceholder": "Inhalte filtern",
+      "defaultLanguageHint": "Standardsprache / Fallback: {label} ({locale}). Die Basisfelder speichern den Fallback; ein Eintrag in den Übersetzungen kann diesen Text für dieselbe Sprache explizit überschreiben.",
+      "defaultLanguageFallback": "Standardsprache / Fallback. Die Basisfelder speichern den Fallback; Übersetzungen können ihn pro Sprache überschreiben.",
+      "editTitle": "{type} bearbeiten",
+      "newTitle": "Neuer {type}-Eintrag",
+      "chooseCategory": "Bitte wählen",
+      "active": "Aktiv",
+      "defaultText": "Text in der Standardsprache",
+      "defaultTitle": "Titel in der Standardsprache",
+      "defaultDescription": "Beschreibung in der Standardsprache",
+      "defaultQuestion": "Frage in der Standardsprache",
+      "depth": "Tiefe",
+      "depthHelp": "Beschreibt die emotionale Intensität der Frage: 1 ist leicht und alltagsnah, 4 ist sehr persönlich und tiefgehend.",
+      "longDistanceSuitable": "Fernbeziehung geeignet",
+      "longDistanceHelp": "Wenn aktiv, darf diese Frage auch Paaren angezeigt werden, die nicht am selben Ort leben.",
+      "minutes": "Minuten",
+      "effort": "Aufwand",
+      "effortLow": "niedrig",
+      "effortMedium": "mittel",
+      "effortHigh": "hoch",
+      "seed": "Seed",
+      "requiresBothPartners": "Beide Partner müssen bestätigen",
+      "translationsHelp": "Die Standardsprache wird oben als Fallback gespeichert und ist hier sichtbar, falls sie explizit gepflegt oder überschrieben werden soll.",
+      "titleText": "Titel/Text",
+      "categoryLabelPlaceholder": "Kategorielabel {locale}",
+      "labels": {
+        "dailyQuestions": "Tagesfragen",
+        "quests": "Aufgaben",
+        "knowMe": "Kennst-du-mich",
+        "loveJar": "Liebesglas"
+      },
+      "errors": {
+        "category": "Bitte wähle eine Kategorie aus den gepflegten Kategorien.",
+        "text": "Bitte gib den Fragetext ein.",
+        "depthLevel": "Tiefe muss zwischen 1 und 4 liegen.",
+        "title": "Bitte gib einen Titel ein.",
+        "description": "Bitte gib eine Beschreibung ein.",
+        "estimatedMinutes": "Minuten müssen größer als 0 sein.",
+        "rewardPoints": "Punkte duerfen nicht negativ sein.",
+        "questionText": "Bitte gib die Frage ein.",
+        "templateText": "Bitte gib den Vorlagentext ein.",
+        "save": "{type} konnte nicht gespeichert werden. Prüfe Pflichtfelder und Kategorie."
+      }
+    },
+    "categories": {
+      "title": "Inhaltskategorien",
+      "help": "Hier pflegst du Kategorien für Inhalte. Einzelne Tagesfragen bearbeitest du unter Inhalte.",
+      "editTitle": "Kategorie bearbeiten",
+      "newTitle": "Neue Kategorie",
+      "technicalValueHelp": "Dieser Wert wird im Inhalt gespeichert und kann nach dem Anlegen nicht umbenannt werden.",
+      "relationshipModes": "Passende Beziehungsmodi",
+      "contentStyles": "Passende Inhaltsstile",
+      "neutralAll": "neutral / alle",
+      "emptySelectionHelp": "Keine Auswahl bedeutet: neutral / alle.",
+      "deleteHelp": "Kategorien können nur gelöscht werden, solange sie nicht verwendet werden.",
+      "suitableFor": "Passend für",
+      "usage": "Nutzung",
+      "labels": {
+        "dailyQuestions": "Tagesfragen-Kategorien",
+        "quests": "Aufgaben-Kategorien",
+        "knowMe": "Kennst-du-mich-Kategorien",
+        "loveJar": "Liebesglas-Kategorien",
+        "memories": "Erinnerungs-Kategorien"
+      },
+      "errors": {
+        "required": "Bitte gib technischen Wert und Label ein.",
+        "save": "Kategorie konnte nicht gespeichert werden. Prüfe technischen Wert, Label und Zuordnungen.",
+        "delete": "Kategorie kann nur gelöscht werden, wenn sie nicht verwendet wird."
+      }
+    },
+    "taxonomies": {
+      "title": "Taxonomien",
+      "editTitle": "Taxonomie bearbeiten",
+      "newTitle": "Neue Taxonomie",
+      "technicalValueHelp": "Dieser Wert wird am Paarraum gespeichert und kann nach dem Anlegen nicht umbenannt werden.",
+      "help": "Beziehungsmodi und Inhaltsstile steuern die Sortierung passender Inhalte.",
+      "relationshipModes": "Beziehungsmodi",
+      "contentStyles": "Inhaltsstile",
+      "errors": {
+        "required": "Bitte gib technischen Wert und Label ein.",
+        "save": "Taxonomie konnte nicht gespeichert werden. Der technische Wert muss eindeutig sein."
+      }
+    },
+    "garden": {
+      "title": "Garten",
+      "subtitle": "Stufen und Punktgrenzen",
+      "editTitle": "Stufe {stage} bearbeiten",
+      "newTitle": "Neue Stufe",
+      "saveWarning": "Beim Speichern werden bestehende Gärten neu berechnet. Objekte in gesperrten Bereichen werden in den höchsten offenen Bereich verschoben.",
+      "pointsToNext": "Punkte bis zur naechsten Stufe",
+      "pointsFromPrevious": "Punkte von der bisherigen letzten Stufe bis hierher",
+      "lastStageHelp": "Optional für die letzte Stufe; wird relevant, sobald eine weitere Stufe angelegt wird.",
+      "deltaHelp": "Administratoren pflegen Delta-Punkte; Mindestpunkte werden daraus berechnet.",
+      "stage": "Stufe",
+      "minimumPoints": "Mindestpunkte",
+      "untilNext": "Bis naechste",
+      "errors": {
+        "name": "Bitte gib einen Namen ein.",
+        "newPoints": "Bitte gib die Punkte ein, die bis zu dieser neuen Stufe nötig sind.",
+        "nextPoints": "Bitte gib für diese Stufe positive Punkte bis zur nächsten Stufe ein.",
+        "positivePoints": "Punkte bis zur nächsten Stufe müssen positiv sein.",
+        "save": "Gartenstufe konnte nicht gespeichert werden.",
+        "delete": "Gartenstufe konnte nicht gelöscht werden."
+      }
+    },
+    "messages": {
+      "title": "Nachrichten",
+      "subtitle": "Benachrichtigungen",
+      "intro": "Hier kannst du die Nachrichtenvorlagen anpassen, die für Benachrichtigungen verwendet werden.",
+      "searchPlaceholder": "Nachrichtenschlüssel filtern",
+      "noPlaceholders": "Keine Platzhalter erlaubt.",
+      "expectedPlaceholders": "Erwartete Platzhalter: {placeholders}.",
+      "standardSuffix": " · Standard",
+      "key": "Schlüssel",
+      "text": "Text",
+      "parameters": "Parameter",
+      "errors": {
+        "defaultTranslationRequired": "Die Standard-Übersetzung darf nicht leer sein.",
+        "save": "Nachrichtenvorlage konnte nicht gespeichert werden."
+      }
     }
   },
   "content": {

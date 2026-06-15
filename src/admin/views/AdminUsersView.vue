@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { Download, Search } from '@lucide/vue';
 import { adminApiRequest, adminDownloadUrl, getAdminToken } from '@/admin/services/adminApi';
 
@@ -18,6 +19,7 @@ const search = ref('');
 const loading = ref(false);
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 
 async function loadUsers() {
   loading.value = true;
@@ -59,16 +61,16 @@ function filterCouples(inviteCode: string) {
 <template>
   <section class="admin-view" data-testid="admin-users">
     <div class="admin-heading">
-      <h1>User</h1>
+      <h1>{{ t('admin.users.title') }}</h1>
       <span>{{ total }}</span>
     </div>
 
     <div class="admin-toolbar">
       <label class="admin-search">
         <Search :size="18" aria-hidden="true" />
-        <input v-model="search" placeholder="Suche" data-testid="admin-users-search" @keyup.enter="loadUsers" />
+        <input v-model="search" :placeholder="t('admin.common.search')" data-testid="admin-users-search" @keyup.enter="loadUsers" />
       </label>
-      <button class="secondary-button" type="button" data-testid="admin-users-search-submit" @click="loadUsers">Suchen</button>
+      <button class="secondary-button" type="button" data-testid="admin-users-search-submit" @click="loadUsers">{{ t('admin.common.searchAction') }}</button>
       <button class="secondary-button" type="button" data-testid="admin-users-export-json" @click="download('json')">
         <Download :size="18" aria-hidden="true" />
         JSON
@@ -83,10 +85,10 @@ function filterCouples(inviteCode: string) {
       <table class="admin-table">
         <thead>
           <tr>
-            <th>Name</th>
+            <th>{{ t('admin.common.name') }}</th>
             <th>E-Mail</th>
-            <th>Paarräume</th>
-            <th>Erstellt</th>
+            <th>{{ t('admin.users.couples') }}</th>
+            <th>{{ t('admin.common.created') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -95,7 +97,7 @@ function filterCouples(inviteCode: string) {
             <td>{{ user.email }}</td>
             <td>
               <button v-for="couple in user.couples" :key="couple.coupleId" class="admin-chip admin-chip-button" type="button" @click="filterCouples(couple.inviteCode)">
-                {{ couple.inviteCode }} · {{ couple.heartPoints }} Punkte
+                {{ couple.inviteCode }} · {{ t('admin.users.pointsInline', { count: couple.heartPoints }) }}
               </button>
             </td>
             <td>{{ new Date(user.createdAt).toLocaleDateString('de-DE') }}</td>
@@ -103,6 +105,6 @@ function filterCouples(inviteCode: string) {
         </tbody>
       </table>
     </div>
-    <p v-if="loading" class="muted">Lade...</p>
+    <p v-if="loading" class="muted">{{ t('admin.common.loading') }}</p>
   </section>
 </template>

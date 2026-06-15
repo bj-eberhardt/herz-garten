@@ -320,7 +320,7 @@ test.describe('admin api', () => {
       '/api/admin/content/quests',
       {
         title: `Admin Matched Quest ${suffix}`,
-        description: 'Diese Quest sollte nach oben sortiert werden.',
+        description: 'Diese Aufgabe sollte nach oben sortiert werden.',
         category: categoryValue,
         estimatedMinutes: 5,
         effortLevel: 'low',

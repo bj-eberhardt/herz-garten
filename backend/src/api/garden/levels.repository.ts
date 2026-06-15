@@ -136,14 +136,14 @@ export async function addCoupleHeartPoints(client: Queryable, coupleId: string, 
 
 export function validateGardenLevelSequence(levels: Array<{ stage: number; pointsToNext: number | null }>) {
   if (levels.length === 0 || levels[0]?.stage !== 1) {
-    throw new GardenLevelValidationError('Garden-Level muessen bei Stufe 1 beginnen.');
+    throw new GardenLevelValidationError('Gartenstufen muessen bei Stufe 1 beginnen.');
   }
 
   for (let index = 0; index < levels.length; index += 1) {
     const expectedStage = index + 1;
     const level = levels[index];
     if (level.stage !== expectedStage) {
-      throw new GardenLevelValidationError('Garden-Level muessen lueckenlos sortiert sein.');
+      throw new GardenLevelValidationError('Gartenstufen muessen lueckenlos sortiert sein.');
     }
     if (index < levels.length - 1 && (!Number.isInteger(level.pointsToNext) || Number(level.pointsToNext) <= 0)) {
       throw new GardenLevelValidationError('Alle Stufen ausser der letzten brauchen positive Punkte bis zur naechsten Stufe.');
@@ -226,7 +226,7 @@ async function recalculateGardens(client: Queryable) {
 
 export async function saveGardenLevel(input: GardenLevelInput, id?: string, locale = 'de') {
   const name = normalizeName(input.name);
-  if (!name) throw new GardenLevelValidationError('Bitte gib einen Namen fuer das Garden-Level ein.');
+  if (!name) throw new GardenLevelValidationError('Bitte gib einen Namen fuer die Gartenstufe ein.');
   const pointsToNext = normalizePoints(input.pointsToNext);
   if (input.pointsToNext !== null && input.pointsToNext !== undefined && pointsToNext === null) {
     throw new GardenLevelValidationError('Punkte bis zur naechsten Stufe muessen positiv sein.');

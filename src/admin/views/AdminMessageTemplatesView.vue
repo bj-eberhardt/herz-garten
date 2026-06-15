@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Save } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
 
@@ -22,6 +23,7 @@ interface MessageTemplateItem {
 const placeholderPattern = /\{(\w+)\}/g;
 
 const locales = ref<LocaleOption[]>([]);
+const { t } = useI18n();
 const items = ref<MessageTemplateItem[]>([]);
 const search = ref('');
 const selectedKey = ref('');
@@ -52,14 +54,16 @@ function validateItem(item: MessageTemplateItem) {
     const text = item.translations[locale.locale]?.text?.trim() ?? '';
     if (!text && locale.locale !== defaultLocale.value) continue;
     if (!text && locale.locale === defaultLocale.value) {
-      nextErrors[locale.locale] = 'Die Default-Übersetzung darf nicht leer sein.';
+      nextErrors[locale.locale] = t('admin.messages.errors.defaultTranslationRequired');
       continue;
     }
 
     const found = placeholdersIn(text);
     const matches = found.length === expected.length && found.every((placeholder, index) => placeholder === expected[index]);
     if (!matches) {
-      nextErrors[locale.locale] = `Erwartete Platzhalter: ${expected.map((param) => `{${param}}`).join(', ') || 'keine'}.`;
+      nextErrors[locale.locale] = t('admin.messages.expectedPlaceholders', {
+        placeholders: expected.map((param) => `{${param}}`).join(', ') || t('admin.common.none'),
+      });
     }
   }
 
@@ -123,7 +127,7 @@ async function saveItem(item: MessageTemplateItem) {
     validationErrors.value = {};
   } catch (caught) {
     const apiError = caught as { serverMessage?: string };
-    error.value = apiError.serverMessage ?? 'Message-Template konnte nicht gespeichert werden.';
+    error.value = apiError.serverMessage ?? t('admin.messages.errors.save');
   } finally {
     savingKey.value = '';
   }
@@ -138,37 +142,38 @@ onMounted(async () => {
 <template>
   <section class="admin-view" data-testid="admin-message-templates">
     <div class="admin-heading">
-      <h1>Messages</h1>
-      <span>Notifications</span>
+      <h1>{{ t('admin.messages.title') }}</h1>
+      <span>{{ t('admin.messages.subtitle') }}</span>
     </div>
+    <p class="muted">{{ t('admin.messages.intro') }}</p>
 
-    <div class="admin-table-header">
-      <div class="admin-toolbar">
-        <input v-model="search" placeholder="Message-Key filtern" data-testid="admin-message-search" />
+    <div class="admin-table-header admin-message-table-header">
+      <div class="admin-toolbar admin-message-toolbar">
+        <input v-model="search" class="admin-message-search-input" :placeholder="t('admin.messages.searchPlaceholder')" data-testid="admin-message-search" />
       </div>
     </div>
 
     <section v-if="selectedItem" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-message-form">
       <div class="admin-form-head">
         <h2>{{ selectedItem.key }}</h2>
-        <button class="secondary-button admin-small-button" type="button" @click="closeForm">Schliessen</button>
+        <button class="secondary-button admin-small-button" type="button" @click="closeForm">{{ t('admin.common.close') }}</button>
       </div>
       <p v-if="error" class="form-error">{{ error }}</p>
       <p class="muted">{{ selectedItem.description }}</p>
       <div>
-        <span v-if="selectedItem.requiredParams.length === 0" class="muted">Keine Platzhalter erlaubt.</span>
+        <span v-if="selectedItem.requiredParams.length === 0" class="muted">{{ t('admin.messages.noPlaceholders') }}</span>
         <span v-for="param in selectedItem.requiredParams" v-else :key="param" class="admin-chip">{ {{ param }} }</span>
       </div>
 
       <div v-for="locale in locales.filter((entry) => entry.active)" :key="locale.locale" class="admin-translation-row">
-        <strong>{{ locale.label }} ({{ locale.locale }}){{ locale.locale === defaultLocale ? ' · Default' : '' }}</strong>
+        <strong>{{ locale.label }} ({{ locale.locale }}){{ locale.locale === defaultLocale ? t('admin.messages.standardSuffix') : '' }}</strong>
         <textarea v-model="selectedItem.translations[locale.locale].text" rows="4" :data-testid="`admin-message-text-${locale.locale}`" />
         <small v-if="validationErrors[locale.locale]" class="admin-field-error">{{ validationErrors[locale.locale] }}</small>
       </div>
 
       <button class="primary-button inline-button" type="button" :disabled="savingKey === selectedItem.key" data-testid="admin-message-save" @click="saveItem(selectedItem)">
         <Save :size="18" aria-hidden="true" />
-        {{ savingKey === selectedItem.key ? 'Speichere...' : 'Speichern' }}
+        {{ savingKey === selectedItem.key ? t('admin.common.saving') : t('admin.common.save') }}
       </button>
     </section>
 
@@ -176,9 +181,9 @@ onMounted(async () => {
       <table class="admin-table">
         <thead>
           <tr>
-            <th>Key</th>
-            <th>Text</th>
-            <th>Parameter</th>
+            <th>{{ t('admin.messages.key') }}</th>
+            <th>{{ t('admin.messages.text') }}</th>
+            <th>{{ t('admin.messages.parameters') }}</th>
             <th></th>
           </tr>
         </thead>
@@ -190,16 +195,16 @@ onMounted(async () => {
             </td>
             <td>{{ previewText(item) }}</td>
             <td>
-              <span v-if="item.requiredParams.length === 0" class="muted">keine</span>
+              <span v-if="item.requiredParams.length === 0" class="muted">{{ t('admin.common.none') }}</span>
               <span v-for="param in item.requiredParams" v-else :key="param" class="admin-chip">{ {{ param }} }</span>
             </td>
             <td class="admin-actions">
-              <button class="secondary-button admin-small-button" type="button" @click="editItem(item)">Bearbeiten</button>
+              <button class="secondary-button admin-small-button" type="button" @click="editItem(item)">{{ t('admin.common.edit') }}</button>
             </td>
           </tr>
         </tbody>
       </table>
-      <p v-if="loading" class="muted">Lade...</p>
+      <p v-if="loading" class="muted">{{ t('admin.common.loading') }}</p>
     </div>
   </section>
 </template>

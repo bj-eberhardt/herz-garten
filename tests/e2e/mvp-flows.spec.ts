@@ -119,7 +119,7 @@ test('quests move through open active and completed states with partner confirma
   await pageA.getByTestId('quest-card').filter({ hasText: quest.title }).getByTestId('quest-action').click();
 
   await openNotifications(pageB);
-  await expect(pageB.getByTestId('notification-item').first()).toContainText('Quest');
+  await expect(pageB.getByTestId('notification-item').first()).toContainText('Aufgabe');
 
   await pageB.goto('/quests');
   await expect(pageB.getByTestId('quests-active-section')).toBeVisible();

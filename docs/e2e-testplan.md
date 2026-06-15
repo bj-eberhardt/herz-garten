@@ -2,7 +2,7 @@
 
 ## Ziel
 
-Die Playwright-Suite prueft den MVP-Kernloop mit zwei Partnern: Registrierung, Paarraum, Tagesfrage, Quests, Love Jar, Erinnerungen, Gartenobjekte, Benachrichtigungen und Basis-Datenschutz.
+Die Playwright-Suite prueft den MVP-Kernloop mit zwei Partnern: Registrierung, Paarraum, Tagesfrage, Aufgaben, Love Jar, Erinnerungen, Gartenobjekte, Benachrichtigungen und Basis-Datenschutz.
 
 ## Ausfuehrung
 
@@ -44,14 +44,14 @@ Playwright startet `docker compose -f docker-compose.yml -f docker-compose.e2e.y
 - Beide sehen die freigeschalteten Antworten.
 - Im Garten entsteht ein Objekt mit Detailinhalt zur Tagesfrage.
 
-### Quests
+### Aufgaben
 
-- Offene Quests werden in einem eigenen Bereich angezeigt.
-- Quest-Filter nach Kategorie, Aufwand, Dauer und Modus grenzen Vorschlaege sichtbar ein.
-- Angenommene Quests wechseln in den aktiven Bereich.
-- Bei Partnerquests wartet die Quest auf die zweite Bestaetigung.
-- Nach Bestaetigung beider Partner landet die Quest im abgeschlossenen Bereich.
-- Im Garten entsteht ein Quest-Objekt.
+- Offene Aufgaben werden in einem eigenen Bereich angezeigt.
+- Aufgaben-Filter nach Kategorie, Aufwand, Dauer und Modus grenzen Vorschlaege sichtbar ein.
+- Angenommene Aufgaben wechseln in den aktiven Bereich.
+- Bei Partneraufgaben wartet die Aufgabe auf die zweite Bestaetigung.
+- Nach Bestaetigung beider Partner landet die Aufgabe im abgeschlossenen Bereich.
+- Im Garten entsteht ein Aufgaben-Objekt.
 
 ### Love Jar
 

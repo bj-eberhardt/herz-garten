@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { adminApiRequest } from '@/admin/services/adminApi';
 
 interface AuditEntry {
@@ -12,6 +13,7 @@ interface AuditEntry {
 }
 
 const entries = ref<AuditEntry[]>([]);
+const { t } = useI18n();
 
 async function loadAuditLog() {
   const payload = await adminApiRequest<{ items: AuditEntry[] }>('/api/admin/audit-log');
@@ -24,7 +26,7 @@ onMounted(loadAuditLog);
 <template>
   <section class="admin-view" data-testid="admin-audit-log">
     <div class="admin-heading">
-      <h1>Audit</h1>
+      <h1>{{ t('admin.auditLog.title') }}</h1>
       <span>{{ entries.length }}</span>
     </div>
 
@@ -32,10 +34,10 @@ onMounted(loadAuditLog);
       <table class="admin-table">
         <thead>
           <tr>
-            <th>Zeit</th>
-            <th>Aktion</th>
-            <th>Resource</th>
-            <th>Metadata</th>
+            <th>{{ t('admin.auditLog.time') }}</th>
+            <th>{{ t('admin.auditLog.action') }}</th>
+            <th>{{ t('admin.auditLog.resource') }}</th>
+            <th>{{ t('admin.auditLog.metadata') }}</th>
           </tr>
         </thead>
         <tbody>

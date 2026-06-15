@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Plus, Save } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
 import { ApiError } from '@/services/api';
@@ -21,10 +22,12 @@ interface PreferenceItem {
   translations: Record<string, Record<string, string>>;
 }
 
-const preferenceKinds: Array<{ id: PreferenceKind; label: string }> = [
-  { id: 'relationship-modes', label: 'Beziehungsmodi' },
-  { id: 'content-styles', label: 'Content-Stile' },
-];
+const { t } = useI18n();
+
+const preferenceKinds = computed<Array<{ id: PreferenceKind; label: string }>>(() => [
+  { id: 'relationship-modes', label: t('admin.taxonomies.relationshipModes') },
+  { id: 'content-styles', label: t('admin.taxonomies.contentStyles') },
+]);
 
 const selectedKind = ref<PreferenceKind>('relationship-modes');
 const locales = ref<LocaleOption[]>([]);
@@ -39,7 +42,7 @@ const formAnchor = ref<HTMLElement | null>(null);
 const form = reactive<PreferenceItem>(emptyForm());
 
 const currentItems = computed(() => items.value[selectedKind.value]);
-const currentKindLabel = computed(() => preferenceKinds.find((kind) => kind.id === selectedKind.value)?.label ?? '');
+const currentKindLabel = computed(() => preferenceKinds.value.find((kind) => kind.id === selectedKind.value)?.label ?? '');
 
 function replaceForm(nextForm: PreferenceItem) {
   for (const key of Object.keys(form)) {
@@ -123,7 +126,7 @@ function switchKind(kind: PreferenceKind) {
 
 async function savePreference() {
   if (!form.value.trim() || !form.label.trim()) {
-    error.value = 'Bitte gib technischen Wert und Label ein.';
+    error.value = t('admin.taxonomies.errors.required');
     return;
   }
   saving.value = true;
@@ -140,7 +143,7 @@ async function savePreference() {
     error.value =
       caught instanceof ApiError && caught.serverMessage
         ? caught.serverMessage
-        : 'Taxonomie konnte nicht gespeichert werden. Der technische Wert muss eindeutig sein.';
+        : t('admin.taxonomies.errors.save');
   } finally {
     saving.value = false;
   }
@@ -155,7 +158,7 @@ onMounted(async () => {
 <template>
   <section class="admin-view" data-testid="admin-taxonomies">
     <div class="admin-heading">
-      <h1>Taxonomien</h1>
+      <h1>{{ t('admin.taxonomies.title') }}</h1>
       <span>{{ currentKindLabel }}</span>
     </div>
 
@@ -167,38 +170,38 @@ onMounted(async () => {
 
     <section v-if="showForm" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-preference-form">
       <div class="admin-form-head">
-        <h2>{{ form.id ? 'Taxonomie bearbeiten' : 'Neue Taxonomie' }}</h2>
-        <button class="secondary-button admin-small-button" type="button" @click="resetForm(false)">Schliessen</button>
+        <h2>{{ form.id ? t('admin.taxonomies.editTitle') : t('admin.taxonomies.newTitle') }}</h2>
+        <button class="secondary-button admin-small-button" type="button" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
       </div>
       <p v-if="error" class="form-error">{{ error }}</p>
       <label>
-        Technischer Wert
+        {{ t('admin.common.technicalValue') }}
         <input v-model="form.value" :disabled="Boolean(form.id)" data-testid="admin-preference-value" />
-        <small>Dieser Wert wird am Paarraum gespeichert und kann nach dem Anlegen nicht umbenannt werden.</small>
+        <small>{{ t('admin.taxonomies.technicalValueHelp') }}</small>
       </label>
-      <label>Label<input v-model="form.label" data-testid="admin-preference-label" /></label>
-      <label>Sortierung<input v-model.number="form.sortOrder" type="number" /></label>
-      <label class="admin-checkbox"><input v-model="form.active" type="checkbox" /> Aktiv</label>
+      <label>{{ t('admin.common.label') }}<input v-model="form.label" data-testid="admin-preference-label" /></label>
+      <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" /></label>
+      <label class="admin-checkbox"><input v-model="form.active" type="checkbox" /> {{ t('admin.common.active') }}</label>
 
       <section class="admin-translation-box">
-        <h2>Uebersetzungen</h2>
+        <h2>{{ t('admin.common.translations') }}</h2>
         <div v-for="locale in locales" :key="locale.locale" class="admin-translation-row">
           <strong>{{ locale.locale }}</strong>
-          <input v-model="form.translations[locale.locale].label" :placeholder="`Label ${locale.locale}`" />
+          <input v-model="form.translations[locale.locale].label" :placeholder="t('admin.common.labelPlaceholder', { locale: locale.locale })" />
         </div>
       </section>
 
       <button class="primary-button" type="button" :disabled="saving" data-testid="admin-preference-save" @click="savePreference">
         <Save :size="18" aria-hidden="true" />
-        {{ saving ? 'Speichere...' : 'Speichern' }}
+        {{ saving ? t('admin.common.saving') : t('admin.common.save') }}
       </button>
     </section>
 
     <div class="admin-table-header">
-      <p class="muted">Beziehungsmodi und Content-Stile steuern die Sortierung passender Inhalte.</p>
+      <p class="muted">{{ t('admin.taxonomies.help') }}</p>
       <button class="primary-button" type="button" data-testid="admin-preference-new" @click="openNew">
         <Plus :size="18" aria-hidden="true" />
-        Neu
+        {{ t('admin.common.new') }}
       </button>
     </div>
 
@@ -206,10 +209,10 @@ onMounted(async () => {
       <table class="admin-table">
         <thead>
           <tr>
-            <th>Wert</th>
-            <th>Label</th>
-            <th>Status</th>
-            <th>Sortierung</th>
+            <th>{{ t('admin.common.value') }}</th>
+            <th>{{ t('admin.common.label') }}</th>
+            <th>{{ t('admin.common.status') }}</th>
+            <th>{{ t('admin.common.sortOrder') }}</th>
             <th></th>
           </tr>
         </thead>
@@ -217,10 +220,10 @@ onMounted(async () => {
           <tr v-for="preference in currentItems" :key="preference.id">
             <td><code>{{ preference.value }}</code></td>
             <td>{{ preference.label }}</td>
-            <td>{{ preference.active ? 'aktiv' : 'inaktiv' }}</td>
+            <td>{{ preference.active ? t('admin.common.activeLower') : t('admin.common.inactiveLower') }}</td>
             <td>{{ preference.sortOrder }}</td>
             <td class="admin-actions">
-              <button class="secondary-button admin-small-button" type="button" @click="editPreference(preference)">Bearbeiten</button>
+              <button class="secondary-button admin-small-button" type="button" @click="editPreference(preference)">{{ t('admin.common.edit') }}</button>
             </td>
           </tr>
         </tbody>

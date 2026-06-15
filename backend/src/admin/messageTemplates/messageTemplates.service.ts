@@ -55,7 +55,7 @@ export async function saveMessageTemplate(key: string, body: MessageTemplateSave
     if (!text && locale !== 'de') continue;
 
     if (!text && locale === 'de') {
-      errors.push({ locale, message: 'Die Default-Übersetzung darf nicht leer sein.' });
+      errors.push({ locale, message: 'Die Standard-Übersetzung darf nicht leer sein.' });
       continue;
     }
 
@@ -72,7 +72,7 @@ export async function saveMessageTemplate(key: string, body: MessageTemplateSave
   }
 
   if (!normalizedTranslations.some((translation) => translation.locale === 'de')) {
-    errors.push({ locale: 'de', message: 'Die Default-Übersetzung darf nicht leer sein.' });
+    errors.push({ locale: 'de', message: 'Die Standard-Übersetzung darf nicht leer sein.' });
   }
 
   if (errors.length > 0) {

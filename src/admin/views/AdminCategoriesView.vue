@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Plus, Save, Trash2 } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
 import { ApiError } from '@/services/api';
@@ -25,13 +26,15 @@ interface CategoryItem {
   translations: Record<string, Record<string, string>>;
 }
 
-const contentTypes: Array<{ id: ContentType; label: string }> = [
-  { id: 'daily-questions', label: 'Daily-Question-Kategorien' },
-  { id: 'quests', label: 'Quest-Kategorien' },
-  { id: 'know-me-catalog', label: 'Know-Me-Kategorien' },
-  { id: 'love-jar-templates', label: 'Love-Jar-Kategorien' },
-  { id: 'memories', label: 'Memory-Kategorien' },
-];
+const { t } = useI18n();
+
+const contentTypes = computed<Array<{ id: ContentType; label: string }>>(() => [
+  { id: 'daily-questions', label: t('admin.categories.labels.dailyQuestions') },
+  { id: 'quests', label: t('admin.categories.labels.quests') },
+  { id: 'know-me-catalog', label: t('admin.categories.labels.knowMe') },
+  { id: 'love-jar-templates', label: t('admin.categories.labels.loveJar') },
+  { id: 'memories', label: t('admin.categories.labels.memories') },
+]);
 
 const selectedType = ref<ContentType>('daily-questions');
 const locales = ref<LocaleOption[]>([]);
@@ -137,7 +140,7 @@ async function switchType(type: ContentType) {
 
 async function saveCategory() {
   if (!form.value.trim() || !form.label.trim()) {
-    error.value = 'Bitte gib technischen Wert und Label ein.';
+    error.value = t('admin.categories.errors.required');
     return;
   }
   saving.value = true;
@@ -154,7 +157,7 @@ async function saveCategory() {
     error.value =
       caught instanceof ApiError && caught.serverMessage
         ? caught.serverMessage
-        : 'Kategorie konnte nicht gespeichert werden. Pruefe technischen Wert, Label und Zuordnungen.';
+        : t('admin.categories.errors.save');
   } finally {
     saving.value = false;
   }
@@ -168,7 +171,7 @@ async function deleteCategory(category: CategoryItem) {
     });
     items.value = payload.items;
   } catch {
-    error.value = 'Kategorie kann nur gelöscht werden, wenn sie nicht verwendet wird.';
+    error.value = t('admin.categories.errors.delete');
   }
 }
 
@@ -181,10 +184,10 @@ onMounted(async () => {
 <template>
   <section class="admin-view" data-testid="admin-categories">
     <div class="admin-heading">
-      <h1>Content-Kategorien</h1>
+      <h1>{{ t('admin.categories.title') }}</h1>
       <span>{{ filteredItems.length }}</span>
     </div>
-    <p class="muted">Hier pflegst du Kategorien fuer Inhalte. Einzelne Daily Questions bearbeitest du unter Content.</p>
+    <p class="muted">{{ t('admin.categories.help') }}</p>
 
     <div class="admin-tabs" role="tablist">
       <button v-for="type in contentTypes" :key="type.id" type="button" :class="{ active: selectedType === type.id }" @click="switchType(type.id)">
@@ -194,54 +197,54 @@ onMounted(async () => {
 
     <section v-if="showForm" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-category-form">
       <div class="admin-form-head">
-        <h2>{{ form.id ? 'Kategorie bearbeiten' : 'Neue Kategorie' }}</h2>
-        <button class="secondary-button admin-small-button" type="button" @click="resetForm(false)">Schliessen</button>
+        <h2>{{ form.id ? t('admin.categories.editTitle') : t('admin.categories.newTitle') }}</h2>
+        <button class="secondary-button admin-small-button" type="button" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
       </div>
       <p v-if="error" class="form-error">{{ error }}</p>
       <label>
-        Technischer Wert
+        {{ t('admin.common.technicalValue') }}
         <input v-model="form.value" :disabled="Boolean(form.id)" placeholder="z.B. ritual" data-testid="admin-category-value" />
-        <small>Dieser Wert wird im Content gespeichert und kann nach dem Anlegen nicht umbenannt werden.</small>
+        <small>{{ t('admin.categories.technicalValueHelp') }}</small>
       </label>
-      <label>Label<input v-model="form.label" data-testid="admin-category-label" /></label>
-      <label>Sortierung<input v-model.number="form.sortOrder" type="number" /></label>
+      <label>{{ t('admin.common.label') }}<input v-model="form.label" data-testid="admin-category-label" /></label>
+      <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" /></label>
       <label>
-        Passende Beziehungsmodi
+        {{ t('admin.categories.relationshipModes') }}
         <select v-model="form.relationshipModes" multiple data-testid="admin-category-relationship-modes">
           <option v-for="mode in relationshipModeOptions" :key="mode.value" :value="mode.value">{{ mode.label }}</option>
         </select>
-        <small>Keine Auswahl bedeutet: neutral / alle.</small>
+        <small>{{ t('admin.categories.emptySelectionHelp') }}</small>
       </label>
       <label>
-        Passende Content-Stile
+        {{ t('admin.categories.contentStyles') }}
         <select v-model="form.contentStyles" multiple data-testid="admin-category-content-styles">
           <option v-for="style in contentStyleOptions" :key="style.value" :value="style.value">{{ style.label }}</option>
         </select>
-        <small>Keine Auswahl bedeutet: neutral / alle.</small>
+        <small>{{ t('admin.categories.emptySelectionHelp') }}</small>
       </label>
-      <label class="admin-checkbox"><input v-model="form.active" type="checkbox" /> Aktiv</label>
+      <label class="admin-checkbox"><input v-model="form.active" type="checkbox" /> {{ t('admin.common.active') }}</label>
 
       <section class="admin-translation-box">
-        <h2>Übersetzungen</h2>
+        <h2>{{ t('admin.common.translations') }}</h2>
         <div v-for="locale in locales" :key="locale.locale" class="admin-translation-row">
           <strong>{{ locale.locale }}</strong>
-          <input v-model="form.translations[locale.locale].label" :placeholder="`Label ${locale.locale}`" />
+          <input v-model="form.translations[locale.locale].label" :placeholder="t('admin.common.labelPlaceholder', { locale: locale.locale })" />
         </div>
       </section>
 
       <button class="primary-button" type="button" :disabled="saving" data-testid="admin-category-save" @click="saveCategory">
         <Save :size="18" aria-hidden="true" />
-        {{ saving ? 'Speichere...' : 'Speichern' }}
+        {{ saving ? t('admin.common.saving') : t('admin.common.save') }}
       </button>
     </section>
 
     <div class="admin-table-header">
       <div class="admin-toolbar">
-        <p class="muted">Kategorien können nur gelöscht werden, solange sie nicht verwendet werden.</p>
+        <p class="muted">{{ t('admin.categories.deleteHelp') }}</p>
       </div>
       <button class="primary-button" type="button" data-testid="admin-category-new" @click="openNew">
         <Plus :size="18" aria-hidden="true" />
-        Neu
+        {{ t('admin.common.new') }}
       </button>
     </div>
 
@@ -249,11 +252,11 @@ onMounted(async () => {
       <table class="admin-table">
         <thead>
           <tr>
-            <th>Wert</th>
-            <th>Label</th>
-            <th>Status</th>
-            <th>Passend fuer</th>
-            <th>Nutzung</th>
+            <th>{{ t('admin.common.value') }}</th>
+            <th>{{ t('admin.common.label') }}</th>
+            <th>{{ t('admin.common.status') }}</th>
+            <th>{{ t('admin.categories.suitableFor') }}</th>
+            <th>{{ t('admin.categories.usage') }}</th>
             <th></th>
           </tr>
         </thead>
@@ -261,18 +264,18 @@ onMounted(async () => {
           <tr v-for="category in filteredItems" :key="category.id">
             <td><code>{{ category.value }}</code></td>
             <td>{{ category.label }}</td>
-            <td>{{ category.active ? 'aktiv' : 'inaktiv' }}</td>
+            <td>{{ category.active ? t('admin.common.activeLower') : t('admin.common.inactiveLower') }}</td>
             <td>
-              <span v-if="!category.relationshipModes.length && !category.contentStyles.length" class="muted">neutral / alle</span>
+              <span v-if="!category.relationshipModes.length && !category.contentStyles.length" class="muted">{{ t('admin.categories.neutralAll') }}</span>
               <span v-for="mode in category.relationshipModes" v-else :key="`mode-${mode}`" class="admin-chip">{{ mode }}</span>
               <span v-for="style in category.contentStyles" :key="`style-${style}`" class="admin-chip">{{ style }}</span>
             </td>
             <td>{{ category.usageCount ?? 0 }}</td>
             <td class="admin-actions">
-              <button class="secondary-button admin-small-button" type="button" @click="editCategory(category)">Bearbeiten</button>
+              <button class="secondary-button admin-small-button" type="button" @click="editCategory(category)">{{ t('admin.common.edit') }}</button>
               <button class="danger-button admin-small-button" type="button" :disabled="Boolean(category.usageCount)" @click="deleteCategory(category)">
                 <Trash2 :size="16" aria-hidden="true" />
-                Loeschen
+                {{ t('admin.common.delete') }}
               </button>
             </td>
           </tr>

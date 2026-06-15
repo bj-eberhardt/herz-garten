@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { RouterLink, useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { adminApiRequest } from '@/admin/services/adminApi';
 
 interface CoupleDetail {
@@ -31,6 +32,7 @@ interface PreferenceItem {
 }
 
 const route = useRoute();
+const { t } = useI18n();
 const couple = ref<CoupleDetail | null>(null);
 const relationshipModes = ref<PreferenceItem[]>([]);
 const contentStyles = ref<PreferenceItem[]>([]);
@@ -69,12 +71,27 @@ async function savePreferences() {
       }),
     });
     couple.value = payload.couple;
-    preferenceMessage.value = 'Einstellungen gespeichert.';
+    preferenceMessage.value = t('admin.coupleDetail.settingsSaved');
   } catch {
-    preferenceError.value = 'Einstellungen konnten nicht gespeichert werden.';
+    preferenceError.value = t('admin.coupleDetail.settingsSaveError');
   } finally {
     savingPreferences.value = false;
   }
+}
+
+function roleLabel(role: string) {
+  const key = `admin.coupleDetail.roles.${role}`;
+  const translated = t(key);
+  return translated === key ? t('admin.coupleDetail.roles.unknown') : translated;
+}
+
+function userFilterLink(email: string) {
+  return { path: '/admin/users', query: { search: email } };
+}
+
+function backToCouplesLink() {
+  const search = typeof route.query.search === 'string' ? route.query.search : '';
+  return { path: '/admin/couples', query: search ? { search } : {} };
 }
 
 onMounted(async () => {
@@ -84,69 +101,70 @@ onMounted(async () => {
 
 <template>
   <section class="admin-view" data-testid="admin-couple-detail">
+    <RouterLink class="secondary-button admin-back-link" :to="backToCouplesLink()">
+      {{ t('admin.coupleDetail.backToCouples') }}
+    </RouterLink>
+
     <div v-if="couple" class="admin-heading">
       <h1>{{ couple.inviteCode }}</h1>
-      <span>{{ couple.heartPoints }} Punkte</span>
+      <span>{{ t('admin.users.pointsInline', { count: couple.heartPoints }) }}</span>
     </div>
 
     <div v-if="couple" class="admin-grid-two">
       <section class="admin-panel">
-        <h2>Mitglieder</h2>
-        <div v-for="member in couple.members" :key="member.id" class="admin-list-row">
-          <strong>{{ member.displayName }}</strong>
-          <span>{{ member.email }}</span>
-          <small>{{ member.role }}</small>
+        <h2>{{ t('admin.coupleDetail.members') }}</h2>
+        <div class="admin-member-list">
+          <RouterLink v-for="member in couple.members" :key="member.id" class="admin-member-card" :to="userFilterLink(member.email)">
+            <span class="admin-member-name">{{ member.displayName }}</span>
+            <span class="admin-member-email">{{ member.email }}</span>
+            <span class="admin-member-meta">
+              <span class="admin-chip">{{ roleLabel(member.role) }}</span>
+              <span>{{ t('admin.coupleDetail.memberJoinedAt', { date: new Date(member.joinedAt).toLocaleDateString('de-DE') }) }}</span>
+            </span>
+          </RouterLink>
         </div>
       </section>
 
       <section class="admin-panel">
-        <h2>Fortschritt</h2>
+        <h2>{{ t('admin.coupleDetail.progress') }}</h2>
         <div class="admin-metric-grid compact">
-          <article class="admin-metric">
-            <span>Daily</span>
-            <strong>{{ couple.answeredQuestionCount }}</strong>
+          <article class="admin-metric" :title="t('admin.coupleDetail.dailyQuestionsTitle', { questions: couple.answeredQuestionCount, answers: couple.dailyAnswerCount })">
+            <span>{{ t('admin.coupleDetail.dailyQuestions') }}</span>
+            <strong>{{ t('admin.coupleDetail.dailyQuestionsWithAnswers', { questions: couple.answeredQuestionCount, answers: couple.dailyAnswerCount }) }}</strong>
           </article>
           <article class="admin-metric">
-            <span>Antworten</span>
-            <strong>{{ couple.dailyAnswerCount }}</strong>
-          </article>
-          <article class="admin-metric">
-            <span>Quests</span>
+            <span>{{ t('admin.coupleDetail.quests') }}</span>
             <strong>{{ couple.completedQuestCount }}</strong>
           </article>
-          <article class="admin-metric">
-            <span>Love Jar</span>
-            <strong>{{ couple.loveJarNoteCount }}</strong>
+          <article class="admin-metric" :title="t('admin.coupleDetail.loveJarTitle', { drawn: couple.drawnLoveJarNoteCount, total: couple.loveJarNoteCount })">
+            <span>{{ t('admin.coupleDetail.loveJar') }}</span>
+            <strong>{{ t('admin.coupleDetail.loveJarDrawnOfTotal', { drawn: couple.drawnLoveJarNoteCount, total: couple.loveJarNoteCount }) }}</strong>
           </article>
           <article class="admin-metric">
-            <span>Gezogen</span>
-            <strong>{{ couple.drawnLoveJarNoteCount }}</strong>
-          </article>
-          <article class="admin-metric">
-            <span>Memories</span>
+            <span>{{ t('admin.coupleDetail.memories') }}</span>
             <strong>{{ couple.memoryCount }}</strong>
           </article>
-          <article class="admin-metric">
-            <span>Know Me</span>
-            <strong>{{ couple.knowMeRoundCount }}</strong>
+          <article class="admin-metric" :title="t('admin.coupleDetail.knowMeTitle', { hits: couple.knowMeHitCount, rounds: couple.knowMeRoundCount })">
+            <span>{{ t('admin.coupleDetail.knowMe') }}</span>
+            <strong>{{ t('admin.coupleDetail.knowMeHitsOfRounds', { hits: couple.knowMeHitCount, rounds: couple.knowMeRoundCount }) }}</strong>
           </article>
           <article class="admin-metric">
-            <span>Objekte</span>
+            <span>{{ t('admin.coupleDetail.objects') }}</span>
             <strong>{{ couple.gardenObjectCount }}</strong>
           </article>
         </div>
       </section>
 
       <section class="admin-panel admin-form" data-testid="admin-couple-preferences">
-        <h2>Personalisierung</h2>
+        <h2>{{ t('admin.coupleDetail.personalization') }}</h2>
         <label>
-          Beziehungsmodus
+          {{ t('admin.coupleDetail.relationshipMode') }}
           <select v-model="relationshipType" data-testid="admin-couple-relationship-type">
             <option v-for="mode in relationshipModes" :key="mode.value" :value="mode.value">{{ mode.label }}</option>
           </select>
         </label>
         <label>
-          Content-Stil
+          {{ t('admin.coupleDetail.contentStyle') }}
           <select v-model="contentPreference" data-testid="admin-couple-content-preference">
             <option v-for="style in contentStyles" :key="style.value" :value="style.value">{{ style.label }}</option>
           </select>
@@ -154,7 +172,7 @@ onMounted(async () => {
         <p v-if="preferenceMessage" class="success-note">{{ preferenceMessage }}</p>
         <p v-if="preferenceError" class="form-error">{{ preferenceError }}</p>
         <button class="primary-button" type="button" :disabled="savingPreferences" data-testid="admin-couple-preferences-save" @click="savePreferences">
-          {{ savingPreferences ? 'Speichere...' : 'Speichern' }}
+          {{ savingPreferences ? t('admin.common.saving') : t('admin.common.save') }}
         </button>
       </section>
     </div>

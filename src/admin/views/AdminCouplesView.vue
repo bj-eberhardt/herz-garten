@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { Download, Search } from '@lucide/vue';
 import { adminApiRequest, adminDownloadUrl, getAdminToken } from '@/admin/services/adminApi';
 
@@ -25,6 +26,7 @@ const search = ref('');
 const loading = ref(false);
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 
 async function loadCouples() {
   loading.value = true;
@@ -66,16 +68,16 @@ function filterUsers(value: string) {
 <template>
   <section class="admin-view" data-testid="admin-couples">
     <div class="admin-heading">
-      <h1>Paarräume</h1>
+      <h1>{{ t('admin.couples.title') }}</h1>
       <span>{{ total }}</span>
     </div>
 
     <div class="admin-toolbar">
       <label class="admin-search">
         <Search :size="18" aria-hidden="true" />
-        <input v-model="search" placeholder="Suche" data-testid="admin-couples-search" @keyup.enter="loadCouples" />
+        <input v-model="search" :placeholder="t('admin.common.search')" data-testid="admin-couples-search" @keyup.enter="loadCouples" />
       </label>
-      <button class="secondary-button" type="button" @click="loadCouples">Suchen</button>
+      <button class="secondary-button" type="button" @click="loadCouples">{{ t('admin.common.searchAction') }}</button>
       <button class="secondary-button" type="button" data-testid="admin-couples-export-json" @click="download('json')">
         <Download :size="18" aria-hidden="true" />
         JSON
@@ -90,10 +92,10 @@ function filterUsers(value: string) {
       <table class="admin-table">
         <thead>
           <tr>
-            <th>Code</th>
-            <th>Mitglieder</th>
-            <th>Punkte</th>
-            <th>Fortschritt</th>
+            <th>{{ t('admin.common.code') }}</th>
+            <th>{{ t('admin.couples.members') }}</th>
+            <th>{{ t('admin.common.points') }}</th>
+            <th>{{ t('admin.couples.progress') }}</th>
             <th></th>
           </tr>
         </thead>
@@ -105,18 +107,26 @@ function filterUsers(value: string) {
                 {{ member.displayName }}
               </button>
             </td>
-            <td>{{ couple.heartPoints }} · Stage {{ couple.gardenStage }}</td>
+            <td>{{ t('admin.couples.levelInline', { points: couple.heartPoints, stage: couple.gardenStage }) }}</td>
             <td>
-              {{ couple.completedQuestCount }} Quests · {{ couple.loveJarNoteCount }} Jar ·
-              {{ couple.memoryCount }} Memories · {{ couple.knowMeRoundCount }} Know Me
+              {{
+                t('admin.couples.progressInline', {
+                  quests: couple.completedQuestCount,
+                  loveJar: couple.loveJarNoteCount,
+                  memories: couple.memoryCount,
+                  knowMe: couple.knowMeRoundCount,
+                })
+              }}
             </td>
             <td>
-              <RouterLink class="secondary-button admin-small-button" :to="`/admin/couples/${couple.id}`">Details</RouterLink>
+              <RouterLink class="secondary-button admin-small-button" :to="{ path: `/admin/couples/${couple.id}`, query: search ? { search } : {} }">
+                {{ t('admin.common.details') }}
+              </RouterLink>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
-    <p v-if="loading" class="muted">Lade...</p>
+    <p v-if="loading" class="muted">{{ t('admin.common.loading') }}</p>
   </section>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Plus, Save, Trash2 } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
 import { ApiError } from '@/services/api';
@@ -29,6 +30,7 @@ interface GardenLevelForm {
 }
 
 const locales = ref<LocaleOption[]>([]);
+const { t } = useI18n();
 const levels = ref<GardenLevelItem[]>([]);
 const showForm = ref(false);
 const saving = ref(false);
@@ -115,15 +117,15 @@ async function loadLevels() {
 }
 
 function validateForm() {
-  if (!form.name.trim()) return 'Bitte gib einen Namen ein.';
+  if (!form.name.trim()) return t('admin.garden.errors.name');
   if (!form.id && (!Number.isInteger(Number(form.pointsToNext)) || Number(form.pointsToNext) <= 0)) {
-    return 'Bitte gib die Punkte ein, die bis zu dieser neuen Stufe noetig sind.';
+    return t('admin.garden.errors.newPoints');
   }
   if (!isLastStage.value && (!Number.isInteger(Number(form.pointsToNext)) || Number(form.pointsToNext) <= 0)) {
-    return 'Bitte gib fuer diese Stufe positive Punkte bis zur naechsten Stufe ein.';
+    return t('admin.garden.errors.nextPoints');
   }
   if (form.pointsToNext !== null && form.pointsToNext !== undefined && Number(form.pointsToNext) <= 0) {
-    return 'Punkte bis zur naechsten Stufe muessen positiv sein.';
+    return t('admin.garden.errors.positivePoints');
   }
   return '';
 }
@@ -149,7 +151,7 @@ async function saveLevel() {
     error.value =
       caught instanceof ApiError && caught.serverMessage
         ? caught.serverMessage
-        : 'Garden-Level konnte nicht gespeichert werden.';
+        : t('admin.garden.errors.save');
   } finally {
     saving.value = false;
   }
@@ -166,7 +168,7 @@ async function deleteLevel(level: GardenLevelItem) {
     error.value =
       caught instanceof ApiError && caught.serverMessage
         ? caught.serverMessage
-        : 'Garden-Level konnte nicht geloescht werden.';
+        : t('admin.garden.errors.delete');
   } finally {
     deletingId.value = '';
   }
@@ -181,46 +183,46 @@ onMounted(async () => {
 <template>
   <section class="admin-view" data-testid="admin-garden">
     <div class="admin-heading">
-      <h1>Garden</h1>
-      <span>Level und Punktgrenzen</span>
+      <h1>{{ t('admin.garden.title') }}</h1>
+      <span>{{ t('admin.garden.subtitle') }}</span>
     </div>
 
     <section v-if="showForm" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-garden-level-form">
       <div class="admin-form-head">
-        <h2>{{ form.id ? `Stufe ${form.stage} bearbeiten` : 'Neue Stufe' }}</h2>
-        <button class="secondary-button admin-small-button" type="button" @click="resetForm(false)">Schliessen</button>
+        <h2>{{ form.id ? t('admin.garden.editTitle', { stage: form.stage }) : t('admin.garden.newTitle') }}</h2>
+        <button class="secondary-button admin-small-button" type="button" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
       </div>
       <p class="admin-warning">
-        Beim Speichern werden bestehende Gaerten neu berechnet. Objekte in gesperrten Bereichen werden in den hoechsten offenen Bereich verschoben.
+        {{ t('admin.garden.saveWarning') }}
       </p>
       <p v-if="error" class="form-error">{{ error }}</p>
 
-      <label>Name<input v-model="form.name" data-testid="admin-garden-level-name" /></label>
+      <label>{{ t('admin.common.name') }}<input v-model="form.name" data-testid="admin-garden-level-name" /></label>
       <label>
-        {{ form.id ? 'Punkte bis zur naechsten Stufe' : 'Punkte von der bisherigen letzten Stufe bis hierher' }}
+        {{ form.id ? t('admin.garden.pointsToNext') : t('admin.garden.pointsFromPrevious') }}
         <input v-model.number="form.pointsToNext" type="number" min="1" data-testid="admin-garden-level-points" />
-        <small v-if="isLastStage">Optional fuer die letzte Stufe; wird relevant, sobald eine weitere Stufe angelegt wird.</small>
+        <small v-if="isLastStage">{{ t('admin.garden.lastStageHelp') }}</small>
       </label>
 
       <section class="admin-translation-box">
-        <h2>Uebersetzungen</h2>
+        <h2>{{ t('admin.common.translations') }}</h2>
         <div v-for="locale in locales" :key="locale.locale" class="admin-translation-row">
           <strong>{{ locale.locale }}</strong>
-          <input v-model="form.translations[locale.locale].name" :placeholder="`Name ${locale.locale}`" />
+          <input v-model="form.translations[locale.locale].name" :placeholder="t('admin.common.namePlaceholder', { locale: locale.locale })" />
         </div>
       </section>
 
       <button class="primary-button" type="button" :disabled="saving" data-testid="admin-garden-level-save" @click="saveLevel">
         <Save :size="18" aria-hidden="true" />
-        {{ saving ? 'Speichere...' : 'Speichern' }}
+        {{ saving ? t('admin.common.saving') : t('admin.common.save') }}
       </button>
     </section>
 
     <div class="admin-table-header">
-      <p class="muted">Admins pflegen Delta-Punkte; Mindestpunkte werden daraus berechnet.</p>
+      <p class="muted">{{ t('admin.garden.deltaHelp') }}</p>
       <button class="primary-button" type="button" data-testid="admin-garden-level-new" @click="openNew">
         <Plus :size="18" aria-hidden="true" />
-        Neu
+        {{ t('admin.common.new') }}
       </button>
     </div>
 
@@ -230,10 +232,10 @@ onMounted(async () => {
       <table class="admin-table">
         <thead>
           <tr>
-            <th>Stufe</th>
-            <th>Name</th>
-            <th>Mindestpunkte</th>
-            <th>Bis naechste</th>
+            <th>{{ t('admin.garden.stage') }}</th>
+            <th>{{ t('admin.common.name') }}</th>
+            <th>{{ t('admin.garden.minimumPoints') }}</th>
+            <th>{{ t('admin.garden.untilNext') }}</th>
             <th></th>
           </tr>
         </thead>
@@ -244,7 +246,7 @@ onMounted(async () => {
             <td>{{ level.minimumPoints }}</td>
             <td>{{ level.pointsToNext ?? '-' }}</td>
             <td class="admin-actions">
-              <button class="secondary-button admin-small-button" type="button" @click="editLevel(level)">Bearbeiten</button>
+              <button class="secondary-button admin-small-button" type="button" @click="editLevel(level)">{{ t('admin.common.edit') }}</button>
               <button
                 class="secondary-button admin-small-button"
                 type="button"
@@ -253,7 +255,7 @@ onMounted(async () => {
                 @click="deleteLevel(level)"
               >
                 <Trash2 :size="14" aria-hidden="true" />
-                Loeschen
+                {{ t('admin.common.delete') }}
               </button>
             </td>
           </tr>

@@ -31,7 +31,6 @@ const emit = defineEmits<{
 }>();
 
 const editing = ref(false);
-const activeAreaKey = ref<GardenAreaKey | 'all'>('all');
 const viewport = ref<HTMLElement | null>(null);
 const areaElements = ref<Record<string, HTMLElement | null>>({});
 const draftPlacements = ref<Record<string, { areaKey: GardenAreaKey; positionX: number; positionY: number; zIndex: number }>>({});
@@ -47,11 +46,7 @@ const worldWidth = computed(() => {
   const lastArea = props.areas[props.areas.length - 1];
   return lastArea ? lastArea.startX + lastArea.width : 1600;
 });
-const filteredObjects = computed(() =>
-  (activeAreaKey.value === 'all' ? props.objects : props.objects.filter((object) => object.areaKey === activeAreaKey.value)).filter(
-    (object) => unlockedAreaKeys.value.has(object.areaKey),
-  ),
-);
+const visibleObjects = computed(() => props.objects.filter((object) => unlockedAreaKeys.value.has(object.areaKey)));
 const legendItems = computed(() => {
   const usedAssets = new Map<string, { asset?: GardenAsset; label: string; count: number }>();
   for (const object of props.objects.filter((item) => unlockedAreaKeys.value.has(item.areaKey))) {
@@ -245,18 +240,11 @@ onBeforeUnmount(() => {
         {{ i18n.global.t('garden.toolbar.home') }}
       </button>
       <div class="garden-area-tabs" aria-label="Gartenbereiche">
-        <button type="button" :class="{ active: activeAreaKey === 'all' }" @click="activeAreaKey = 'all'">
-          {{ i18n.global.t('common.all') }}
-        </button>
         <button
           v-for="area in unlockedAreas"
           :key="area.key"
           type="button"
-          :class="{ active: activeAreaKey === area.key }"
-          @click="
-            activeAreaKey = area.key;
-            scrollToArea(area.key);
-          "
+          @click="scrollToArea(area.key)"
         >
           {{ area.label }}
         </button>
@@ -332,7 +320,7 @@ onBeforeUnmount(() => {
             </div>
 
             <GardenObjectSprite
-              v-for="object in filteredObjects.filter((item) => item.areaKey === area.key)"
+              v-for="object in visibleObjects.filter((item) => item.areaKey === area.key)"
               :key="object.id"
               :object="displayObject(object)"
               :asset="assetByKey.get(object.assetKey)"

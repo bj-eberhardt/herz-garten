@@ -137,9 +137,9 @@ Dafuer muss PostgreSQL lokal laufen und `DATABASE_URL` auf die Datenbank zeigen.
 ## Projektstruktur
 
 - `src/views`: Hauptseiten aus dem MVP-Scope
-- `src/components`: Feature-Komponenten fuer Garten, Fragen, Quests, Love Jar und Erinnerungen
+- `src/components`: Feature-Komponenten fuer Garten, Fragen, Aufgaben, Love Jar und Erinnerungen
 - `src/stores`: Lokale Demo-Logik als Vorstufe zur Backend-Anbindung
-- `src/content`: Start-Content fuer Fragen, Quests und Love-Jar-Vorlagen
+- `src/content`: Start-Content fuer Fragen, Aufgaben und Love-Jar-Vorlagen
 - `backend`: Express-API-Skeleton mit PostgreSQL-Verbindung
 - `backend/src/migrate.ts`: Migration-Runner fuer versionierte SQL-Dateien
 - `database/migrations`: PostgreSQL-Migrationen fuer die Docker-DB
