@@ -1,6 +1,7 @@
 {
   "name": "Herzgarten",
   "short_name": "Herzgarten",
+  "id": "/",
   "description": "Ein liebevolles Beziehungsspiel, in dem gemeinsame Momente einen digitalen Garten wachsen lassen.",
   "start_url": "/",
   "display": "standalone",

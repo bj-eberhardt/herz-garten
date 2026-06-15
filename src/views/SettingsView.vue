@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { ShieldCheck } from '@lucide/vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -7,9 +7,11 @@ import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
 import FeatureExplainerSettingsPanel from '@/components/settings/FeatureExplainerSettingsPanel.vue';
 import PrivacyDetailsPanel from '@/components/settings/PrivacyDetailsPanel.vue';
 import ProfileSettingsPanel from '@/components/settings/ProfileSettingsPanel.vue';
+import PushNotificationsSettingsPanel from '@/components/settings/PushNotificationsSettingsPanel.vue';
 import SettingsConfirmDialog from '@/components/settings/SettingsConfirmDialog.vue';
 import { FIELD_SUCCESS_VISIBLE_MS } from '@/constants/timing';
 import { featureExplainerKeys, useAuthStore } from '@/stores/authStore';
+import { usePushStore } from '@/stores/pushStore';
 import { localizeApiError } from '@/services/errorMessages';
 import type { FeatureExplainerKey } from '@/types/domain';
 
@@ -18,6 +20,7 @@ type ConfirmAction = 'leaveCouple' | 'deleteAccount';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const pushStore = usePushStore();
 const { t } = useI18n();
 const message = ref('');
 const error = ref('');
@@ -78,6 +81,10 @@ const confirmDialog = computed(() => {
     confirmLabel: t('settings.leaveCouple'),
     titleId: 'leave-confirm-title',
   };
+});
+
+onMounted(() => {
+  pushStore.loadStatus();
 });
 
 function clearProfileErrors() {
@@ -298,6 +305,20 @@ async function confirmPendingAction() {
       :messages="featureExplainerMessages"
       :errors="featureExplainerErrors"
       @toggle="updateFeatureExplainer"
+    />
+
+    <PushNotificationsSettingsPanel
+      :status-key="pushStore.statusKey"
+      :loading="pushStore.loading"
+      :saving="pushStore.saving"
+      :testing="pushStore.testing"
+      :active="pushStore.active"
+      :can-prompt="pushStore.canPrompt"
+      :message="pushStore.message"
+      :error="pushStore.error"
+      @enable="pushStore.enable"
+      @disable="pushStore.disable"
+      @test="pushStore.sendTest"
     />
 
     <PrivacyDetailsPanel />

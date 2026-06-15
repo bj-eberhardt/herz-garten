@@ -1584,6 +1584,44 @@ textarea {
   margin-bottom: 0;
 }
 
+.push-settings {
+  display: grid;
+  gap: 16px;
+}
+
+.push-status,
+.push-opt-in {
+  align-items: center;
+  background: #fffaf6;
+  border: 1px solid #efd7ca;
+  border-radius: 8px;
+  color: #6a5147;
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.push-status svg {
+  color: #9f4c43;
+  flex: 0 0 auto;
+}
+
+.push-status span {
+  font-weight: 800;
+}
+
+.push-opt-in {
+  justify-content: space-between;
+}
+
+.push-opt-in p {
+  margin-bottom: 0;
+}
+
+.push-opt-in .eyebrow {
+  margin-bottom: 4px;
+}
+
 .detail-panel {
   display: grid;
   gap: 16px;

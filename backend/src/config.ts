@@ -3,6 +3,10 @@ import 'dotenv/config';
 const defaultJwtSecret = 'dev-only-herzgarten-secret';
 const defaultAdminPassword = 'admin';
 const nodeEnv = process.env.NODE_ENV ?? 'development';
+const pushEnabledEnv = process.env.PUSH_ENABLED?.trim().toLowerCase();
+const vapidPublicKey = process.env.VAPID_PUBLIC_KEY ?? '';
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY ?? '';
+const pushKeysConfigured = Boolean(vapidPublicKey && vapidPrivateKey);
 
 export const config = {
   nodeEnv,
@@ -19,6 +23,15 @@ export const config = {
   adminJwtAudience: process.env.ADMIN_JWT_AUDIENCE ?? 'herzgarten-admin',
   authRateLimitWindowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS ?? 15 * 60 * 1000),
   authRateLimitMax: Number(process.env.AUTH_RATE_LIMIT_MAX ?? 1000),
+  vapidPublicKey,
+  vapidPrivateKey,
+  vapidSubject: process.env.VAPID_SUBJECT ?? 'mailto:admin@herzgarten.local',
+  pushEnabled:
+    pushEnabledEnv === 'true' || pushEnabledEnv === '1'
+      ? true
+      : pushEnabledEnv === 'false' || pushEnabledEnv === '0'
+        ? false
+        : pushKeysConfigured,
 };
 
 if (config.nodeEnv === 'production') {
@@ -26,6 +39,7 @@ if (config.nodeEnv === 'production') {
     !process.env.JWT_SECRET || config.jwtSecret === defaultJwtSecret ? 'JWT_SECRET' : '',
     !process.env.ADMIN_JWT_SECRET || config.adminJwtSecret === defaultJwtSecret ? 'ADMIN_JWT_SECRET' : '',
     !process.env.ADMIN_PASSWORD || config.adminPassword === defaultAdminPassword ? 'ADMIN_PASSWORD' : '',
+    config.pushEnabled && !pushKeysConfigured ? 'VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY' : '',
   ].filter(Boolean);
 
   if (unsafeSettings.length > 0) {

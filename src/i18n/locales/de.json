@@ -349,6 +349,12 @@
     "howText": "Hier landen Hinweise, wenn im Paarraum etwas auf dich wartet: Antworten, Aufgaben-Bestätigungen, neue Zettel, Erinnerungen oder Spielrunden.",
     "unread": "keine ungelesenen Hinweise | ein ungelesener Hinweis | {count} ungelesene Hinweise",
     "hint": "Hier landen nur sanfte In-App-Hinweise, keine Push-Nachrichten.",
+    "push": {
+      "eyebrow": "Browser-Push",
+      "text": "Du kannst neue Hinweise auch als Browser-Push erhalten.",
+      "enable": "Aktivieren",
+      "enabling": "Aktiviert..."
+    },
     "readAll": "Alle gelesen",
     "loading": "Benachrichtigungen werden geladen...",
     "empty": "Noch keine Hinweise. Sobald im Paarraum etwas auf dich wartet, erscheint es hier.",
@@ -436,6 +442,24 @@
     "hintSettingsTitle": "Erklärboxen anzeigen",
     "hintSettingsText": "Lege pro Bereich fest, ob die kurze „Was ist das?“-Box angezeigt werden soll. Ausgeblendete Hinweise kannst du hier jederzeit wieder aktivieren.",
     "hintSettingsSaved": "Hinweis-Einstellung wurde gespeichert.",
+    "push": {
+      "eyebrow": "Browser-Push",
+      "title": "Push-Benachrichtigungen",
+      "text": "Erhalte neue Herzgarten-Hinweise auch dann, wenn die App gerade nicht offen ist. Die Aktivierung gilt nur fuer dieses Geraet und diesen Browser.",
+      "enable": "Aktivieren",
+      "enabling": "Aktiviert...",
+      "disable": "Deaktivieren",
+      "disabling": "Deaktiviert...",
+      "test": "Test senden",
+      "testing": "Sendet...",
+      "status": {
+        "unsupported": "Dieser Browser unterstuetzt Browser-Push nicht.",
+        "serverDisabled": "Browser-Push ist auf dem Server noch nicht konfiguriert.",
+        "blocked": "Browser-Push ist im Browser blockiert.",
+        "inactive": "Browser-Push ist noch nicht aktiv.",
+        "active": "Browser-Push ist aktiv."
+      }
+    },
     "featureExplainers": {
       "onboarding": "Onboarding",
       "today": "Heute",

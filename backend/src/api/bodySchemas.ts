@@ -118,6 +118,25 @@ export const gardenPlacementBodySchema = z
     message: 'At least one placement field is required',
   });
 
+export const pushSubscriptionBodySchema = z
+  .object({
+    endpoint: trimmedString.pipe(z.string().url()),
+    expirationTime: z.number().nullable().optional(),
+    keys: z
+      .object({
+        p256dh: trimmedString.pipe(z.string().min(1)),
+        auth: trimmedString.pipe(z.string().min(1)),
+      })
+      .strict(),
+  })
+  .strict();
+
+export const pushUnsubscribeBodySchema = z
+  .object({
+    endpoint: trimmedString.pipe(z.string().url()).optional(),
+  })
+  .strict();
+
 export const questQuerySchema = z
   .object({
     category: optionalQueryString,

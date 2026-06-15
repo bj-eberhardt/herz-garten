@@ -2,6 +2,7 @@ import { randomInt, randomUUID } from 'node:crypto';
 import type { Request } from 'express';
 import { pool } from '../db.js';
 import { type NotificationMessageKey, translateNotificationBackend } from '../i18n/messages.js';
+import { sendPushNotifications, type PushNotificationPayload } from './push/push.service.js';
 import { fallbackAreaKey, gardenAreas, gardenAssets } from './garden/catalog.js';
 import {
   addCoupleHeartPoints,
@@ -448,13 +449,15 @@ export async function createNotifications(
   const params = options.params ?? {};
   const title = await translateNotificationBackend(options.titleKey, params);
   const body = await translateNotificationBackend(options.bodyKey, params);
+  const pushPayloads: PushNotificationPayload[] = [];
 
   for (const userId of uniqueUserIds) {
-    await client.query(
+    const result = await client.query<{ id: string; userId: string }>(
       `
         insert into notifications (id, couple_id, user_id, type, title, body, source_type, source_id, title_key, body_key, params)
         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         on conflict do nothing
+        returning id, user_id as "userId"
       `,
       [
         randomUUID(),
@@ -470,7 +473,22 @@ export async function createNotifications(
         JSON.stringify(params),
       ],
     );
+
+    const inserted = result.rows[0];
+    if (inserted) {
+      pushPayloads.push({
+        notificationId: inserted.id,
+        userId: inserted.userId,
+        title,
+        body,
+        url: `/notifications?notification=${inserted.id}`,
+      });
+    }
   }
+
+  sendPushNotifications(pushPayloads).catch((error) => {
+    console.warn('Push notification dispatch failed', error);
+  });
 }
 
 export async function getOrCreateTodayInstance(client: Queryable, coupleId: string) {

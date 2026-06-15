@@ -125,6 +125,28 @@ npm run dev
 
 Dafuer muss PostgreSQL lokal laufen und `DATABASE_URL` auf die Datenbank zeigen.
 
+## Browser-Push lokal testen
+
+Browser-Push ist kostenlos und nutzt standardsbasierten Web Push mit VAPID. Ohne VAPID-Keys meldet die API `enabled: false` und die App zeigt Push als nicht konfiguriert an.
+
+VAPID-Keys einmalig im Backend erzeugen:
+
+```bash
+cd backend
+npx web-push generate-vapid-keys
+```
+
+Dann die Werte als Umgebungsvariablen setzen, zum Beispiel in einer lokalen `.env` oder vor `docker compose up`:
+
+```bash
+PUSH_ENABLED=true
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:admin@herzgarten.local
+```
+
+Auf `localhost` funktionieren Service Worker und Notifications in modernen Desktop-Browsern. Fuer Tests auf echten Mobilgeraeten braucht die App eine HTTPS-URL, zum Beispiel ueber ngrok, Cloudflare Tunnel oder mkcert. Auf iOS/iPadOS funktioniert Web Push ab 16.4 fuer Web-Apps, die zum Home-Bildschirm hinzugefuegt wurden.
+
 ## Stack
 
 - Vue 3 + Vite + TypeScript

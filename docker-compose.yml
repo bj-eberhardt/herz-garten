@@ -28,6 +28,10 @@ services:
       MIGRATIONS_DIR: /database/migrations
       JWT_SECRET: dev-only-herzgarten-secret
       CORS_ORIGIN: http://localhost:5173
+      PUSH_ENABLED: "${PUSH_ENABLED:-false}"
+      VAPID_PUBLIC_KEY: "${VAPID_PUBLIC_KEY:-}"
+      VAPID_PRIVATE_KEY: "${VAPID_PRIVATE_KEY:-}"
+      VAPID_SUBJECT: "${VAPID_SUBJECT:-mailto:admin@herzgarten.local}"
     ports:
       - "3000:3000"
     volumes:

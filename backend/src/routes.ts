@@ -9,6 +9,7 @@ import { registerKnowMeRoutes } from './api/routes/know-me.js';
 import { registerLoveJarRoutes } from './api/routes/love-jar.js';
 import { registerMemoryRoutes } from './api/routes/memories.js';
 import { registerNotificationRoutes } from './api/routes/notifications.js';
+import { registerPushRoutes } from './api/routes/push.js';
 import { registerQuestRoutes } from './api/routes/quests.js';
 import { registerTodayRoutes } from './api/routes/today.js';
 
@@ -19,6 +20,7 @@ export function apiRouter(): Router {
   registerConfigRoutes(router);
   registerAccountRoutes(router);
   registerNotificationRoutes(router);
+  registerPushRoutes(router);
   registerCoupleRoutes(router);
   registerTodayRoutes(router);
   registerQuestRoutes(router);
