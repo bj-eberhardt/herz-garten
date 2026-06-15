@@ -46,7 +46,7 @@ export function registerGardenRoutes(router: Router) {
     }
 
     const placement = normalizeGardenPlacement(request.body ?? {});
-    if (!isUnlockedGardenArea(placement.areaKey, Number(couple.gardenStage))) {
+    if (placement.areaKey !== undefined && !isUnlockedGardenArea(placement.areaKey, Number(couple.gardenStage))) {
       sendApiError(response, 400, 'garden.invalidPlacement');
       return;
     }

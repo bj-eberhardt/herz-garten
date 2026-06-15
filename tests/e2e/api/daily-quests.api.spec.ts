@@ -154,6 +154,11 @@ test.describe('quests api', () => {
 
     await expectApiError(await apiGetRaw(request, '/api/quests', user.token), 409, 'couple.notConnected');
     await expectApiError(
+      await apiGetRaw(request, '/api/quests?effortLevel=invalid&maxMinutes=soon', partnerA.token),
+      400,
+      'common.validation',
+    );
+    await expectApiError(
       await apiPostRaw(request, `/api/quests/${missingQuestId}/accept`, {}, partnerA.token),
       404,
       'quest.notFound',

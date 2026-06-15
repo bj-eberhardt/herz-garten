@@ -69,6 +69,14 @@ const adminAuthRateLimit = createRateLimiter({
   max: config.authRateLimitMax,
 });
 
+function sendAdminError(response: Response, status: number, errorKey: string, error: string, params?: Record<string, unknown>) {
+  response.status(status).json({
+    errorKey,
+    error,
+    ...(params ? { params } : {}),
+  });
+}
+
 export function adminRouter(): Router {
   const router = createRouter();
 
@@ -150,7 +158,7 @@ export function adminRouter(): Router {
     try {
       const couple = await getCoupleDetail(String(request.params.id));
       if (!couple) {
-        response.status(404).json({ errorKey: 'couple.notFound', error: 'Paarraum nicht gefunden.' });
+        sendAdminError(response, 404, 'couple.notFound', 'Paarraum nicht gefunden.');
         return;
       }
       response.json({ couple });
@@ -169,13 +177,13 @@ export function adminRouter(): Router {
         !(await preferenceValueExists('relationshipModes', relationshipType, true)) ||
         !(await preferenceValueExists('contentStyles', contentPreference, true))
       ) {
-        response.status(400).json({ errorKey: 'admin.couplePreferencesInvalid', error: 'Paarraum-Einstellungen sind ungÃ¼ltig.' });
+        sendAdminError(response, 400, 'admin.couplePreferencesInvalid', 'Paarraum-Einstellungen sind ungültig.');
         return;
       }
 
       const couple = await updateCouplePreferences(String(request.params.id), relationshipType, contentPreference);
       if (!couple) {
-        response.status(404).json({ errorKey: 'couple.notFound', error: 'Paarraum nicht gefunden.' });
+        sendAdminError(response, 404, 'couple.notFound', 'Paarraum nicht gefunden.');
         return;
       }
       await audit('update', 'couple', String(request.params.id), { relationshipType, contentPreference });
@@ -207,16 +215,14 @@ export function adminRouter(): Router {
       const key = String(request.params.key);
       const result = await saveMessageTemplate(key, request.body);
       if (result.status === 'notFound') {
-        response.status(404).json({ errorKey: 'admin.messageTemplateNotFound', error: 'Message-Template nicht gefunden.' });
+        sendAdminError(response, 404, 'admin.messageTemplateNotFound', 'Message-Template nicht gefunden.');
         return;
       }
       await audit('update', 'message-template', null, { key });
       response.json({ items: result.items });
     } catch (error) {
       if (error instanceof MessageTemplateValidationException) {
-        response.status(400).json({
-          errorKey: 'admin.messageTemplateInvalid',
-          error: 'Message-Template ist ungültig.',
+        sendAdminError(response, 400, 'admin.messageTemplateInvalid', 'Message-Template ist ungültig.', {
           validationErrors: error.errors,
         });
         return;
@@ -244,7 +250,7 @@ export function adminRouter(): Router {
       response.status(201).json(payload);
     } catch (error) {
       if (error instanceof GardenLevelValidationError) {
-        response.status(400).json({ errorKey: 'admin.gardenLevelInvalid', error: error.message });
+        sendAdminError(response, 400, 'admin.gardenLevelInvalid', error.message);
         return;
       }
       handleError(response, error);
@@ -260,11 +266,11 @@ export function adminRouter(): Router {
       response.json(payload);
     } catch (error) {
       if (error instanceof Error && error.message === 'garden level not found') {
-        response.status(404).json({ errorKey: 'admin.gardenLevelNotFound', error: 'Garden-Level nicht gefunden.' });
+        sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Garden-Level nicht gefunden.');
         return;
       }
       if (error instanceof GardenLevelValidationError) {
-        response.status(400).json({ errorKey: 'admin.gardenLevelInvalid', error: error.message });
+        sendAdminError(response, 400, 'admin.gardenLevelInvalid', error.message);
         return;
       }
       handleError(response, error);
@@ -276,18 +282,18 @@ export function adminRouter(): Router {
       const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
       const result = await deleteGardenLevel(String(request.params.id), locale);
       if (result.status === 'not_found') {
-        response.status(404).json({ errorKey: 'admin.gardenLevelNotFound', error: 'Garden-Level nicht gefunden.' });
+        sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Garden-Level nicht gefunden.');
         return;
       }
       if (result.status === 'invalid') {
-        response.status(400).json({ errorKey: 'admin.gardenLevelInvalid', error: 'Stufe 1 kann nicht geloescht werden.' });
+        sendAdminError(response, 400, 'admin.gardenLevelInvalid', 'Stufe 1 kann nicht gelöscht werden.');
         return;
       }
       await audit('delete', 'garden-level', String(request.params.id));
       response.json({ items: result.items });
     } catch (error) {
       if (error instanceof GardenLevelValidationError) {
-        response.status(400).json({ errorKey: 'admin.gardenLevelInvalid', error: error.message });
+        sendAdminError(response, 400, 'admin.gardenLevelInvalid', error.message);
         return;
       }
       handleError(response, error);
@@ -321,7 +327,7 @@ export function adminRouter(): Router {
       await audit('create', 'relationship-mode', id, { value: request.body.value });
       response.status(201).json({ id, items: await listPreferences('relationshipModes') });
     } catch {
-      response.status(400).json({ errorKey: 'admin.preferenceInvalid', error: 'Taxonomie-Daten sind ungÃ¼ltig.' });
+      sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomie-Daten sind ungültig.');
     }
   });
 
@@ -331,7 +337,7 @@ export function adminRouter(): Router {
       await audit('update', 'relationship-mode', id, { value: request.body.value });
       response.json({ id, items: await listPreferences('relationshipModes') });
     } catch {
-      response.status(400).json({ errorKey: 'admin.preferenceInvalid', error: 'Taxonomie-Daten sind ungÃ¼ltig.' });
+      sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomie-Daten sind ungültig.');
     }
   });
 
@@ -349,7 +355,7 @@ export function adminRouter(): Router {
       await audit('create', 'content-style', id, { value: request.body.value });
       response.status(201).json({ id, items: await listPreferences('contentStyles') });
     } catch {
-      response.status(400).json({ errorKey: 'admin.preferenceInvalid', error: 'Taxonomie-Daten sind ungÃ¼ltig.' });
+      sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomie-Daten sind ungültig.');
     }
   });
 
@@ -359,7 +365,7 @@ export function adminRouter(): Router {
       await audit('update', 'content-style', id, { value: request.body.value });
       response.json({ id, items: await listPreferences('contentStyles') });
     } catch {
-      response.status(400).json({ errorKey: 'admin.preferenceInvalid', error: 'Taxonomie-Daten sind ungÃ¼ltig.' });
+      sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomie-Daten sind ungültig.');
     }
   });
 
@@ -368,7 +374,7 @@ export function adminRouter(): Router {
       const type = normalizeText(request.query.type);
       const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
       if (type && !isContentType(type)) {
-        response.status(404).json({ errorKey: 'content.notFound', error: 'Content-Typ nicht gefunden.' });
+        sendAdminError(response, 404, 'content.notFound', 'Content-Typ nicht gefunden.');
         return;
       }
       response.json({ items: await listCategories(type ? (type as ContentType) : undefined, locale) });
@@ -383,7 +389,7 @@ export function adminRouter(): Router {
       await audit('create', 'category', id, { contentType: request.body.contentType, value: request.body.value });
       response.status(201).json({ id, items: await listCategories() });
     } catch {
-      response.status(400).json({ errorKey: 'admin.categoryInvalid', error: 'Kategorie-Daten sind ungültig.' });
+      sendAdminError(response, 400, 'admin.categoryInvalid', 'Kategorie-Daten sind ungültig.');
     }
   });
 
@@ -393,7 +399,7 @@ export function adminRouter(): Router {
       await audit('update', 'category', id, { contentType: request.body.contentType, value: request.body.value });
       response.json({ id, items: await listCategories() });
     } catch {
-      response.status(400).json({ errorKey: 'admin.categoryInvalid', error: 'Kategorie-Daten sind ungültig.' });
+      sendAdminError(response, 400, 'admin.categoryInvalid', 'Kategorie-Daten sind ungültig.');
     }
   });
 
@@ -401,13 +407,11 @@ export function adminRouter(): Router {
     try {
       const result = await deleteCategory(String(request.params.id));
       if (result.reason === 'not_found') {
-        response.status(404).json({ errorKey: 'admin.categoryNotFound', error: 'Kategorie nicht gefunden.' });
+        sendAdminError(response, 404, 'admin.categoryNotFound', 'Kategorie nicht gefunden.');
         return;
       }
       if (result.reason === 'in_use') {
-        response.status(409).json({
-          errorKey: 'admin.categoryInUse',
-          error: 'Kategorie wird noch verwendet.',
+        sendAdminError(response, 409, 'admin.categoryInUse', 'Kategorie wird noch verwendet.', {
           usageCount: result.usageCount,
         });
         return;
@@ -423,7 +427,7 @@ export function adminRouter(): Router {
     try {
       const type = String(request.params.type);
       if (!isEditableContentType(type)) {
-        response.status(404).json({ errorKey: 'content.notFound', error: 'Content-Typ nicht gefunden.' });
+        sendAdminError(response, 404, 'content.notFound', 'Content-Typ nicht gefunden.');
         return;
       }
       response.json({ items: await listContent(type, request) });
@@ -436,14 +440,14 @@ export function adminRouter(): Router {
     try {
       const type = String(request.params.type);
       if (!isEditableContentType(type)) {
-        response.status(404).json({ errorKey: 'content.notFound', error: 'Content-Typ nicht gefunden.' });
+        sendAdminError(response, 404, 'content.notFound', 'Content-Typ nicht gefunden.');
         return;
       }
       const id = await saveContent(type, request.body);
       await audit('create', type, id, { fields: Object.keys(request.body ?? {}) });
       response.status(201).json({ id, items: await listContent(type, request) });
     } catch (error) {
-      response.status(400).json({ errorKey: 'admin.contentInvalid', error: 'Content-Daten sind ungültig.' });
+      sendAdminError(response, 400, 'admin.contentInvalid', 'Content-Daten sind ungültig.');
     }
   });
 
@@ -451,14 +455,14 @@ export function adminRouter(): Router {
     try {
       const type = String(request.params.type);
       if (!isEditableContentType(type)) {
-        response.status(404).json({ errorKey: 'content.notFound', error: 'Content-Typ nicht gefunden.' });
+        sendAdminError(response, 404, 'content.notFound', 'Content-Typ nicht gefunden.');
         return;
       }
       const id = await saveContent(type, request.body, String(request.params.id));
       await audit('update', type, id, { fields: Object.keys(request.body ?? {}) });
       response.json({ id, items: await listContent(type, request) });
     } catch (error) {
-      response.status(400).json({ errorKey: 'admin.contentInvalid', error: 'Content-Daten sind ungültig.' });
+      sendAdminError(response, 400, 'admin.contentInvalid', 'Content-Daten sind ungültig.');
     }
   });
 

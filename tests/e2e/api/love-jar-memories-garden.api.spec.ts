@@ -191,6 +191,13 @@ test.describe('memories and garden api', () => {
       expect.objectContaining({ areaKey: 'heart_bed', positionX: 42, positionY: 58, zIndex: 7, placedByUser: true }),
     );
 
+    const partiallyPlaced = await expectJson<{ object: GardenPayload['objects'][number] }>(
+      await apiPatchRaw(request, `/api/garden/objects/${object!.id}/placement`, { rotation: 3 }, partnerA.token),
+    );
+    expect(partiallyPlaced.object).toEqual(
+      expect.objectContaining({ areaKey: 'heart_bed', positionX: 42, positionY: 58, zIndex: 7, rotation: 3 }),
+    );
+
     const detail = await expectJson<GardenObjectDetailPayload>(
       await apiGetRaw(request, `/api/garden/objects/${object!.id}`, partnerA.token),
     );

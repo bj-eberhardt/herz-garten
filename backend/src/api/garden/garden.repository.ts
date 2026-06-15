@@ -3,12 +3,12 @@ import { pool } from '../../db.js';
 import type { GardenObjectRow } from './garden.mapper.js';
 
 export interface GardenPlacementUpdate {
-  areaKey: string;
-  positionX: number;
-  positionY: number;
-  zIndex: number;
-  scale: number;
-  rotation: number;
+  areaKey?: string;
+  positionX?: number;
+  positionY?: number;
+  zIndex?: number;
+  scale?: number;
+  rotation?: number;
 }
 
 export async function listGardenObjects(coupleId: string) {
@@ -54,12 +54,12 @@ export async function updateGardenObjectPlacement(coupleId: string, objectId: st
     `
       update garden_objects
       set
-        area_key = $1,
-        position_x = $2,
-        position_y = $3,
-        z_index = $4,
-        scale = $5,
-        rotation = $6,
+        area_key = coalesce($1, area_key),
+        position_x = coalesce($2, position_x),
+        position_y = coalesce($3, position_y),
+        z_index = coalesce($4, z_index),
+        scale = coalesce($5, scale),
+        rotation = coalesce($6, rotation),
         placed_by_user = true
       where id = $7 and couple_id = $8
       returning
@@ -69,6 +69,7 @@ export async function updateGardenObjectPlacement(coupleId: string, objectId: st
         source_type as "sourceType",
         source_id as "sourceId",
         label,
+        label as "historyTitle",
         area_key as "areaKey",
         asset_key as "assetKey",
         position_x as "positionX",

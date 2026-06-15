@@ -31,7 +31,7 @@ const de = {
   'errors.auth.invalidCredentials': 'E-Mail oder Passwort stimmt nicht.',
   'errors.auth.registrationInvalid': 'Bitte gib E-Mail, Namen und ein Passwort mit mindestens 8 Zeichen ein.',
   'errors.auth.emailAlreadyRegistered': 'Diese E-Mail ist schon registriert.',
-  'errors.profile.updateInvalid': 'Bitte gib einen Namen und eine gÃ¼ltige E-Mail-Adresse ein.',
+  'errors.profile.updateInvalid': 'Bitte gib einen Namen und eine gültige E-Mail-Adresse ein.',
   'errors.profile.passwordInvalid': 'Das aktuelle Passwort stimmt nicht.',
   'errors.couple.alreadyConnected': 'Du bist bereits mit einem Paarraum verbunden.',
   'errors.couple.inviteCodeRequired': 'Bitte gib einen Paar-Code ein.',

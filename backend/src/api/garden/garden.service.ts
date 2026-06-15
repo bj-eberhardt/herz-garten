@@ -70,15 +70,14 @@ export async function buildGardenPayload(couple: CurrentCouple, locale = 'de') {
 }
 
 export function normalizeGardenPlacement(body: GardenPlacementBody) {
-  const positionY = Math.round(clampNumber(body.positionY, 28, 88, 64));
-  return {
-    areaKey: typeof body.areaKey === 'string' ? body.areaKey.trim() : '',
-    positionX: Math.round(clampNumber(body.positionX, 4, 96, 50)),
-    positionY,
-    zIndex: Math.round(clampNumber(body.zIndex, 1, 99, 1 + positionY / 10)),
-    scale: clampNumber(body.scale, 0.7, 1.35, 1),
-    rotation: Math.round(clampNumber(body.rotation, -12, 12, 0)),
-  };
+  const placement: GardenPlacementUpdate = {};
+  if (typeof body.areaKey === 'string') placement.areaKey = body.areaKey.trim();
+  if (body.positionX !== undefined) placement.positionX = Math.round(clampNumber(body.positionX, 4, 96, 50));
+  if (body.positionY !== undefined) placement.positionY = Math.round(clampNumber(body.positionY, 28, 88, 64));
+  if (body.zIndex !== undefined) placement.zIndex = Math.round(clampNumber(body.zIndex, 1, 99, 1));
+  if (body.scale !== undefined) placement.scale = clampNumber(body.scale, 0.7, 1.35, 1);
+  if (body.rotation !== undefined) placement.rotation = Math.round(clampNumber(body.rotation, -12, 12, 0));
+  return placement;
 }
 
 export function isUnlockedGardenArea(areaKey: string, gardenStage: number) {

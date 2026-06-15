@@ -7,6 +7,7 @@ const trimmedNullableString = z
   .string()
   .transform((value) => value.trim())
   .nullable();
+const optionalQueryString = z.string().optional();
 
 export const authRegisterBodySchema = z
   .object({
@@ -111,5 +112,22 @@ export const gardenPlacementBodySchema = z
     zIndex: z.number().finite().optional(),
     scale: z.number().finite().optional(),
     rotation: z.number().finite().optional(),
+  })
+  .strict()
+  .refine((body) => Object.keys(body).length > 0, {
+    message: 'At least one placement field is required',
+  });
+
+export const questQuerySchema = z
+  .object({
+    category: optionalQueryString,
+    effortLevel: z.enum(['all', 'low', 'medium', 'high']).optional(),
+    maxMinutes: z
+      .string()
+      .regex(/^\d+$/)
+      .refine((value) => Number(value) > 0)
+      .optional(),
+    mode: z.enum(['all', 'solo', 'together', 'long_distance']).optional(),
+    lang: optionalQueryString,
   })
   .strict();
