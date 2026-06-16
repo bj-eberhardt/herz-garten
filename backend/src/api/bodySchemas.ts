@@ -25,9 +25,11 @@ export const authLoginBodySchema = z
   .strict();
 
 const featureExplainersSchema = z.record(z.string(), z.boolean());
+const pushNotificationModeSchema = z.enum(['all', 'actions_only']);
 const knownPreferencesSchema = z
   .object({
     featureExplainers: featureExplainersSchema.optional(),
+    pushNotificationMode: pushNotificationModeSchema.optional(),
     futureOption: z.object({ enabled: z.boolean() }).strict().optional(),
   })
   .strict();
@@ -36,6 +38,7 @@ export const preferencesBodySchema = z
   .object({
     preferences: knownPreferencesSchema.optional(),
     featureExplainers: featureExplainersSchema.optional(),
+    pushNotificationMode: pushNotificationModeSchema.optional(),
     futureOption: z.object({ enabled: z.boolean() }).strict().optional(),
   })
   .strict();

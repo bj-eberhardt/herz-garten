@@ -18,6 +18,7 @@ const coupleStore = useCoupleStore();
 const { t, d } = useI18n();
 const detailPanel = ref<InstanceType<typeof GardenObjectDetailPanel> | null>(null);
 const gardenPanel = ref<HTMLElement | null>(null);
+const historyList = ref<HTMLElement | null>(null);
 const historyOpen = ref(false);
 const historyPage = ref(1);
 const historyPageSize = 6;
@@ -166,10 +167,19 @@ async function openHistoryObject(objectId: string) {
   gardenPanel.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function scrollToFirstHistoryItem() {
+  const firstHistoryItem = historyList.value?.querySelector<HTMLElement>('[data-testid="garden-history-item"]');
+  if (!firstHistoryItem) return;
+  const top = firstHistoryItem.getBoundingClientRect().top + window.scrollY - 18;
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+}
+
 function toggleHistory() {
   const nextOpen = !historyOpen.value;
   historyOpen.value = nextOpen;
-  if (nextOpen) gardenStore.clearDetail();
+  if (!nextOpen) return;
+  gardenStore.clearDetail();
 }
 
 function historyTypeTitle(sourceType: string) {
@@ -294,7 +304,8 @@ watch(
       <ChevronDown class="history-link-chevron" aria-hidden="true" />
     </button>
 
-    <section v-if="historyOpen" class="panel garden-history" data-testid="garden-history">
+    <Transition name="garden-history-expand" @after-enter="scrollToFirstHistoryItem">
+      <section v-if="historyOpen" class="panel garden-history" data-testid="garden-history">
       <article class="history-level-card" data-testid="garden-history-next-level">
         <strong>{{ t('garden.history.nextLevelTitle') }}</strong>
         <p>
@@ -307,7 +318,7 @@ watch(
         </p>
       </article>
 
-      <div class="garden-history-list">
+      <div ref="historyList" class="garden-history-list">
         <button
           v-for="object in pagedHistoryObjects"
           :key="object.id"
@@ -335,7 +346,8 @@ watch(
           {{ t('garden.history.next') }}
         </button>
       </div>
-    </section>
+      </section>
+    </Transition>
 
     <GardenObjectDetailPanel
       v-if="gardenStore.selectedDetail"

@@ -11,7 +11,8 @@ export interface MessageTemplateSaveBody {
 
 export interface MessageTemplateValidationError {
   locale: string;
-  message: string;
+  errorCode: 'admin.messageTemplate.defaultTranslationRequired' | 'admin.messageTemplate.placeholderMismatch';
+  params?: Record<string, unknown>;
 }
 
 export class MessageTemplateValidationException extends Error {
@@ -55,7 +56,7 @@ export async function saveMessageTemplate(key: string, body: MessageTemplateSave
     if (!text && locale !== 'de') continue;
 
     if (!text && locale === 'de') {
-      errors.push({ locale, message: 'Die Standard-Übersetzung darf nicht leer sein.' });
+      errors.push({ locale, errorCode: 'admin.messageTemplate.defaultTranslationRequired' });
       continue;
     }
 
@@ -63,7 +64,8 @@ export async function saveMessageTemplate(key: string, body: MessageTemplateSave
     if (!samePlaceholders(placeholders, template.requiredParams)) {
       errors.push({
         locale,
-        message: `Erwartete Platzhalter: ${template.requiredParams.map((param) => `{${param}}`).join(', ') || 'keine'}.`,
+        errorCode: 'admin.messageTemplate.placeholderMismatch',
+        params: { expectedPlaceholders: template.requiredParams },
       });
       continue;
     }
@@ -72,7 +74,7 @@ export async function saveMessageTemplate(key: string, body: MessageTemplateSave
   }
 
   if (!normalizedTranslations.some((translation) => translation.locale === 'de')) {
-    errors.push({ locale: 'de', message: 'Die Standard-Übersetzung darf nicht leer sein.' });
+    errors.push({ locale: 'de', errorCode: 'admin.messageTemplate.defaultTranslationRequired' });
   }
 
   if (errors.length > 0) {

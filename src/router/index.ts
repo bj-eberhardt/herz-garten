@@ -18,6 +18,7 @@ const AdminCoupleDetailView = () => import('@/admin/views/AdminCoupleDetailView.
 const AdminCouplesView = () => import('@/admin/views/AdminCouplesView.vue');
 const AdminDashboardView = () => import('@/admin/views/AdminDashboardView.vue');
 const AdminGardenView = () => import('@/admin/views/AdminGardenView.vue');
+const AdminGardenAssetsView = () => import('@/admin/views/AdminGardenAssetsView.vue');
 const AdminLoginView = () => import('@/admin/views/AdminLoginView.vue');
 const AdminMessageTemplatesView = () => import('@/admin/views/AdminMessageTemplatesView.vue');
 const AdminTaxonomiesView = () => import('@/admin/views/AdminTaxonomiesView.vue');
@@ -52,6 +53,7 @@ const router = createRouter({
         { path: 'couples/:id', name: 'adminCoupleDetail', component: AdminCoupleDetailView },
         { path: 'content', name: 'adminContent', component: AdminContentView },
         { path: 'garden', name: 'adminGarden', component: AdminGardenView },
+        { path: 'garden-assets', name: 'adminGardenAssets', component: AdminGardenAssetsView },
         { path: 'categories', name: 'adminCategories', component: AdminCategoriesView },
         { path: 'taxonomies', name: 'adminTaxonomies', component: AdminTaxonomiesView },
         { path: 'messages', name: 'adminMessages', component: AdminMessageTemplatesView },

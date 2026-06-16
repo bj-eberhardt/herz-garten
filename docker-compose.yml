@@ -7,6 +7,7 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       VITE_API_URL: http://localhost:3000
+      VITE_PROXY_TARGET: http://backend:3000
     ports:
       - "5173:5173"
     volumes:
@@ -28,6 +29,7 @@ services:
       MIGRATIONS_DIR: /database/migrations
       JWT_SECRET: dev-only-herzgarten-secret
       CORS_ORIGIN: http://localhost:5173
+      UPLOAD_DIR: /uploads
       PUSH_ENABLED: "${PUSH_ENABLED:-false}"
       VAPID_PUBLIC_KEY: "${VAPID_PUBLIC_KEY:-}"
       VAPID_PRIVATE_KEY: "${VAPID_PRIVATE_KEY:-}"
@@ -37,6 +39,7 @@ services:
     volumes:
       - ./backend:/app
       - ./database:/database:ro
+      - ./public/uploads:/uploads
       - backend_node_modules:/app/node_modules
     depends_on:
       db:

@@ -31,7 +31,7 @@ export async function answerTodayQuestion(user: { id: string; displayName: strin
     const answers = await listAnswersForDailyInstance(client, couple.id, instance.questionId, instance.date);
 
     if (answers.length >= 2 && !instance.rewardAppliedAt) {
-      const areaKey = highestUnlockedAreaForReward(await gardenStageAfterReward(client, couple.id, 10), 'question');
+      const areaKey = await highestUnlockedAreaForReward(await gardenStageAfterReward(client, couple.id, 10), 'question', '', client);
       const placement = await nextGardenPlacement(client, couple.id, areaKey);
       await insertDailyGardenReward(client, {
         coupleId: couple.id,

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { pool } from '../../db.js';
 import { withTransaction } from '../../db/transaction.js';
-import { fallbackAreaKey, gardenAreas } from './catalog.js';
+import { fallbackAreaKey, listGardenAreas } from './catalog.js';
 
 export interface Queryable {
   query: typeof pool.query;
@@ -12,6 +12,9 @@ export interface GardenLevelRow {
   stage: number;
   name: string;
   localizedName: string;
+  areaKey: string;
+  backgroundImage: string;
+  accent: string;
   pointsToNext: number | null;
   minimumPoints: number;
   translations: Record<string, { name: string }>;
@@ -21,13 +24,39 @@ export interface GardenLevelRow {
 
 export interface GardenLevelInput {
   name: string;
+  backgroundImage?: string | null;
+  accent?: string | null;
   pointsToNext?: number | null;
   translations?: Record<string, { name?: string }>;
 }
 
+export type GardenLevelValidationErrorCode =
+  | 'admin.gardenLevel.sequenceMustStartAtOne'
+  | 'admin.gardenLevel.sequenceMustBeContiguous'
+  | 'admin.gardenLevel.intermediatePointsRequired'
+  | 'admin.gardenLevel.pointsMustBePositive'
+  | 'admin.gardenLevel.nameRequired'
+  | 'admin.gardenLevel.newLevelPointsRequired'
+  | 'admin.gardenLevel.backgroundRequired'
+  | 'admin.gardenLevel.accentRequired';
+
+const gardenLevelValidationMessages: Record<GardenLevelValidationErrorCode, string> = {
+  'admin.gardenLevel.sequenceMustStartAtOne': 'Garden levels must start at stage 1.',
+  'admin.gardenLevel.sequenceMustBeContiguous': 'Garden levels must be contiguous.',
+  'admin.gardenLevel.intermediatePointsRequired': 'All levels except the last level need positive points to the next level.',
+  'admin.gardenLevel.pointsMustBePositive': 'Points to the next level must be positive.',
+  'admin.gardenLevel.nameRequired': 'Garden level name is required.',
+  'admin.gardenLevel.newLevelPointsRequired': 'New levels need positive points from the previous last level.',
+  'admin.gardenLevel.backgroundRequired': 'Garden level background image is required.',
+  'admin.gardenLevel.accentRequired': 'Garden level accent color is required.',
+};
+
 export class GardenLevelValidationError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(
+    public readonly errorCode: GardenLevelValidationErrorCode,
+    public readonly params?: Record<string, unknown>,
+  ) {
+    super(gardenLevelValidationMessages[errorCode]);
     this.name = 'GardenLevelValidationError';
   }
 }
@@ -42,6 +71,15 @@ export interface GardenUnlockConfig {
 }
 
 function normalizeName(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeColor(value: unknown) {
+  const color = typeof value === 'string' ? value.trim() : '';
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : '';
+}
+
+function normalizePath(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
@@ -83,6 +121,9 @@ export async function listGardenLevels(locale = 'de', client: Queryable = pool) 
         gl.id,
         gl.stage,
         gl.name,
+        gl.area_key as "areaKey",
+        gl.background_image as "backgroundImage",
+        gl.accent,
         coalesce(requested.name, fallback.name, gl.name) as "localizedName",
         gl.points_to_next as "pointsToNext",
         gl.created_at as "createdAt",
@@ -128,20 +169,20 @@ export async function addCoupleHeartPoints(client: Queryable, coupleId: string, 
 
 export function validateGardenLevelSequence(levels: Array<{ stage: number; pointsToNext: number | null }>) {
   if (levels.length === 0 || levels[0]?.stage !== 1) {
-    throw new GardenLevelValidationError('Gartenstufen muessen bei Stufe 1 beginnen.');
+    throw new GardenLevelValidationError('admin.gardenLevel.sequenceMustStartAtOne');
   }
 
   for (let index = 0; index < levels.length; index += 1) {
     const expectedStage = index + 1;
     const level = levels[index];
     if (level.stage !== expectedStage) {
-      throw new GardenLevelValidationError('Gartenstufen muessen lueckenlos sortiert sein.');
+      throw new GardenLevelValidationError('admin.gardenLevel.sequenceMustBeContiguous', { expectedStage, stage: level.stage });
     }
     if (index < levels.length - 1 && (!Number.isInteger(level.pointsToNext) || Number(level.pointsToNext) <= 0)) {
-      throw new GardenLevelValidationError('Alle Stufen ausser der letzten brauchen positive Punkte bis zur naechsten Stufe.');
+      throw new GardenLevelValidationError('admin.gardenLevel.intermediatePointsRequired', { stage: level.stage });
     }
     if (level.pointsToNext !== null && (!Number.isInteger(level.pointsToNext) || Number(level.pointsToNext) <= 0)) {
-      throw new GardenLevelValidationError('Punkte bis zur naechsten Stufe muessen positiv sein.');
+      throw new GardenLevelValidationError('admin.gardenLevel.pointsMustBePositive', { stage: level.stage });
     }
   }
 }
@@ -185,7 +226,8 @@ async function recalculateCoupleStages(client: Queryable, levels: GardenLevelRow
 
 async function rebalanceGardenObjects(client: Queryable, levels: GardenLevelRow[]) {
   const levelThresholds = JSON.stringify(levels.map((level) => ({ stage: level.stage, minimum_points: level.minimumPoints })));
-  const areaThresholds = JSON.stringify(gardenAreas.map((area) => ({ stage_unlock: area.stageUnlock, area_key: area.key })));
+  const areas = await listGardenAreas('de', client);
+  const areaThresholds = JSON.stringify(areas.map((area) => ({ stage_unlock: area.stageUnlock, area_key: area.key })));
 
   await client.query(
     `
@@ -256,38 +298,52 @@ async function recalculateGardens(client: Queryable) {
 
 export async function saveGardenLevel(input: GardenLevelInput, id?: string, locale = 'de') {
   const name = normalizeName(input.name);
-  if (!name) throw new GardenLevelValidationError('Bitte gib einen Namen fuer die Gartenstufe ein.');
+  if (!name) throw new GardenLevelValidationError('admin.gardenLevel.nameRequired');
+  const backgroundImage = normalizePath(input.backgroundImage);
+  const accent = normalizeColor(input.accent);
+  if (!id && !backgroundImage) throw new GardenLevelValidationError('admin.gardenLevel.backgroundRequired');
+  if (!accent) throw new GardenLevelValidationError('admin.gardenLevel.accentRequired');
   const pointsToNext = normalizePoints(input.pointsToNext);
   if (input.pointsToNext !== null && input.pointsToNext !== undefined && pointsToNext === null) {
-    throw new GardenLevelValidationError('Punkte bis zur naechsten Stufe muessen positiv sein.');
+    throw new GardenLevelValidationError('admin.gardenLevel.pointsMustBePositive');
   }
 
   return withTransaction(async (client) => {
     let levelId = id;
     let stage: number;
+    let areaKey: string;
+    let currentBackgroundImage = '';
     if (levelId) {
-      const existing = await client.query<{ stage: number }>('select stage from garden_levels where id = $1', [levelId]);
+      const existing = await client.query<{ stage: number; areaKey: string; backgroundImage: string }>(
+        'select stage, area_key as "areaKey", background_image as "backgroundImage" from garden_levels where id = $1',
+        [levelId],
+      );
       if (!existing.rows[0]) throw new Error('garden level not found');
       stage = Number(existing.rows[0].stage);
+      areaKey = existing.rows[0].areaKey;
+      currentBackgroundImage = existing.rows[0].backgroundImage;
     } else {
       levelId = randomUUID();
+      areaKey = `level_${levelId.replace(/-/g, '_')}`;
       const maxResult = await client.query<{ stage: number }>('select coalesce(max(stage), 0)::int + 1 as stage from garden_levels');
       stage = Number(maxResult.rows[0]?.stage ?? 1);
       if (stage > 1 && pointsToNext === null) {
-        throw new GardenLevelValidationError('Neue Stufen brauchen positive Punkte von der bisherigen letzten Stufe bis hierher.');
+        throw new GardenLevelValidationError('admin.gardenLevel.newLevelPointsRequired', { stage });
       }
     }
 
     await client.query(
       `
-        insert into garden_levels (id, stage, name, points_to_next, updated_at)
-        values ($1, $2, $3, $4, now())
+        insert into garden_levels (id, stage, name, area_key, background_image, accent, points_to_next, updated_at)
+        values ($1, $2, $3, $4, $5, $6, $7, now())
         on conflict (id) do update set
           name = excluded.name,
+          background_image = excluded.background_image,
+          accent = excluded.accent,
           points_to_next = excluded.points_to_next,
           updated_at = now()
       `,
-      [levelId, stage, name, id ? pointsToNext : null],
+      [levelId, stage, name, areaKey, backgroundImage || currentBackgroundImage, accent, id ? pointsToNext : null],
     );
     if (!id && stage > 1) {
       await client.query('update garden_levels set points_to_next = $2, updated_at = now() where stage = $1', [stage - 1, pointsToNext]);
@@ -318,8 +374,9 @@ export async function deleteGardenLevel(id: string, locale = 'de') {
 
 export async function gardenUnlocksForLocale(locale = 'de', client: Queryable = pool): Promise<GardenUnlockConfig[]> {
   const levels = await listGardenLevels(locale, client);
+  const areas = await listGardenAreas(locale, client);
   return levels.map((level) => {
-    const area = gardenAreas.find((item) => item.stageUnlock === level.stage);
+    const area = areas.find((item) => item.stageUnlock === level.stage);
     return {
       stage: level.stage,
       points: level.minimumPoints,

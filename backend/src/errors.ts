@@ -61,6 +61,7 @@ export function sendApiError(
 ) {
   response.status(status).json({
     errorKey,
+    errorCode: errorKey,
     error: translateBackend(backendErrorKey(errorKey), params),
     ...(params ? { params } : {}),
   });

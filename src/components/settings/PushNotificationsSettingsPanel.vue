@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Bell, BellOff, Send } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
+import type { PushNotificationMode } from '@/types/domain';
 
 defineProps<{
   statusKey: string;
@@ -9,6 +10,10 @@ defineProps<{
   testing: boolean;
   active: boolean;
   canPrompt: boolean;
+  pushNotificationMode: PushNotificationMode;
+  modeSaving: boolean;
+  modeMessage: string;
+  modeError: string;
   message: string;
   error: string;
 }>();
@@ -17,6 +22,7 @@ const emit = defineEmits<{
   enable: [];
   disable: [];
   test: [];
+  modeChange: [mode: PushNotificationMode];
 }>();
 
 const { t } = useI18n();
@@ -34,6 +40,37 @@ const { t } = useI18n();
       <Bell v-if="active" :size="20" />
       <BellOff v-else :size="20" />
       <span>{{ t(`settings.push.status.${statusKey}`) }}</span>
+    </div>
+
+    <div class="push-mode-settings">
+      <div>
+        <p class="eyebrow">{{ t('settings.push.modeEyebrow') }}</p>
+        <p class="muted">{{ t('settings.push.modeText') }}</p>
+      </div>
+      <div class="segmented-control push-mode-control" role="group" :aria-label="t('settings.push.modeEyebrow')">
+        <button
+          type="button"
+          data-testid="settings-push-mode-all"
+          :class="{ active: pushNotificationMode === 'all' }"
+          :aria-pressed="pushNotificationMode === 'all'"
+          :disabled="modeSaving"
+          @click="emit('modeChange', 'all')"
+        >
+          {{ t('settings.push.modes.all') }}
+        </button>
+        <button
+          type="button"
+          data-testid="settings-push-mode-actions-only"
+          :class="{ active: pushNotificationMode === 'actions_only' }"
+          :aria-pressed="pushNotificationMode === 'actions_only'"
+          :disabled="modeSaving"
+          @click="emit('modeChange', 'actions_only')"
+        >
+          {{ t('settings.push.modes.actionsOnly') }}
+        </button>
+      </div>
+      <p v-if="modeMessage" class="success-note" data-testid="settings-push-mode-success">{{ modeMessage }}</p>
+      <p v-if="modeError" class="form-error" data-testid="settings-push-mode-error">{{ modeError }}</p>
     </div>
 
     <div class="settings-actions">

@@ -5,11 +5,11 @@ import { config } from './config.js';
 import { handleError, sendApiError } from './errors.js';
 import { createRateLimiter } from './security/rateLimit.js';
 import { validateBody } from './validation.js';
+import { deleteUploadedImageIfManaged, saveUploadedImage, upload } from './admin/uploads.js';
 import {
   adminCouplePreferencesBodySchema,
   adminLoginBodySchema,
   categoryBodySchema,
-  gardenLevelBodySchema,
   messageTemplateBodySchema,
   preferenceBodySchema,
 } from './admin/bodySchemas.js';
@@ -52,6 +52,7 @@ import {
   saveGardenLevel,
   type GardenLevelRow,
 } from './api/garden/levels.repository.js';
+import { gardenAssetExists, listAdminGardenAssets, saveGardenAsset } from './api/garden/catalog.js';
 
 export interface AdminGardenLevelItem extends GardenLevelRow {}
 
@@ -63,6 +64,56 @@ export interface AdminGardenLevelMutationResponse extends AdminGardenLevelsRespo
   id?: string;
 }
 
+function textField(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function numberField(value: unknown, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function booleanField(value: unknown, fallback = false) {
+  if (value === undefined) return fallback;
+  return value === true || value === 'true' || value === '1' || value === 'on';
+}
+
+function jsonField<T>(value: unknown, fallback: T): T {
+  if (typeof value !== 'string' || !value.trim()) return fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function gardenLevelMultipartBody(request: Request, backgroundImage?: string) {
+  return {
+    name: textField(request.body.name),
+    pointsToNext: request.body.pointsToNext === '' || request.body.pointsToNext === undefined ? null : Number(request.body.pointsToNext),
+    backgroundImage,
+    accent: textField(request.body.accent),
+    translations: jsonField(request.body.translations, {}),
+  };
+}
+
+function gardenAssetMultipartBody(request: Request, image?: { path: string; width: number; height: number }) {
+  return {
+    key: textField(request.body.key),
+    label: textField(request.body.label),
+    objectType: textField(request.body.objectType),
+    sourceTypes: jsonField<string[]>(request.body.sourceTypes, []),
+    stageUnlock: Math.max(1, Math.round(numberField(request.body.stageUnlock, 1))),
+    image: image?.path,
+    width: image?.width,
+    height: image?.height,
+    anchorX: Math.min(1, Math.max(0, numberField(request.body.anchorX, 0.5))),
+    anchorY: Math.min(1, Math.max(0, numberField(request.body.anchorY, 0.9))),
+    active: booleanField(request.body.active, true),
+    sortOrder: Math.round(numberField(request.body.sortOrder, 0)),
+  };
+}
+
 const adminAuthRateLimit = createRateLimiter({
   keyPrefix: 'admin-auth',
   windowMs: config.authRateLimitWindowMs,
@@ -72,6 +123,7 @@ const adminAuthRateLimit = createRateLimiter({
 function sendAdminError(response: Response, status: number, errorKey: string, error: string, params?: Record<string, unknown>) {
   response.status(status).json({
     errorKey,
+    errorCode: errorKey,
     error,
     ...(params ? { params } : {}),
   });
@@ -158,7 +210,7 @@ export function adminRouter(): Router {
     try {
       const couple = await getCoupleDetail(String(request.params.id));
       if (!couple) {
-        sendAdminError(response, 404, 'couple.notFound', 'Paarraum nicht gefunden.');
+        sendAdminError(response, 404, 'couple.notFound', 'Couple space not found.');
         return;
       }
       response.json({ couple });
@@ -177,13 +229,13 @@ export function adminRouter(): Router {
         !(await preferenceValueExists('relationshipModes', relationshipType, true)) ||
         !(await preferenceValueExists('contentStyles', contentPreference, true))
       ) {
-        sendAdminError(response, 400, 'admin.couplePreferencesInvalid', 'Paarraum-Einstellungen sind ungültig.');
+        sendAdminError(response, 400, 'admin.couplePreferencesInvalid', 'Couple preferences are invalid.');
         return;
       }
 
       const couple = await updateCouplePreferences(String(request.params.id), relationshipType, contentPreference);
       if (!couple) {
-        sendAdminError(response, 404, 'couple.notFound', 'Paarraum nicht gefunden.');
+        sendAdminError(response, 404, 'couple.notFound', 'Couple space not found.');
         return;
       }
       await audit('update', 'couple', String(request.params.id), { relationshipType, contentPreference });
@@ -215,14 +267,14 @@ export function adminRouter(): Router {
       const key = String(request.params.key);
       const result = await saveMessageTemplate(key, request.body);
       if (result.status === 'notFound') {
-        sendAdminError(response, 404, 'admin.messageTemplateNotFound', 'Nachrichtenvorlage nicht gefunden.');
+        sendAdminError(response, 404, 'admin.messageTemplateNotFound', 'Message template not found.');
         return;
       }
       await audit('update', 'message-template', null, { key });
       response.json({ items: result.items });
     } catch (error) {
       if (error instanceof MessageTemplateValidationException) {
-        sendAdminError(response, 400, 'admin.messageTemplateInvalid', 'Nachrichtenvorlage ist ungültig.', {
+        sendAdminError(response, 400, 'admin.messageTemplateInvalid', 'Message template is invalid.', {
           validationErrors: error.errors,
         });
         return;
@@ -241,36 +293,67 @@ export function adminRouter(): Router {
     }
   });
 
-  router.post('/garden/levels', requireAdminAuth, validateBody(gardenLevelBodySchema), async (request, response) => {
+  router.post('/garden/levels', requireAdminAuth, upload.single('backgroundImage'), async (request, response) => {
+    let uploadedImage: { path: string; absolutePath: string; width: number; height: number } | null = null;
     try {
       const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
-      const result = await saveGardenLevel(request.body, undefined, locale);
+      if (!request.file) {
+        sendAdminError(response, 400, 'admin.gardenLevel.backgroundRequired', 'Garden level background image is required.');
+        return;
+      }
+      uploadedImage = await saveUploadedImage(request.file, 'garden-backgrounds', { width: 700, height: 520 });
+      const result = await saveGardenLevel(gardenLevelMultipartBody(request, uploadedImage.path), undefined, locale);
       await audit('create', 'garden-level', result.id, { name: request.body.name });
       const payload: AdminGardenLevelMutationResponse = result;
       response.status(201).json(payload);
     } catch (error) {
+      if (uploadedImage) await deleteUploadedImageIfManaged(uploadedImage.path);
       if (error instanceof GardenLevelValidationError) {
-        sendAdminError(response, 400, 'admin.gardenLevelInvalid', error.message);
+        sendAdminError(response, 400, error.errorCode, error.message, error.params);
+        return;
+      }
+      if (error instanceof Error && error.message === 'invalid image dimensions') {
+        sendAdminError(response, 400, 'admin.upload.invalidDimensions', 'Image dimensions are invalid.');
+        return;
+      }
+      if (error instanceof Error && (error.message === 'unsupported image type' || error.message === 'invalid image')) {
+        sendAdminError(response, 400, 'admin.upload.invalidImage', 'Image file is invalid.');
         return;
       }
       handleError(response, error);
     }
   });
 
-  router.patch('/garden/levels/:id', requireAdminAuth, validateBody(gardenLevelBodySchema), async (request, response) => {
+  router.patch('/garden/levels/:id', requireAdminAuth, upload.single('backgroundImage'), async (request, response) => {
+    let uploadedImage: { path: string; absolutePath: string; width: number; height: number } | null = null;
+    let oldBackgroundImage: string | undefined;
     try {
       const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
-      const result = await saveGardenLevel(request.body, String(request.params.id), locale);
+      oldBackgroundImage = (await listGardenLevels(locale)).find((level) => level.id === String(request.params.id))?.backgroundImage;
+      if (request.file) {
+        uploadedImage = await saveUploadedImage(request.file, 'garden-backgrounds', { width: 700, height: 520 });
+      }
+      const result = await saveGardenLevel(gardenLevelMultipartBody(request, uploadedImage?.path), String(request.params.id), locale);
       await audit('update', 'garden-level', result.id, { name: request.body.name });
+      if (uploadedImage) await deleteUploadedImageIfManaged(oldBackgroundImage);
       const payload: AdminGardenLevelMutationResponse = result;
       response.json(payload);
     } catch (error) {
+      if (uploadedImage) await deleteUploadedImageIfManaged(uploadedImage.path);
       if (error instanceof Error && error.message === 'garden level not found') {
-        sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Gartenstufe nicht gefunden.');
+        sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Garden level not found.');
         return;
       }
       if (error instanceof GardenLevelValidationError) {
-        sendAdminError(response, 400, 'admin.gardenLevelInvalid', error.message);
+        sendAdminError(response, 400, error.errorCode, error.message, error.params);
+        return;
+      }
+      if (error instanceof Error && error.message === 'invalid image dimensions') {
+        sendAdminError(response, 400, 'admin.upload.invalidDimensions', 'Image dimensions are invalid.');
+        return;
+      }
+      if (error instanceof Error && (error.message === 'unsupported image type' || error.message === 'invalid image')) {
+        sendAdminError(response, 400, 'admin.upload.invalidImage', 'Image file is invalid.');
         return;
       }
       handleError(response, error);
@@ -282,18 +365,82 @@ export function adminRouter(): Router {
       const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
       const result = await deleteGardenLevel(String(request.params.id), locale);
       if (result.status === 'not_found') {
-        sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Gartenstufe nicht gefunden.');
+        sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Garden level not found.');
         return;
       }
       if (result.status === 'invalid') {
-        sendAdminError(response, 400, 'admin.gardenLevelInvalid', 'Stufe 1 kann nicht gelöscht werden.');
+        sendAdminError(response, 400, 'admin.gardenLevel.cannotDeleteFirstStage', 'Stage 1 cannot be deleted.');
         return;
       }
       await audit('delete', 'garden-level', String(request.params.id));
       response.json({ items: result.items });
     } catch (error) {
       if (error instanceof GardenLevelValidationError) {
-        sendAdminError(response, 400, 'admin.gardenLevelInvalid', error.message);
+        sendAdminError(response, 400, error.errorCode, error.message, error.params);
+        return;
+      }
+      handleError(response, error);
+    }
+  });
+
+  router.get('/garden/assets', requireAdminAuth, async (_request, response) => {
+    try {
+      response.json({ items: await listAdminGardenAssets() });
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.post('/garden/assets', requireAdminAuth, upload.single('image'), async (request, response) => {
+    let uploadedImage: { path: string; absolutePath: string; width: number; height: number } | null = null;
+    try {
+      const key = textField(request.body.key);
+      if (!key || !/^[a-z0-9_]+$/.test(key)) {
+        sendAdminError(response, 400, 'admin.gardenAsset.keyInvalid', 'Garden asset key is invalid.');
+        return;
+      }
+      if (await gardenAssetExists(key)) {
+        sendAdminError(response, 409, 'admin.gardenAsset.keyExists', 'Garden asset key already exists.');
+        return;
+      }
+      if (!request.file) {
+        sendAdminError(response, 400, 'admin.gardenAsset.imageRequired', 'Garden asset image is required.');
+        return;
+      }
+      uploadedImage = await saveUploadedImage(request.file, 'garden-assets');
+      const item = await saveGardenAsset(gardenAssetMultipartBody(request, uploadedImage));
+      await audit('create', 'garden-asset', key, { key });
+      response.status(201).json({ item, items: await listAdminGardenAssets() });
+    } catch (error) {
+      if (uploadedImage) await deleteUploadedImageIfManaged(uploadedImage.path);
+      if (error instanceof Error && (error.message === 'unsupported image type' || error.message === 'invalid image')) {
+        sendAdminError(response, 400, 'admin.upload.invalidImage', 'Image file is invalid.');
+        return;
+      }
+      handleError(response, error);
+    }
+  });
+
+  router.patch('/garden/assets/:key', requireAdminAuth, upload.single('image'), async (request, response) => {
+    let uploadedImage: { path: string; absolutePath: string; width: number; height: number } | null = null;
+    try {
+      const key = String(request.params.key);
+      const existing = (await listAdminGardenAssets()).find((asset) => asset.key === key);
+      if (!existing) {
+        sendAdminError(response, 404, 'admin.gardenAsset.notFound', 'Garden asset not found.');
+        return;
+      }
+      if (request.file) {
+        uploadedImage = await saveUploadedImage(request.file, 'garden-assets');
+      }
+      const item = await saveGardenAsset(gardenAssetMultipartBody(request, uploadedImage ?? undefined), key);
+      if (uploadedImage) await deleteUploadedImageIfManaged(existing.image);
+      await audit('update', 'garden-asset', key, { key });
+      response.json({ item, items: await listAdminGardenAssets() });
+    } catch (error) {
+      if (uploadedImage) await deleteUploadedImageIfManaged(uploadedImage.path);
+      if (error instanceof Error && (error.message === 'unsupported image type' || error.message === 'invalid image')) {
+        sendAdminError(response, 400, 'admin.upload.invalidImage', 'Image file is invalid.');
         return;
       }
       handleError(response, error);
@@ -327,7 +474,7 @@ export function adminRouter(): Router {
       await audit('create', 'relationship-mode', id, { value: request.body.value });
       response.status(201).json({ id, items: await listPreferences('relationshipModes') });
     } catch {
-      sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomie-Daten sind ungültig.');
+      sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomy data is invalid.');
     }
   });
 
@@ -337,7 +484,7 @@ export function adminRouter(): Router {
       await audit('update', 'relationship-mode', id, { value: request.body.value });
       response.json({ id, items: await listPreferences('relationshipModes') });
     } catch {
-      sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomie-Daten sind ungültig.');
+      sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomy data is invalid.');
     }
   });
 
@@ -355,7 +502,7 @@ export function adminRouter(): Router {
       await audit('create', 'content-style', id, { value: request.body.value });
       response.status(201).json({ id, items: await listPreferences('contentStyles') });
     } catch {
-      sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomie-Daten sind ungültig.');
+      sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomy data is invalid.');
     }
   });
 
@@ -365,7 +512,7 @@ export function adminRouter(): Router {
       await audit('update', 'content-style', id, { value: request.body.value });
       response.json({ id, items: await listPreferences('contentStyles') });
     } catch {
-      sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomie-Daten sind ungültig.');
+      sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomy data is invalid.');
     }
   });
 
@@ -374,7 +521,7 @@ export function adminRouter(): Router {
       const type = normalizeText(request.query.type);
       const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
       if (type && !isContentType(type)) {
-        sendAdminError(response, 404, 'content.notFound', 'Inhaltstyp nicht gefunden.');
+        sendAdminError(response, 404, 'content.notFound', 'Content type not found.');
         return;
       }
       response.json({ items: await listCategories(type ? (type as ContentType) : undefined, locale) });
@@ -389,7 +536,7 @@ export function adminRouter(): Router {
       await audit('create', 'category', id, { contentType: request.body.contentType, value: request.body.value });
       response.status(201).json({ id, items: await listCategories() });
     } catch {
-      sendAdminError(response, 400, 'admin.categoryInvalid', 'Kategorie-Daten sind ungültig.');
+      sendAdminError(response, 400, 'admin.categoryInvalid', 'Category data is invalid.');
     }
   });
 
@@ -399,7 +546,7 @@ export function adminRouter(): Router {
       await audit('update', 'category', id, { contentType: request.body.contentType, value: request.body.value });
       response.json({ id, items: await listCategories() });
     } catch {
-      sendAdminError(response, 400, 'admin.categoryInvalid', 'Kategorie-Daten sind ungültig.');
+      sendAdminError(response, 400, 'admin.categoryInvalid', 'Category data is invalid.');
     }
   });
 
@@ -407,11 +554,11 @@ export function adminRouter(): Router {
     try {
       const result = await deleteCategory(String(request.params.id));
       if (result.reason === 'not_found') {
-        sendAdminError(response, 404, 'admin.categoryNotFound', 'Kategorie nicht gefunden.');
+        sendAdminError(response, 404, 'admin.categoryNotFound', 'Category not found.');
         return;
       }
       if (result.reason === 'in_use') {
-        sendAdminError(response, 409, 'admin.categoryInUse', 'Kategorie wird noch verwendet.', {
+        sendAdminError(response, 409, 'admin.categoryInUse', 'Category is still in use.', {
           usageCount: result.usageCount,
         });
         return;
@@ -427,7 +574,7 @@ export function adminRouter(): Router {
     try {
       const type = String(request.params.type);
       if (!isEditableContentType(type)) {
-        sendAdminError(response, 404, 'content.notFound', 'Inhaltstyp nicht gefunden.');
+        sendAdminError(response, 404, 'content.notFound', 'Content type not found.');
         return;
       }
       response.json({ items: await listContent(type, request) });
@@ -440,14 +587,14 @@ export function adminRouter(): Router {
     try {
       const type = String(request.params.type);
       if (!isEditableContentType(type)) {
-        sendAdminError(response, 404, 'content.notFound', 'Inhaltstyp nicht gefunden.');
+        sendAdminError(response, 404, 'content.notFound', 'Content type not found.');
         return;
       }
       const id = await saveContent(type, request.body);
       await audit('create', type, id, { fields: Object.keys(request.body ?? {}) });
       response.status(201).json({ id, items: await listContent(type, request) });
     } catch (error) {
-      sendAdminError(response, 400, 'admin.contentInvalid', 'Inhaltsdaten sind ungültig.');
+      sendAdminError(response, 400, 'admin.contentInvalid', 'Content data is invalid.');
     }
   });
 
@@ -455,14 +602,14 @@ export function adminRouter(): Router {
     try {
       const type = String(request.params.type);
       if (!isEditableContentType(type)) {
-        sendAdminError(response, 404, 'content.notFound', 'Inhaltstyp nicht gefunden.');
+        sendAdminError(response, 404, 'content.notFound', 'Content type not found.');
         return;
       }
       const id = await saveContent(type, request.body, String(request.params.id));
       await audit('update', type, id, { fields: Object.keys(request.body ?? {}) });
       response.json({ id, items: await listContent(type, request) });
     } catch (error) {
-      sendAdminError(response, 400, 'admin.contentInvalid', 'Inhaltsdaten sind ungültig.');
+      sendAdminError(response, 400, 'admin.contentInvalid', 'Content data is invalid.');
     }
   });
 

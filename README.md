@@ -147,6 +147,98 @@ VAPID_SUBJECT=mailto:admin@herzgarten.local
 
 Auf `localhost` funktionieren Service Worker und Notifications in modernen Desktop-Browsern. Fuer Tests auf echten Mobilgeraeten braucht die App eine HTTPS-URL, zum Beispiel ueber ngrok, Cloudflare Tunnel oder mkcert. Auf iOS/iPadOS funktioniert Web Push ab 16.4 fuer Web-Apps, die zum Home-Bildschirm hinzugefuegt wurden.
 
+## Production-Image bauen und pushen
+
+Das Production-Image baut Frontend und Backend in getrennten Stages und liefert die Vue-App ueber das Express-Backend auf Port `3000` aus. Beim Container-Start werden zuerst die SQL-Migrationen ausgefuehrt.
+
+Windows PowerShell:
+
+```powershell
+$tag = "0.1.0"
+docker build -f Dockerfile.prod -t "beberhardt/herzgarten:$tag" .
+docker push "beberhardt/herzgarten:$tag"
+```
+
+Linux/macOS Shell:
+
+```bash
+tag=0.1.0
+docker build -f Dockerfile.prod -t "beberhardt/herzgarten:$tag" .
+docker push "beberhardt/herzgarten:$tag"
+```
+
+Multi-Arch-Image fuer Linux-Hosts und Windows mit Docker Desktop im Linux-Container-Modus bauen und direkt pushen:
+
+Windows PowerShell:
+
+```powershell
+$tag = "0.1.0"
+docker buildx create --use --name herzgarten-builder
+docker buildx build `
+  --platform linux/amd64,linux/arm64 `
+  -f Dockerfile.prod `
+  -t "beberhardt/herzgarten:$tag" `
+  --push .
+```
+
+Linux/macOS Shell:
+
+```bash
+tag=0.1.0
+docker buildx create --use --name herzgarten-builder
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -f Dockerfile.prod \
+  -t "beberhardt/herzgarten:$tag" \
+  --push .
+```
+
+Falls der Builder bereits existiert, reicht stattdessen:
+
+```bash
+docker buildx use herzgarten-builder
+```
+
+Hinweis: Das Image ist ein Linux-Container, weil `Dockerfile.prod` auf `node:24-alpine` basiert. Es laeuft auf Windows ueber Docker Desktop/WSL2 im Linux-Container-Modus. Fuer native Windows-Container waere ein separates Windows-Dockerfile mit einem Windows-Node-Base-Image noetig.
+
+Ein Beispiel-Deployment mit dem gepushten Image und PostgreSQL-Sidecar liegt unter [`release/docker-compose.prod.yml`](release/docker-compose.prod.yml). Die Platzhalter stehen in [`release/.env.example`](release/.env.example); lokal kann dieselbe Struktur als `release/.env` genutzt werden.
+Das Compose-Setup persistiert Datenbankdaten im Volume `postgres_data` und Admin-Uploads im Volume `app_uploads`; im Container werden Uploads unter `/app/uploads` abgelegt und unter `/uploads/...` ausgeliefert.
+
+Starten:
+
+```bash
+cd release
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Logs ansehen:
+
+```bash
+docker compose -f docker-compose.prod.yml logs -f app
+```
+
+Vor dem Push einmal bei Docker Hub anmelden:
+
+```bash
+docker login
+```
+
+Lokaler Testlauf mit einer erreichbaren PostgreSQL-Datenbank:
+
+```bash
+docker run --rm -p 3000:3000 \
+  -e NODE_ENV=production \
+  -e UPLOAD_DIR=/app/uploads \
+  -e DATABASE_URL=postgresql://herzgarten:herzgarten@host.docker.internal:5432/herzgarten \
+  -e JWT_SECRET=replace-with-a-long-random-secret \
+  -e ADMIN_JWT_SECRET=replace-with-another-long-random-secret \
+  -e ADMIN_PASSWORD=replace-with-a-strong-password \
+  -v herzgarten_uploads:/app/uploads \
+  beberhardt/herzgarten:0.1.0
+```
+
+Unter Linux funktioniert `host.docker.internal` je nach Docker-Version nicht automatisch. Dann entweder den Container in ein Docker-Compose-Netz mit PostgreSQL haengen oder beim Testlauf `--add-host=host.docker.internal:host-gateway` ergaenzen.
+
 ## Stack
 
 - Vue 3 + Vite + TypeScript

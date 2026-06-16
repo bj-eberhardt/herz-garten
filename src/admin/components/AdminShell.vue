@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { RouterLink, RouterView, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { ClipboardList, FileText, FolderTree, LayoutDashboard, LogOut, MessageSquare, Sprout, Tags, Users, Workflow } from '@lucide/vue';
+import { ClipboardList, FileText, FolderTree, Image, LayoutDashboard, LogOut, MessageSquare, Sprout, Tags, Users, Workflow } from '@lucide/vue';
 import { useAdminStore } from '@/admin/stores/adminStore';
 import '@/admin/admin.css';
 
@@ -42,6 +42,10 @@ function logout() {
         <RouterLink to="/admin/garden" class="admin-nav-item">
           <Sprout :size="18" aria-hidden="true" />
           {{ t('admin.shell.nav.garden') }}
+        </RouterLink>
+        <RouterLink to="/admin/garden-assets" class="admin-nav-item">
+          <Image :size="18" aria-hidden="true" />
+          {{ t('admin.shell.nav.gardenAssets') }}
         </RouterLink>
         <RouterLink to="/admin/categories" class="admin-nav-item">
           <FolderTree :size="18" aria-hidden="true" />

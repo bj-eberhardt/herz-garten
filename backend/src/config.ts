@@ -1,7 +1,9 @@
 import 'dotenv/config';
+import { fileURLToPath } from 'node:url';
 
 const defaultJwtSecret = 'dev-only-herzgarten-secret';
 const defaultAdminPassword = 'admin';
+const defaultUploadDir = fileURLToPath(new URL('../../public/uploads', import.meta.url));
 const nodeEnv = process.env.NODE_ENV ?? 'development';
 const pushEnabledEnv = process.env.PUSH_ENABLED?.trim().toLowerCase();
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY ?? '';
@@ -18,6 +20,8 @@ export const config = {
   adminJwtSecret: process.env.ADMIN_JWT_SECRET ?? process.env.JWT_SECRET ?? defaultJwtSecret,
   adminTokenTtl: process.env.ADMIN_TOKEN_TTL ?? '8h',
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+  staticDir: process.env.STATIC_DIR ?? '',
+  uploadDir: process.env.UPLOAD_DIR ?? defaultUploadDir,
   jwtIssuer: process.env.JWT_ISSUER ?? 'herzgarten',
   userJwtAudience: process.env.JWT_AUDIENCE ?? 'herzgarten-app',
   adminJwtAudience: process.env.ADMIN_JWT_AUDIENCE ?? 'herzgarten-admin',

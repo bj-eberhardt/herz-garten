@@ -124,6 +124,16 @@ function switchKind(kind: PreferenceKind) {
   resetForm(false);
 }
 
+function localizeAdminError(caught: unknown, fallbackKey: string) {
+  if (caught instanceof ApiError && caught.errorKey) {
+    const key = `admin.serverErrors.${caught.errorKey}`;
+    const translated = t(key, caught.params ?? {});
+    if (translated !== key) return translated;
+  }
+
+  return t(fallbackKey);
+}
+
 async function savePreference() {
   if (!form.value.trim() || !form.label.trim()) {
     error.value = t('admin.taxonomies.errors.required');
@@ -140,10 +150,7 @@ async function savePreference() {
     items.value[selectedKind.value] = payload.items;
     resetForm(false);
   } catch (caught) {
-    error.value =
-      caught instanceof ApiError && caught.serverMessage
-        ? caught.serverMessage
-        : t('admin.taxonomies.errors.save');
+    error.value = localizeAdminError(caught, 'admin.taxonomies.errors.save');
   } finally {
     saving.value = false;
   }

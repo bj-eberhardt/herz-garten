@@ -21,9 +21,13 @@ export async function loginViaUi(page: Page, user: TestUser) {
 
 export async function createCoupleViaUi(page: Page) {
   await page.getByTestId('create-couple-submit').click();
+  await expect(page.getByTestId('invite-code-modal')).toBeVisible();
+  const inviteCode = (await page.getByTestId('invite-modal-code').innerText()).trim();
+  await expect(page.getByTestId('invite-modal-code')).toContainText(/^[a-z]+-[a-z]+-\d{4}$/);
+  await page.getByTestId('invite-modal-confirm').click();
   await expect(page).toHaveURL(/\/today$/);
   await expect(page.getByTestId('header-couple-link')).toContainText(/^[a-z]+-[a-z]+-\d{4}$/);
-  return (await page.getByTestId('header-couple-link').innerText()).trim();
+  return inviteCode;
 }
 
 export async function joinCoupleViaUi(page: Page, inviteCode: string) {

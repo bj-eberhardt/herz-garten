@@ -19,7 +19,7 @@ export async function adminApiRequest<T>(path: string, options: RequestInit = {}
   const token = getAdminToken();
   const headers = new Headers(options.headers);
 
-  if (!headers.has('Content-Type') && options.body) {
+  if (!headers.has('Content-Type') && options.body && !(options.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
   if (token) {
@@ -39,7 +39,12 @@ export async function adminApiRequest<T>(path: string, options: RequestInit = {}
 
   if (!response.ok) {
     const serverMessage = typeof payload?.error === 'string' ? payload.error : undefined;
-    const errorKey = typeof payload?.errorKey === 'string' ? payload.errorKey : undefined;
+    const errorKey =
+      typeof payload?.errorCode === 'string'
+        ? payload.errorCode
+        : typeof payload?.errorKey === 'string'
+          ? payload.errorKey
+          : undefined;
     const params = payload?.params && typeof payload.params === 'object' ? payload.params : undefined;
     throw new ApiError(errorKey ?? serverMessage ?? 'api.requestFailed', response.status, errorKey, params, serverMessage);
   }

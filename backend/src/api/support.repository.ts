@@ -2,8 +2,13 @@ import { randomInt, randomUUID } from 'node:crypto';
 import type { Request } from 'express';
 import { pool } from '../db.js';
 import { type NotificationMessageKey, translateNotificationBackend } from '../i18n/messages.js';
+import {
+  normalizePushNotificationMode,
+  shouldSendPushForMode,
+  type PushNotificationMode,
+} from './notifications/notificationPolicy.js';
 import { sendPushNotifications, type PushNotificationPayload } from './push/push.service.js';
-import { fallbackAreaKey, gardenAreas, gardenAssets } from './garden/catalog.js';
+import { fallbackAreaKey, gardenAssetObjectType, listGardenAreas, type GardenArea } from './garden/catalog.js';
 import {
   addCoupleHeartPoints,
   gardenStageAfterReward,
@@ -11,7 +16,7 @@ import {
   nextGardenUnlock,
 } from './garden/levels.repository.js';
 
-export { fallbackAreaKey, gardenAreas, gardenAssets, gardenStageAfterReward, gardenStageForPoints, nextGardenUnlock };
+export { fallbackAreaKey, gardenStageAfterReward, gardenStageForPoints, nextGardenUnlock };
 
 export interface Queryable {
   query: typeof pool.query;
@@ -355,6 +360,7 @@ export function normalizeUserPreferences(value: unknown) {
       ...defaultFeatureExplainerPreferences,
       ...normalizeBooleanRecord(preferences.featureExplainers),
     },
+    pushNotificationMode: normalizePushNotificationMode(preferences.pushNotificationMode),
   };
 }
 
@@ -369,7 +375,28 @@ export function mergeUserPreferences(current: unknown, patch: unknown) {
       ...normalizedCurrent.featureExplainers,
       ...normalizeBooleanRecord(patch.featureExplainers),
     },
+    pushNotificationMode:
+      'pushNotificationMode' in patch
+        ? normalizePushNotificationMode(patch.pushNotificationMode)
+        : normalizedCurrent.pushNotificationMode,
   };
+}
+
+async function pushNotificationModesForUsers(client: Queryable, userIds: string[]) {
+  if (userIds.length === 0) return new Map<string, PushNotificationMode>();
+
+  const result = await client.query<{ id: string; preferences: unknown }>(
+    `
+      select id, preferences
+      from profiles
+      where id = any($1::uuid[])
+    `,
+    [userIds],
+  );
+
+  return new Map(
+    result.rows.map((row) => [row.id, normalizeUserPreferences(row.preferences).pushNotificationMode as PushNotificationMode]),
+  );
 }
 
 export async function getPublicUser(userId: string) {
@@ -450,6 +477,7 @@ export async function createNotifications(
   const title = await translateNotificationBackend(options.titleKey, params);
   const body = await translateNotificationBackend(options.bodyKey, params);
   const pushPayloads: PushNotificationPayload[] = [];
+  const pushModes = await pushNotificationModesForUsers(client, uniqueUserIds);
 
   for (const userId of uniqueUserIds) {
     const result = await client.query<{ id: string; userId: string }>(
@@ -475,7 +503,8 @@ export async function createNotifications(
     );
 
     const inserted = result.rows[0];
-    if (inserted) {
+    const pushMode = pushModes.get(userId) ?? 'all';
+    if (inserted && shouldSendPushForMode(pushMode, options.type)) {
       pushPayloads.push({
         notificationId: inserted.id,
         userId: inserted.userId,
@@ -591,8 +620,8 @@ export function mapGardenObject(row: GardenObjectRow) {
   };
 }
 
-export function areaForStage(stage: number) {
-  return gardenAreas.filter((area) => area.stageUnlock <= Math.max(1, stage));
+export function areaForStage(stage: number, areas: GardenArea[]) {
+  return areas.filter((area) => area.stageUnlock <= Math.max(1, stage));
 }
 
 export function areaKeyForSource(sourceType: string, questCategory = '') {
@@ -634,15 +663,12 @@ export function assetKeyForGardenObject(type: string, sourceType: string, catego
   return 'garden_decor';
 }
 
-export function highestUnlockedAreaForReward(coupleStage: number, sourceType: string, questCategory = '') {
+export async function highestUnlockedAreaForReward(coupleStage: number, sourceType: string, questCategory = '', client: Queryable = pool) {
+  const areas = await listGardenAreas('de', client);
   const targetAreaKey = areaKeyForSource(sourceType, questCategory);
-  const unlockedAreas = areaForStage(coupleStage);
+  const unlockedAreas = areaForStage(coupleStage, areas);
   const targetArea = unlockedAreas.find((area) => area.key === targetAreaKey);
   return targetArea?.key ?? unlockedAreas[unlockedAreas.length - 1]?.key ?? fallbackAreaKey;
-}
-
-export function objectTypeForAsset(assetKey: string) {
-  return gardenAssets.find((asset) => asset.key === assetKey)?.objectType ?? 'decoration';
 }
 
 export function clampNumber(value: unknown, min: number, max: number, fallback: number) {
@@ -902,7 +928,7 @@ export async function isActiveContentCategory(contentType: string, value: string
 export async function applyQuestReward(client: Queryable, coupleId: string, coupleQuestId: string, quest: QuestRewardSource) {
   const category = quest.category;
   const rewardPoints = quest.rewardPoints;
-  const areaKey = highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, rewardPoints), 'quest', category);
+  const areaKey = await highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, rewardPoints), 'quest', category, client);
   const assetKey = assetKeyForQuest(category);
   const placement = await nextGardenPlacement(client, coupleId, areaKey);
 
@@ -917,7 +943,7 @@ export async function applyQuestReward(client: Queryable, coupleId: string, coup
     [
       randomUUID(),
       coupleId,
-      objectTypeForAsset(assetKey),
+      await gardenAssetObjectType(assetKey, client),
       coupleQuestId,
       quest.title,
       areaKey,
@@ -1305,7 +1331,7 @@ export async function buildKnowMePayload(userId: string, locale = 'de') {
 }
 
 export async function createMemoryStone(client: Queryable, coupleId: string, memoryId: string, title: string) {
-  const areaKey = highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, 8), 'memory');
+  const areaKey = await highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, 8), 'memory', '', client);
   const assetKey = 'memory_stone';
   const placement = await nextGardenPlacement(client, coupleId, areaKey);
 
@@ -1327,7 +1353,7 @@ export async function createMemoryStone(client: Queryable, coupleId: string, mem
 }
 
 export async function createKnowMeFlower(client: Queryable, coupleId: string, questionId: string) {
-  const areaKey = highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, 12), 'know_me');
+  const areaKey = await highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, 12), 'know_me', '', client);
   const assetKey = 'heart_flower';
   const placement = await nextGardenPlacement(client, coupleId, areaKey);
 
@@ -1679,7 +1705,7 @@ export async function buildLoveJarTemplatePayload(userId: string, locale = 'de')
 }
 
 export async function createLoveJarLight(client: Queryable, coupleId: string, noteId: string) {
-  const areaKey = highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, 5), 'love_jar');
+  const areaKey = await highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, 5), 'love_jar', '', client);
   const assetKey = 'warm_lantern';
   const placement = await nextGardenPlacement(client, coupleId, areaKey);
 

@@ -4,17 +4,7 @@ export type QuestCategory = 'romance' | 'date' | 'humor' | 'memory' | 'teamwork'
 export type EffortLevel = 'low' | 'medium' | 'high';
 export type GardenObjectType = 'flower' | 'tree' | 'bench' | 'light' | 'stone' | 'pond' | 'decoration';
 export type GardenSourceType = 'question' | 'quest' | 'memory' | 'love_jar' | 'milestone' | 'know_me';
-export type GardenAreaKey =
-  | 'heart_bed'
-  | 'flower_meadow'
-  | 'bench_grove'
-  | 'memory_tree'
-  | 'light_meadow'
-  | 'pond'
-  | 'picnic'
-  | 'star_meadow'
-  | 'wishing_well'
-  | 'garden_fest';
+export type GardenAreaKey = string;
 export type LoveJarCategory = string;
 export type MemoryCategory = string;
 export type FeatureExplainerKey =
@@ -27,9 +17,11 @@ export type FeatureExplainerKey =
   | 'memories'
   | 'notifications'
   | 'settings';
+export type PushNotificationMode = 'all' | 'actions_only';
 
 export interface UserPreferences {
   featureExplainers: Record<FeatureExplainerKey, boolean> & Record<string, boolean>;
+  pushNotificationMode: PushNotificationMode;
   [key: string]: unknown;
 }
 
@@ -156,6 +148,8 @@ export interface GardenAsset {
   height: number;
   anchorX: number;
   anchorY: number;
+  active: boolean;
+  sortOrder: number;
 }
 
 export interface GardenUnlock {

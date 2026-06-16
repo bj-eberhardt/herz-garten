@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ShieldCheck } from '@lucide/vue';
+import { ref } from 'vue';
+import { Clipboard, ShieldCheck } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import EditableProfileRow from '@/components/settings/EditableProfileRow.vue';
 import PasswordProfileRow from '@/components/settings/PasswordProfileRow.vue';
@@ -42,6 +43,16 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const copiedInviteCode = ref(false);
+
+async function copyInviteCode(inviteCode?: string | null) {
+  if (!inviteCode) return;
+  await navigator.clipboard.writeText(inviteCode);
+  copiedInviteCode.value = true;
+  window.setTimeout(() => {
+    copiedInviteCode.value = false;
+  }, 1500);
+}
 </script>
 
 <template>
@@ -82,7 +93,13 @@ const { t } = useI18n();
       @edit="emit('edit', 'password')"
       @save="emit('savePassword', $event)"
     />
-    <p><strong>{{ t('settings.coupleCode') }}</strong> {{ inviteCode }}</p>
+    <div class="settings-code-row">
+      <p><strong>{{ t('settings.coupleCode') }}</strong> <span data-testid="settings-couple-code">{{ inviteCode }}</span></p>
+      <button class="secondary-button inline-button" type="button" data-testid="settings-copy-couple-code" :disabled="!inviteCode" @click="copyInviteCode(inviteCode)">
+        <Clipboard :size="18" aria-hidden="true" />
+        {{ copiedInviteCode ? t('common.copied') : t('auth.copyCode') }}
+      </button>
+    </div>
     <p><strong>{{ t('settings.relationshipMode') }}</strong> {{ relationshipModeLabel }}</p>
     <p><strong>{{ t('settings.contentStyle') }}</strong> {{ contentStyleLabel }}</p>
     <p class="privacy-note"><ShieldCheck :size="18" /> {{ t('settings.privacyNote') }}</p>

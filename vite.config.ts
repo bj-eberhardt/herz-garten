@@ -3,7 +3,17 @@ import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 
+const proxyTarget = process.env.VITE_PROXY_TARGET ?? 'http://localhost:3000';
+
 export default defineConfig({
+  server: {
+    proxy: {
+      '/uploads': {
+        target: proxyTarget,
+        changeOrigin: true,
+      },
+    },
+  },
   plugins: [
     {
       name: 'legacy-source-extension-rewrite',

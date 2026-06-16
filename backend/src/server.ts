@@ -1,5 +1,7 @@
 import cors from 'cors';
 import express from 'express';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { config } from './config.js';
 import { checkDatabase, pool } from './db.js';
 import { adminRouter } from './adminRoutes.js';
@@ -39,6 +41,28 @@ app.get('/health', async (_request, response) => {
 
 app.use('/api/admin', adminRouter());
 app.use('/api', apiRouter());
+
+const uploadDir = path.resolve(config.uploadDir);
+app.use('/uploads', express.static(uploadDir));
+
+if (config.staticDir) {
+  const staticDir = path.resolve(config.staticDir);
+  const indexFile = path.join(staticDir, 'index.html');
+
+  if (!existsSync(indexFile)) {
+    throw new Error(`Static frontend index not found: ${indexFile}`);
+  }
+
+  app.use(express.static(staticDir));
+  app.get('*', (request, response, next) => {
+    if (request.path.startsWith('/api')) {
+      next();
+      return;
+    }
+
+    response.sendFile(indexFile);
+  });
+}
 
 const server = app.listen(config.port, () => {
   console.log(`Herzgarten backend listening on port ${config.port}`);

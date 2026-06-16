@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Clipboard, HeartHandshake, KeyRound, LogIn, Sprout, UserPlus } from '@lucide/vue';
+import { Clipboard, HeartHandshake, Link2, LogIn, Sprout, UserPlus } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
 import type { ContentPreference, RelationshipType } from '@/types/domain';
@@ -23,6 +23,7 @@ const relationshipType = ref<RelationshipType>('mixed');
 const contentPreference = ref<ContentPreference>('balanced');
 const formError = ref('');
 const copied = ref(false);
+const showInviteModal = ref(false);
 const authSubmitAttempted = ref(false);
 const joinSubmitAttempted = ref(false);
 const createSubmitAttempted = ref(false);
@@ -77,7 +78,7 @@ async function createCouple() {
       relationshipType: relationshipType.value,
       contentPreference: contentPreference.value,
     });
-    await router.push('/today');
+    showInviteModal.value = true;
   } catch (error) {
     formError.value = localizeApiError(error, 'errors.fallback.createCouple');
   }
@@ -115,6 +116,11 @@ async function copyInviteCode() {
   window.setTimeout(() => {
     copied.value = false;
   }, 1500);
+}
+
+async function continueToToday() {
+  showInviteModal.value = false;
+  await router.push('/today');
 }
 </script>
 
@@ -189,42 +195,85 @@ async function copyInviteCode() {
       </div>
       <div v-else class="couple-actions">
         <div class="next-step-note">
-          <KeyRound :size="20" aria-hidden="true" />
-          <div>
-            <strong>{{ t('auth.enterPartnerCodeLater') }}</strong>
-            <p>{{ t('auth.enterPartnerCodeHint') }}</p>
-          </div>
+          <HeartHandshake :size="20" aria-hidden="true" />
+          <p>{{ t('auth.onboardingNextSteps') }}</p>
         </div>
 
-        <form class="join-form highlighted-form" :class="{ 'form-submitted': joinSubmitAttempted }" data-testid="join-couple-form" @submit.prevent="joinCouple">
-          <label for="invite-code">{{ t('auth.partnerCode') }}</label>
-          <input id="invite-code" v-model="inviteCode" placeholder="apfel-sonne-4821" autocomplete="off" data-testid="invite-code-input" required />
-          <button class="primary-button" type="submit" data-testid="join-couple-submit" @click="joinSubmitAttempted = true">
-            <KeyRound :size="18" aria-hidden="true" />
-            {{ t('auth.connectPartner') }}
-          </button>
-        </form>
+        <div class="onboarding-flow-grid">
+          <article class="onboarding-option-card" data-testid="onboarding-join-option">
+            <div class="onboarding-option-header">
+              <span class="onboarding-option-icon"><Link2 :size="20" aria-hidden="true" /></span>
+              <div>
+                <h3>{{ t('auth.joinPartnerTitle') }}</h3>
+                <p>{{ t('auth.enterPartnerCodeHint') }}</p>
+              </div>
+            </div>
 
-        <div class="section-divider"><span>{{ t('auth.orCreateNew') }}</span></div>
+            <form class="join-form" :class="{ 'form-submitted': joinSubmitAttempted }" data-testid="join-couple-form" @submit.prevent="joinCouple">
+              <label for="invite-code">{{ t('auth.partnerCode') }}</label>
+              <input id="invite-code" v-model="inviteCode" placeholder="apfel-sonne-4821" autocomplete="off" data-testid="invite-code-input" required />
+              <button class="primary-button" type="submit" data-testid="join-couple-submit" @click="joinSubmitAttempted = true">
+                <Link2 :size="18" aria-hidden="true" />
+                {{ t('auth.connectPartner') }}
+              </button>
+            </form>
+          </article>
 
-        <form class="join-form" :class="{ 'form-submitted': createSubmitAttempted }" data-testid="create-couple-form" @submit.prevent="createCouple">
-          <label for="relationship-type">{{ t('auth.relationshipMode') }}</label>
-          <select id="relationship-type" v-model="relationshipType" data-testid="relationship-type-select" required>
-            <option v-for="option in relationshipOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-          </select>
+          <article class="onboarding-option-card" data-testid="onboarding-create-option">
+            <div class="onboarding-option-header">
+              <span class="onboarding-option-icon"><Sprout :size="20" aria-hidden="true" /></span>
+              <div>
+                <h3>{{ t('auth.createGardenTitle') }}</h3>
+                <p>{{ t('auth.createGardenHint') }}</p>
+              </div>
+            </div>
 
-          <label for="content-preference">{{ t('auth.contentStyle') }}</label>
-          <select id="content-preference" v-model="contentPreference" data-testid="content-preference-select" required>
-            <option v-for="option in contentStyleOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-          </select>
+            <form class="join-form" :class="{ 'form-submitted': createSubmitAttempted }" data-testid="create-couple-form" @submit.prevent="createCouple">
+              <label for="relationship-type">{{ t('auth.relationshipMode') }}</label>
+              <select id="relationship-type" v-model="relationshipType" data-testid="relationship-type-select" required>
+                <option v-for="option in relationshipOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              </select>
 
-          <button class="primary-button" type="submit" data-testid="create-couple-submit" @click="createSubmitAttempted = true">
-            <Sprout :size="18" aria-hidden="true" />
-            {{ t('auth.createGarden') }}
-          </button>
-        </form>
+              <label for="content-preference">{{ t('auth.contentStyle') }}</label>
+              <select id="content-preference" v-model="contentPreference" data-testid="content-preference-select" required>
+                <option v-for="option in contentStyleOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+              </select>
+
+              <button class="primary-button" type="submit" data-testid="create-couple-submit" @click="createSubmitAttempted = true">
+                <Sprout :size="18" aria-hidden="true" />
+                {{ t('auth.createGarden') }}
+              </button>
+            </form>
+          </article>
+        </div>
       </div>
       <p v-if="formError" class="form-error" data-testid="couple-error">{{ formError }}</p>
     </section>
+
+    <div v-if="showInviteModal && authStore.couple" class="confirm-overlay" role="presentation">
+      <section class="invite-code-dialog" role="dialog" aria-modal="true" :aria-labelledby="'invite-code-title'" data-testid="invite-code-modal">
+        <div class="onboarding-option-header">
+          <span class="onboarding-option-icon"><HeartHandshake :size="20" aria-hidden="true" /></span>
+          <div>
+            <p class="eyebrow">{{ t('nav.coupleRoom') }}</p>
+            <h2 id="invite-code-title">{{ t('auth.inviteModalTitle') }}</h2>
+          </div>
+        </div>
+
+        <div class="invite-code-copy">
+          <strong data-testid="invite-modal-code">{{ authStore.couple.inviteCode }}</strong>
+          <button class="secondary-button inline-button" type="button" data-testid="invite-modal-copy" @click="copyInviteCode">
+            <Clipboard :size="18" aria-hidden="true" />
+            {{ copied ? t('common.copied') : t('auth.copyCode') }}
+          </button>
+        </div>
+
+        <p>{{ t('auth.inviteModalText') }}</p>
+
+        <button class="primary-button" type="button" data-testid="invite-modal-confirm" @click="continueToToday">
+          {{ t('auth.continueToToday') }}
+        </button>
+      </section>
+    </div>
   </div>
 </template>

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { Plus, Save, Trash2 } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
 import { ApiError } from '@/services/api';
+import { resolveAssetUrl } from '@/services/assetUrls';
 
 interface LocaleOption {
   locale: string;
@@ -15,6 +16,9 @@ interface GardenLevelItem {
   id: string;
   stage: number;
   name: string;
+  areaKey: string;
+  backgroundImage: string;
+  accent: string;
   localizedName: string;
   pointsToNext: number | null;
   minimumPoints: number;
@@ -25,6 +29,8 @@ interface GardenLevelForm {
   id?: string;
   stage?: number;
   name: string;
+  backgroundImage: string;
+  accent: string;
   pointsToNext: number | null;
   translations: Record<string, { name?: string }>;
 }
@@ -36,6 +42,8 @@ const showForm = ref(false);
 const saving = ref(false);
 const deletingId = ref('');
 const error = ref('');
+const backgroundFile = ref<File | null>(null);
+const backgroundPreview = ref('');
 const formAnchor = ref<HTMLElement | null>(null);
 const form = reactive<GardenLevelForm>(emptyForm());
 
@@ -47,6 +55,8 @@ const isLastStage = computed(() => {
 function emptyForm(): GardenLevelForm {
   return {
     name: '',
+    backgroundImage: '',
+    accent: '#8fb66b',
     pointsToNext: null,
     translations: {},
   };
@@ -67,17 +77,21 @@ function ensureTranslations() {
 }
 
 function levelPayload() {
-  return {
-    name: form.name,
-    pointsToNext: form.pointsToNext === null || form.pointsToNext === undefined ? null : Number(form.pointsToNext),
-    translations: form.translations,
-  };
+  const payload = new FormData();
+  payload.set('name', form.name);
+  payload.set('accent', form.accent);
+  payload.set('pointsToNext', form.pointsToNext === null || form.pointsToNext === undefined ? '' : String(Number(form.pointsToNext)));
+  payload.set('translations', JSON.stringify(form.translations));
+  if (backgroundFile.value) payload.set('backgroundImage', backgroundFile.value);
+  return payload;
 }
 
 function resetForm(open = false) {
   replaceForm(emptyForm());
   ensureTranslations();
   error.value = '';
+  backgroundFile.value = null;
+  backgroundPreview.value = '';
   showForm.value = open;
 }
 
@@ -91,6 +105,7 @@ async function openNew() {
     ...emptyForm(),
     stage: Math.max(0, ...levels.value.map((level) => level.stage)) + 1,
     pointsToNext: 200,
+    accent: '#8fb66b',
   });
   ensureTranslations();
   error.value = '';
@@ -111,13 +126,22 @@ async function loadLocales() {
   locales.value = payload.locales;
 }
 
+function normalizeLevelItem(level: GardenLevelItem): GardenLevelItem {
+  return {
+    ...level,
+    backgroundImage: resolveAssetUrl(level.backgroundImage),
+  };
+}
+
 async function loadLevels() {
   const payload = await adminApiRequest<{ items: GardenLevelItem[] }>('/api/admin/garden/levels');
-  levels.value = payload.items;
+  levels.value = payload.items.map(normalizeLevelItem);
 }
 
 function validateForm() {
   if (!form.name.trim()) return t('admin.garden.errors.name');
+  if (!/^#[0-9a-f]{6}$/i.test(form.accent)) return t('admin.garden.errors.accent');
+  if (!form.id && !backgroundFile.value) return t('admin.garden.errors.background');
   if (!form.id && (!Number.isInteger(Number(form.pointsToNext)) || Number(form.pointsToNext) <= 0)) {
     return t('admin.garden.errors.newPoints');
   }
@@ -128,6 +152,23 @@ function validateForm() {
     return t('admin.garden.errors.positivePoints');
   }
   return '';
+}
+
+function onBackgroundSelected(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0] ?? null;
+  backgroundFile.value = file;
+  backgroundPreview.value = file ? URL.createObjectURL(file) : '';
+}
+
+function localizeAdminError(caught: unknown, fallbackKey: string) {
+  if (caught instanceof ApiError && caught.errorKey) {
+    const key = `admin.serverErrors.${caught.errorKey}`;
+    const translated = t(key, caught.params ?? {});
+    if (translated !== key) return translated;
+  }
+
+  return t(fallbackKey);
 }
 
 async function saveLevel() {
@@ -143,15 +184,12 @@ async function saveLevel() {
     const method = form.id ? 'PATCH' : 'POST';
     const payload = await adminApiRequest<{ items: GardenLevelItem[] }>(path, {
       method,
-      body: JSON.stringify(levelPayload()),
+      body: levelPayload(),
     });
-    levels.value = payload.items;
+    levels.value = payload.items.map(normalizeLevelItem);
     resetForm(false);
   } catch (caught) {
-    error.value =
-      caught instanceof ApiError && caught.serverMessage
-        ? caught.serverMessage
-        : t('admin.garden.errors.save');
+    error.value = localizeAdminError(caught, 'admin.garden.errors.save');
   } finally {
     saving.value = false;
   }
@@ -162,13 +200,10 @@ async function deleteLevel(level: GardenLevelItem) {
   error.value = '';
   try {
     const payload = await adminApiRequest<{ items: GardenLevelItem[] }>(`/api/admin/garden/levels/${level.id}`, { method: 'DELETE' });
-    levels.value = payload.items;
+    levels.value = payload.items.map(normalizeLevelItem);
     if (form.id === level.id) resetForm(false);
   } catch (caught) {
-    error.value =
-      caught instanceof ApiError && caught.serverMessage
-        ? caught.serverMessage
-        : t('admin.garden.errors.delete');
+    error.value = localizeAdminError(caught, 'admin.garden.errors.delete');
   } finally {
     deletingId.value = '';
   }
@@ -199,6 +234,21 @@ onMounted(async () => {
 
       <label>{{ t('admin.common.name') }}<input v-model="form.name" data-testid="admin-garden-level-name" /></label>
       <label>
+        {{ t('admin.garden.accent') }}
+        <input v-model="form.accent" type="color" data-testid="admin-garden-level-accent" />
+      </label>
+      <label>
+        {{ t('admin.garden.backgroundImage') }}
+        <input type="file" accept="image/png,image/jpeg,image/webp" data-testid="admin-garden-level-background" @change="onBackgroundSelected" />
+        <small>{{ form.id ? t('admin.garden.backgroundOptionalHelp') : t('admin.garden.backgroundRequiredHelp') }}</small>
+      </label>
+      <img
+        v-if="backgroundPreview || form.backgroundImage"
+        class="admin-image-preview admin-background-preview"
+        :src="backgroundPreview || form.backgroundImage"
+        alt=""
+      />
+      <label>
         {{ form.id ? t('admin.garden.pointsToNext') : t('admin.garden.pointsFromPrevious') }}
         <input v-model.number="form.pointsToNext" type="number" min="1" data-testid="admin-garden-level-points" />
         <small v-if="isLastStage">{{ t('admin.garden.lastStageHelp') }}</small>
@@ -211,10 +261,6 @@ onMounted(async () => {
           <input v-model="form.translations[locale.locale].name" :placeholder="t('admin.common.namePlaceholder', { locale: locale.locale })" />
         </div>
       </section>
-
-      <p v-if="!form.id" class="admin-warning" data-testid="admin-garden-level-asset-warning">
-        {{ t('admin.garden.assetWarning') }}
-      </p>
 
       <button class="primary-button" type="button" :disabled="saving" data-testid="admin-garden-level-save" @click="saveLevel">
         <Save :size="18" aria-hidden="true" />
@@ -238,6 +284,7 @@ onMounted(async () => {
           <tr>
             <th>{{ t('admin.garden.stage') }}</th>
             <th>{{ t('admin.common.name') }}</th>
+            <th>{{ t('admin.garden.visual') }}</th>
             <th>{{ t('admin.garden.minimumPoints') }}</th>
             <th>{{ t('admin.garden.untilNext') }}</th>
             <th></th>
@@ -247,6 +294,10 @@ onMounted(async () => {
           <tr v-for="level in levels" :key="level.id">
             <td>{{ level.stage }}</td>
             <td>{{ level.localizedName }}</td>
+            <td>
+              <span class="admin-color-swatch" :style="{ background: level.accent }"></span>
+              <img class="admin-table-thumb" :src="level.backgroundImage" alt="" />
+            </td>
             <td>{{ level.minimumPoints }}</td>
             <td>{{ level.pointsToNext ?? '-' }}</td>
             <td class="admin-actions">

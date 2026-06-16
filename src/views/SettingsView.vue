@@ -13,7 +13,7 @@ import { FIELD_SUCCESS_VISIBLE_MS } from '@/constants/timing';
 import { featureExplainerKeys, useAuthStore } from '@/stores/authStore';
 import { usePushStore } from '@/stores/pushStore';
 import { localizeApiError } from '@/services/errorMessages';
-import type { FeatureExplainerKey } from '@/types/domain';
+import type { FeatureExplainerKey, PushNotificationMode } from '@/types/domain';
 
 type ProfileField = 'displayName' | 'email' | 'password';
 type ConfirmAction = 'leaveCouple' | 'deleteAccount';
@@ -44,6 +44,9 @@ const featureExplainerErrors = reactive<Record<FeatureExplainerKey, string>>(
 let profileSuccessTimeout: ReturnType<typeof window.setTimeout> | undefined;
 let featureExplainerSuccessTimeout: ReturnType<typeof window.setTimeout> | undefined;
 const profileSaving = ref(false);
+const pushModeSaving = ref(false);
+const pushModeMessage = ref('');
+const pushModeError = ref('');
 const pendingConfirm = ref<ConfirmAction | null>(null);
 
 const featureExplainerItems = computed(() =>
@@ -72,6 +75,15 @@ const confirmDialog = computed(() => {
       message: t('settings.confirmDelete'),
       confirmLabel: t('settings.deleteAccount'),
       titleId: 'delete-confirm-title',
+    };
+  }
+  if ((authStore.couple?.memberCount ?? 0) <= 1) {
+    return {
+      variant: 'primary' as const,
+      title: t('settings.confirmLeaveSoloTitle'),
+      message: t('settings.confirmLeaveSolo'),
+      confirmLabel: t('settings.leaveSoloCouple'),
+      titleId: 'leave-confirm-title',
     };
   }
   return {
@@ -114,6 +126,11 @@ function clearFeatureExplainerMessages() {
   }
 }
 
+function clearPushModeMessages() {
+  pushModeMessage.value = '';
+  pushModeError.value = '';
+}
+
 function showProfileSuccess(field: ProfileField, text: string) {
   clearProfileSuccess();
   profileSuccess[field] = text;
@@ -136,6 +153,7 @@ function resetPanelMessages() {
   clearProfileErrors();
   clearProfileSuccess();
   clearFeatureExplainerMessages();
+  clearPushModeMessages();
 }
 
 function validEmail(value: string) {
@@ -153,6 +171,25 @@ async function updateFeatureExplainer(key: FeatureExplainerKey, visible: boolean
     showFeatureExplainerSuccess(key, t('settings.hintSettingsSaved'));
   } catch (caught) {
     featureExplainerErrors[key] = localizeApiError(caught, 'errors.fallback.preferences');
+  }
+}
+
+async function updatePushNotificationMode(mode: PushNotificationMode) {
+  if (mode === authStore.pushNotificationMode) return;
+  error.value = '';
+  message.value = '';
+  clearProfileErrors();
+  clearProfileSuccess();
+  clearFeatureExplainerMessages();
+  clearPushModeMessages();
+  pushModeSaving.value = true;
+  try {
+    await authStore.setPushNotificationMode(mode);
+    pushModeMessage.value = t('settings.push.modeSaved');
+  } catch (caught) {
+    pushModeError.value = localizeApiError(caught, 'errors.fallback.preferences');
+  } finally {
+    pushModeSaving.value = false;
   }
 }
 
@@ -314,11 +351,16 @@ async function confirmPendingAction() {
       :testing="pushStore.testing"
       :active="pushStore.active"
       :can-prompt="pushStore.canPrompt"
+      :push-notification-mode="authStore.pushNotificationMode"
+      :mode-saving="pushModeSaving"
+      :mode-message="pushModeMessage"
+      :mode-error="pushModeError"
       :message="pushStore.message"
       :error="pushStore.error"
       @enable="pushStore.enable"
       @disable="pushStore.disable"
       @test="pushStore.sendTest"
+      @mode-change="updatePushNotificationMode"
     />
 
     <PrivacyDetailsPanel />

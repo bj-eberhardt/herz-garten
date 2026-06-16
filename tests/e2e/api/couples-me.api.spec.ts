@@ -125,6 +125,7 @@ test.describe('me and couples api', () => {
         settings: true,
       }),
     );
+    expect(initial.user.preferences?.pushNotificationMode).toBe('all');
 
     const updated = await expectJson<MePayload>(
       await apiPatchRaw(
@@ -133,6 +134,7 @@ test.describe('me and couples api', () => {
         {
           preferences: {
             featureExplainers: { today: false, loveJar: false },
+            pushNotificationMode: 'actions_only',
             futureOption: { enabled: true },
           },
         },
@@ -146,10 +148,17 @@ test.describe('me and couples api', () => {
         settings: true,
       }),
     );
+    expect(updated.user.preferences?.pushNotificationMode).toBe('actions_only');
     expect(updated.user.preferences?.futureOption).toEqual({ enabled: true });
 
     const reloaded = await expectJson<MePayload>(await apiGetRaw(request, '/api/me', user.token));
     expect(reloaded.user.preferences).toEqual(updated.user.preferences);
+
+    await expectApiError(
+      await apiPatchRaw(request, '/api/me/preferences', { preferences: { pushNotificationMode: 'urgent_only' } }, user.token),
+      400,
+      'common.validation',
+    );
   });
 
   test('updates profile name and email with validation', async ({ request }) => {

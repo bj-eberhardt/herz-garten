@@ -2,6 +2,21 @@ import { expect, test } from '@playwright/test';
 import { setupCoupleByApi } from './helpers/api';
 import { testRunId, testUser } from './helpers/testUsers';
 
+function pngHeader(width: number, height: number) {
+  return Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    0x00, 0x00, 0x00, 0x0d,
+    0x49, 0x48, 0x44, 0x52,
+    (width >> 24) & 0xff, (width >> 16) & 0xff, (width >> 8) & 0xff, width & 0xff,
+    (height >> 24) & 0xff, (height >> 16) & 0xff, (height >> 8) & 0xff, height & 0xff,
+    0x08, 0x06, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x49, 0x45, 0x4e, 0x44,
+    0xae, 0x42, 0x60, 0x82,
+  ]);
+}
+
 test.describe('admin ui', () => {
   test('logs in, navigates linked filters and manages content/categories', async ({ page, request }) => {
     test.setTimeout(60000);
@@ -54,12 +69,22 @@ test.describe('admin ui', () => {
     await page.getByTestId('admin-garden-level-new').click();
     await expect(page.getByTestId('admin-garden-level-form')).toBeVisible();
     await page.getByTestId('admin-garden-level-name').fill(`UI Garten ${runId}`);
+    await page.getByTestId('admin-garden-level-accent').fill('#446688');
+    await page.getByTestId('admin-garden-level-background').setInputFiles({
+      name: 'background.png',
+      mimeType: 'image/png',
+      buffer: pngHeader(700, 520),
+    });
     await page.getByTestId('admin-garden-level-points').fill('175');
     await page.getByTestId('admin-garden-level-save').click();
     await expect(page.getByTestId('admin-garden-level-form')).toHaveCount(0);
     await expect(page.locator('.admin-table')).toContainText(`UI Garten ${runId}`);
     await page.getByTestId('admin-garden-level-delete').last().click();
     await expect(page.locator('.admin-table')).not.toContainText(`UI Garten ${runId}`);
+    await page.getByRole('link', { name: 'Garten-Assets' }).click();
+    await expect(page.getByTestId('admin-garden-assets')).toBeVisible();
+    await page.getByRole('button', { name: 'Bearbeiten' }).first().click();
+    await expect(page.getByTestId('admin-garden-asset-preview')).toBeVisible();
     await page.getByRole('link', { name: 'Taxonomien' }).click();
     await expect(page.getByTestId('admin-taxonomies')).toBeVisible();
     await expect(page.getByTestId('admin-preference-new')).toBeVisible();

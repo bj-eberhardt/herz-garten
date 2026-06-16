@@ -1,7 +1,14 @@
 import { defineStore } from 'pinia';
 import { apiRequest, clearToken, getToken, setToken } from '@/services/api';
 import { localizeApiError } from '@/services/errorMessages';
-import type { ContentPreference, Couple, FeatureExplainerKey, RelationshipType, UserPreferences } from '@/types/domain';
+import type {
+  ContentPreference,
+  Couple,
+  FeatureExplainerKey,
+  PushNotificationMode,
+  RelationshipType,
+  UserPreferences,
+} from '@/types/domain';
 
 export const featureExplainerKeys: FeatureExplainerKey[] = [
   'onboarding',
@@ -17,6 +24,7 @@ export const featureExplainerKeys: FeatureExplainerKey[] = [
 
 const defaultPreferences: UserPreferences = {
   featureExplainers: Object.fromEntries(featureExplainerKeys.map((key) => [key, true])) as UserPreferences['featureExplainers'],
+  pushNotificationMode: 'all',
 };
 
 interface AuthUser {
@@ -50,6 +58,7 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     isAuthenticated: (state) => Boolean(state.token && state.user),
     hasCouple: (state) => Boolean(state.couple),
+    pushNotificationMode: (state): PushNotificationMode => state.user?.preferences?.pushNotificationMode ?? 'all',
   },
   actions: {
     async bootstrap() {
@@ -127,6 +136,26 @@ export const useAuthStore = defineStore('auth', {
           ...currentPreferences.featureExplainers,
           [key]: visible,
         },
+      };
+      this.user = { ...this.user, preferences };
+      const result = await apiRequest<{ user: AuthUser; couple: (Couple & { memberCount?: number }) | null }>('/api/me/preferences', {
+        method: 'PATCH',
+        body: JSON.stringify({ preferences }),
+      });
+      this.user = result.user;
+      this.couple = result.couple;
+    },
+    async setPushNotificationMode(mode: PushNotificationMode) {
+      if (!this.user) return;
+      const currentPreferences = this.user.preferences ?? defaultPreferences;
+      const preferences: UserPreferences = {
+        ...defaultPreferences,
+        ...currentPreferences,
+        featureExplainers: {
+          ...defaultPreferences.featureExplainers,
+          ...currentPreferences.featureExplainers,
+        },
+        pushNotificationMode: mode,
       };
       this.user = { ...this.user, preferences };
       const result = await apiRequest<{ user: AuthUser; couple: (Couple & { memberCount?: number }) | null }>('/api/me/preferences', {

@@ -13,6 +13,39 @@ async function adminLogin(request: APIRequestContext) {
   return payload.token;
 }
 
+function pngHeader(width: number, height: number) {
+  return Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    0x00, 0x00, 0x00, 0x0d,
+    0x49, 0x48, 0x44, 0x52,
+    (width >> 24) & 0xff, (width >> 16) & 0xff, (width >> 8) & 0xff, width & 0xff,
+    (height >> 24) & 0xff, (height >> 16) & 0xff, (height >> 8) & 0xff, height & 0xff,
+    0x08, 0x06, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x49, 0x45, 0x4e, 0x44,
+    0xae, 0x42, 0x60, 0x82,
+  ]);
+}
+
+function gardenLevelMultipart(input: { name: string; pointsToNext?: number | null; accent?: string; translations?: unknown; image?: Buffer }) {
+  return {
+    name: input.name,
+    pointsToNext: input.pointsToNext === null || input.pointsToNext === undefined ? '' : String(input.pointsToNext),
+    accent: input.accent ?? '#8fb66b',
+    translations: JSON.stringify(input.translations ?? {}),
+    ...(input.image
+      ? {
+          backgroundImage: {
+            name: 'background.png',
+            mimeType: 'image/png',
+            buffer: input.image,
+          },
+        }
+      : {}),
+  };
+}
+
 test.describe('admin api', () => {
   test('authenticates admin and rejects invalid tokens', async ({ request }) => {
     const token = await adminLogin(request);
@@ -464,31 +497,45 @@ test.describe('admin api', () => {
     const token = await adminLogin(request);
     const sqlLiteral = (value: string) => `'${value.replace(/'/g, "''")}'`;
     const listed = await apiGet<{
-      items: Array<{ id: string; stage: number; name: string; pointsToNext: number | null; minimumPoints: number }>;
+      items: Array<{ id: string; stage: number; name: string; pointsToNext: number | null; minimumPoints: number; accent: string }>;
     }>(request, '/api/admin/garden/levels', token);
     expect(listed.items.length).toBeGreaterThanOrEqual(10);
     expect(listed.items[0]).toMatchObject({ stage: 1, minimumPoints: 0 });
+    expect(listed.items[0]).toEqual(expect.objectContaining({ areaKey: expect.any(String), backgroundImage: expect.any(String), accent: expect.any(String) }));
     const stageOne = listed.items.find((item) => item.stage === 1)!;
     const originalStageOnePoints = stageOne.pointsToNext;
 
-    const invalid = await apiPostRaw(request, '/api/admin/garden/levels', { name: '', pointsToNext: -1, unexpected: true }, token);
-    await expectApiError(invalid, 400, 'common.validation');
+    const invalid = await request.post(`${apiBaseURL}/api/admin/garden/levels`, {
+      multipart: gardenLevelMultipart({ name: '', pointsToNext: -1, image: pngHeader(700, 520) }),
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    await expectApiError(invalid, 400, 'admin.gardenLevel.nameRequired');
 
-    const created = await expectJson<{ id: string; items: Array<{ id: string; stage: number; pointsToNext: number | null }> }>(
-      await apiPostRaw(
-        request,
-        '/api/admin/garden/levels',
-        {
+    const invalidSize = await request.post(`${apiBaseURL}/api/admin/garden/levels`, {
+      multipart: gardenLevelMultipart({ name: 'Wrong size', pointsToNext: 150, image: pngHeader(10, 10) }),
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    await expectApiError(invalidSize, 400, 'admin.upload.invalidDimensions');
+
+    const created = await expectJson<{
+      id: string;
+      items: Array<{ id: string; stage: number; pointsToNext: number | null; backgroundImage: string }>;
+    }>(
+      await request.post(`${apiBaseURL}/api/admin/garden/levels`, {
+        multipart: gardenLevelMultipart({
           name: `Admin Garden ${testRunId()}`,
           pointsToNext: 150,
+          accent: '#123456',
           translations: { de: { name: 'Admin Garten' }, en: { name: 'Admin Garden' } },
-        },
-        token,
-      ),
+          image: pngHeader(700, 520),
+        }),
+        headers: { Authorization: `Bearer ${token}` },
+      }),
       201,
     );
     expect(created.id).toBeTruthy();
     expect(created.items.at(-1)?.pointsToNext).toBeNull();
+    expect(created.items.at(-1)).toEqual(expect.objectContaining({ backgroundImage: expect.stringMatching(/^\/uploads\/garden-backgrounds\//) }));
 
     await expectJson(await apiDeleteRaw(request, `/api/admin/garden/levels/${created.id}`, token));
 
@@ -525,20 +572,28 @@ test.describe('admin api', () => {
 
     try {
       await expectJson(
-        await apiPatchRaw(
-          request,
-          `/api/admin/garden/levels/${stageOne.id}`,
-          { name: stageOne.name, pointsToNext: 80, translations: { de: { name: stageOne.name } } },
-          token,
-        ),
+        await request.patch(`${apiBaseURL}/api/admin/garden/levels/${stageOne.id}`, {
+          multipart: gardenLevelMultipart({
+            name: stageOne.name,
+            pointsToNext: 80,
+            accent: stageOne.accent,
+            translations: { de: { name: stageOne.name } },
+          }),
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       );
 
       const garden = await apiGet<{
         couple: { gardenStage: number; heartPoints: number };
+        areas: Array<{ key: string; startX: number; width: number; backgroundImage: string; accent: string }>;
+        assetCatalog: Array<{ key: string; image: string; active: boolean }>;
         objects: Array<{ label: string; areaKey: string; positionX: number; positionY: number; zIndex: number; placedByUser: boolean }>;
       }>(request, '/api/garden', setup.partnerA.token);
       expect(garden.couple.heartPoints).toBe(300);
       expect(garden.couple.gardenStage).toBe(3);
+      expect(garden.areas[0]).toMatchObject({ startX: 0, width: 700, backgroundImage: expect.any(String), accent: expect.any(String) });
+      expect(garden.areas[1]).toMatchObject({ startX: 700, width: 700 });
+      expect(garden.assetCatalog.some((asset) => asset.key === 'garden_decor')).toBeTruthy();
       expect(garden.objects.find((object) => object.label === 'First reward')).toMatchObject({
         areaKey: 'heart_bed',
         positionX: 21,
@@ -568,12 +623,80 @@ test.describe('admin api', () => {
         placedByUser: false,
       });
     } finally {
-      await apiPatchRaw(
-        request,
-        `/api/admin/garden/levels/${stageOne.id}`,
-        { name: stageOne.name, pointsToNext: originalStageOnePoints, translations: { de: { name: stageOne.name } } },
-        token,
-      );
+      await request.patch(`${apiBaseURL}/api/admin/garden/levels/${stageOne.id}`, {
+        multipart: gardenLevelMultipart({
+          name: stageOne.name,
+          pointsToNext: originalStageOnePoints,
+          accent: stageOne.accent,
+          translations: { de: { name: stageOne.name } },
+        }),
+        headers: { Authorization: `Bearer ${token}` },
+      });
     }
+  });
+
+  test('manages garden assets with uploaded images', async ({ request }) => {
+    const token = await adminLogin(request);
+    const key = `asset_${testRunId().replaceAll('-', '_')}`;
+
+    const listed = await apiGet<{ items: Array<{ key: string; image: string; active: boolean }> }>(request, '/api/admin/garden/assets', token);
+    expect(listed.items.some((item) => item.key === 'conversation_flower')).toBeTruthy();
+
+    const missingImage = await request.post(`${apiBaseURL}/api/admin/garden/assets`, {
+      multipart: {
+        key,
+        label: 'Missing image',
+        objectType: 'decoration',
+        sourceTypes: JSON.stringify(['quest']),
+        stageUnlock: '1',
+        anchorX: '0.5',
+        anchorY: '0.9',
+        active: 'true',
+        sortOrder: '999',
+      },
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    await expectApiError(missingImage, 400, 'admin.gardenAsset.imageRequired');
+
+    const created = await expectJson<{ item: { key: string; image: string; width: number; height: number; active: boolean } }>(
+      await request.post(`${apiBaseURL}/api/admin/garden/assets`, {
+        multipart: {
+          key,
+          label: 'Uploaded asset',
+          objectType: 'decoration',
+          sourceTypes: JSON.stringify(['quest']),
+          stageUnlock: '1',
+          anchorX: '0.5',
+          anchorY: '0.9',
+          active: 'true',
+          sortOrder: '999',
+          image: {
+            name: 'asset.png',
+            mimeType: 'image/png',
+            buffer: pngHeader(64, 80),
+          },
+        },
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      201,
+    );
+    expect(created.item).toMatchObject({ key, image: expect.stringMatching(/^\/uploads\/garden-assets\//), width: 64, height: 80 });
+
+    const updated = await expectJson<{ item: { key: string; active: boolean; label: string } }>(
+      await request.patch(`${apiBaseURL}/api/admin/garden/assets/${key}`, {
+        multipart: {
+          label: 'Inactive uploaded asset',
+          objectType: 'decoration',
+          sourceTypes: JSON.stringify(['quest']),
+          stageUnlock: '1',
+          anchorX: '0.5',
+          anchorY: '0.9',
+          active: 'false',
+          sortOrder: '999',
+        },
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+    expect(updated.item).toMatchObject({ key, active: false, label: 'Inactive uploaded asset' });
   });
 });

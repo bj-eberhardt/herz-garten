@@ -138,6 +138,16 @@ async function switchType(type: ContentType) {
   resetForm(false);
 }
 
+function localizeAdminError(caught: unknown, fallbackKey: string) {
+  if (caught instanceof ApiError && caught.errorKey) {
+    const key = `admin.serverErrors.${caught.errorKey}`;
+    const translated = t(key, caught.params ?? {});
+    if (translated !== key) return translated;
+  }
+
+  return t(fallbackKey);
+}
+
 async function saveCategory() {
   if (!form.value.trim() || !form.label.trim()) {
     error.value = t('admin.categories.errors.required');
@@ -154,10 +164,7 @@ async function saveCategory() {
     items.value = payload.items;
     resetForm(false);
   } catch (caught) {
-    error.value =
-      caught instanceof ApiError && caught.serverMessage
-        ? caught.serverMessage
-        : t('admin.categories.errors.save');
+    error.value = localizeAdminError(caught, 'admin.categories.errors.save');
   } finally {
     saving.value = false;
   }
@@ -170,8 +177,8 @@ async function deleteCategory(category: CategoryItem) {
       method: 'DELETE',
     });
     items.value = payload.items;
-  } catch {
-    error.value = t('admin.categories.errors.delete');
+  } catch (caught) {
+    error.value = localizeAdminError(caught, 'admin.categories.errors.delete');
   }
 }
 

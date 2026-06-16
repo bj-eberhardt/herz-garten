@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Save } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
+import { ApiError } from '@/services/api';
 
 interface LocaleOption {
   locale: string;
@@ -18,6 +19,12 @@ interface MessageTemplateItem {
   requiredParams: string[];
   active: boolean;
   translations: Record<string, { text: string }>;
+}
+
+interface MessageTemplateServerValidationError {
+  locale: string;
+  errorCode: string;
+  params?: Record<string, unknown>;
 }
 
 const placeholderPattern = /\{(\w+)\}/g;
@@ -69,6 +76,37 @@ function validateItem(item: MessageTemplateItem) {
 
   validationErrors.value = nextErrors;
   return Object.keys(nextErrors).length === 0;
+}
+
+function localizedTemplateValidationError(error: MessageTemplateServerValidationError) {
+  if (error.errorCode === 'admin.messageTemplate.placeholderMismatch') {
+    const expected = Array.isArray(error.params?.expectedPlaceholders)
+      ? error.params.expectedPlaceholders.map((placeholder) => `{${String(placeholder)}}`).join(', ')
+      : '';
+    return t('admin.messages.expectedPlaceholders', {
+      placeholders: expected || t('admin.common.none'),
+    });
+  }
+
+  const key = `admin.serverErrors.${error.errorCode}`;
+  const translated = t(key, error.params ?? {});
+  return translated === key ? t('admin.messages.errors.save') : translated;
+}
+
+function applyServerValidationErrors(apiError: ApiError) {
+  const validationErrorsPayload = apiError.params?.validationErrors;
+  if (!Array.isArray(validationErrorsPayload)) return false;
+
+  const nextErrors: Record<string, string> = {};
+  for (const item of validationErrorsPayload) {
+    if (!item || typeof item !== 'object') continue;
+    const serverError = item as MessageTemplateServerValidationError;
+    if (typeof serverError.locale !== 'string' || typeof serverError.errorCode !== 'string') continue;
+    nextErrors[serverError.locale] = localizedTemplateValidationError(serverError);
+  }
+
+  validationErrors.value = nextErrors;
+  return Object.keys(nextErrors).length > 0;
 }
 
 function ensureTranslations(item: MessageTemplateItem) {
@@ -126,8 +164,11 @@ async function saveItem(item: MessageTemplateItem) {
     selectedKey.value = item.key;
     validationErrors.value = {};
   } catch (caught) {
-    const apiError = caught as { serverMessage?: string };
-    error.value = apiError.serverMessage ?? t('admin.messages.errors.save');
+    if (caught instanceof ApiError && applyServerValidationErrors(caught)) {
+      error.value = t('admin.messages.errors.validation');
+    } else {
+      error.value = t('admin.messages.errors.save');
+    }
   } finally {
     savingKey.value = '';
   }

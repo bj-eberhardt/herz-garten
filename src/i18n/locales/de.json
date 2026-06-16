@@ -35,7 +35,7 @@
     "onboarding": "Onboarding",
     "welcomeTitle": "Willkommen in eurem Herzgarten.",
     "introGuest": "Erstellt ein Konto oder loggt euch ein. Danach könnt ihr einen vorhandenen Partnercode eingeben oder einen neuen Paarraum anlegen.",
-    "introNoCouple": "Dein Konto ist bereit. Verbinde dich jetzt nachträglich mit dem Partnercode oder lege euren gemeinsamen Garten an.",
+    "introNoCouple": "Dein Konto ist bereit. Jetzt wählst du nur noch, wie ihr euren gemeinsamen Garten verbindet.",
     "introCouple": "Teilt euren Paar-Code, damit dein Partner jederzeit nachträglich beitreten kann.",
     "howTitle": "Was ist das?",
     "howText": "Herzgarten ist euer geschützter Paarraum. Erst wenn beide im selben Raum sind, werden Fragen, Aufgaben, Zettel, Erinnerungen und Gartenmomente miteinander geteilt.",
@@ -48,12 +48,19 @@
     "createAccount": "Konto erstellen",
     "loginAction": "Einloggen",
     "rememberEmail": "E-Mail-Adresse in diesem Browser merken",
-    "hello": "Hallo {name}",
+    "hello": "Schön, dass du da bist, {name}.",
     "coupleCodeText": "Euer Paar-Code ist {code}. Dein Partner kann ihn auch später nach dem Login eingeben.",
     "coupleCodePrefix": "Euer Paar-Code ist",
     "coupleCodeSuffix": "Dein Partner kann ihn auch später nach dem Login eingeben.",
     "copyCode": "Code kopieren",
+    "inviteModalTitle": "Euer Paarcode ist bereit.",
+    "inviteModalText": "Gib diesen Code deinem Partner weiter. Sobald er den Code im Onboarding eingibt, seid ihr beide mit demselben Garten verbunden.",
+    "continueToToday": "Okay, weiter",
     "enterPartnerCodeLater": "Partnercode nachträglich eingeben",
+    "onboardingNextSteps": "Ihr habt zwei Wege: Du legst euren Garten an und teilst den Partnercode mit deinem Partner, oder dein Partner legt den Garten an und du gibst hier seinen Partnercode ein. Danach seid ihr im selben Paarraum verbunden.",
+    "joinPartnerTitle": "Partnercode eingeben",
+    "createGardenTitle": "Neuen Garten anlegen",
+    "createGardenHint": "Lege euren gemeinsamen Garten an. Danach erhältst du einen Partnercode, den du mit deinem Partner teilen kannst.",
     "enterPartnerCodeHint": "Wenn dein Partner den Garten schon angelegt hat, trage hier den Code ein. Danach landet ihr beide im selben Paarraum.",
     "partnerCode": "Partnercode",
     "connectPartner": "Mit Partner verbinden",
@@ -446,6 +453,13 @@
       "eyebrow": "Browser-Push",
       "title": "Push-Benachrichtigungen",
       "text": "Erhalte neue Herzgarten-Hinweise auch dann, wenn die App gerade nicht offen ist. Die Aktivierung gilt nur fuer dieses Geraet und diesen Browser.",
+      "modeEyebrow": "Push-Auswahl",
+      "modeText": "Lege fest, welche Hinweise als Push-Nachricht auf deinen Geraeten ankommen.",
+      "modeSaved": "Push-Auswahl wurde gespeichert.",
+      "modes": {
+        "all": "Alle Benachrichtigungen",
+        "actionsOnly": "Nur Aktionen"
+      },
       "enable": "Aktivieren",
       "enabling": "Aktiviert...",
       "disable": "Deaktivieren",
@@ -484,11 +498,14 @@
     "exportCreated": "Export wurde erstellt.",
     "confirmLeaveTitle": "Paarraum verlassen",
     "confirmLeave": "Paarraum wirklich verlassen? Die Paarung wird sofort und unwiderruflich aufgehoben.",
+    "confirmLeaveSoloTitle": "Leeren Paarraum verlassen",
+    "confirmLeaveSolo": "Du bist gerade allein in diesem Paarraum. Wenn du ihn verlässt, wird der leere Raum gelöscht und der Paarcode funktioniert danach nicht mehr.",
     "confirmDeleteTitle": "Konto löschen",
     "confirmDelete": "Konto wirklich dauerhaft löschen?",
     "exportData": "Daten exportieren",
     "logout": "Ausloggen",
     "leaveCouple": "Paarraum verlassen",
+    "leaveSoloCouple": "Paarraum löschen",
     "deleteAccount": "Konto löschen"
   },
   "errors": {
@@ -623,6 +640,48 @@
       "translations": "Übersetzungen",
       "value": "Wert"
     },
+    "serverErrors": {
+      "couple": {
+        "notFound": "Paarraum nicht gefunden."
+      },
+      "content": {
+        "notFound": "Inhaltstyp nicht gefunden."
+      },
+      "upload": {
+        "invalidDimensions": "Das Bild hat nicht die erwarteten Maße.",
+        "invalidImage": "Bitte lade ein gueltiges PNG-, JPEG- oder WebP-Bild hoch."
+      },
+      "admin": {
+        "couplePreferencesInvalid": "Paarraum-Einstellungen sind ungueltig.",
+        "messageTemplateNotFound": "Nachrichtenvorlage nicht gefunden.",
+        "messageTemplateInvalid": "Nachrichtenvorlage ist ungueltig.",
+        "preferenceInvalid": "Taxonomie-Daten sind ungueltig.",
+        "categoryInvalid": "Kategorie-Daten sind ungueltig.",
+        "categoryNotFound": "Kategorie nicht gefunden.",
+        "categoryInUse": "Kategorie wird noch verwendet.",
+        "contentInvalid": "Inhaltsdaten sind ungueltig.",
+        "gardenLevelNotFound": "Gartenstufe nicht gefunden.",
+        "messageTemplate": {
+          "defaultTranslationRequired": "Die Standard-Uebersetzung darf nicht leer sein.",
+          "placeholderMismatch": "Die Platzhalter stimmen nicht."
+        },
+        "gardenLevel": {
+          "sequenceMustStartAtOne": "Gartenstufen muessen bei Stufe 1 beginnen.",
+          "sequenceMustBeContiguous": "Gartenstufen muessen lueckenlos sortiert sein.",
+          "intermediatePointsRequired": "Alle Stufen ausser der letzten brauchen positive Punkte bis zur naechsten Stufe.",
+          "pointsMustBePositive": "Punkte bis zur naechsten Stufe muessen positiv sein.",
+          "nameRequired": "Bitte gib einen Namen fuer die Gartenstufe ein.",
+          "newLevelPointsRequired": "Neue Stufen brauchen positive Punkte von der bisherigen letzten Stufe bis hierher.",
+          "cannotDeleteFirstStage": "Stufe 1 kann nicht geloescht werden."
+        },
+        "gardenAsset": {
+          "keyInvalid": "Der Asset-Key darf nur Kleinbuchstaben, Zahlen und Unterstriche enthalten.",
+          "keyExists": "Dieser Asset-Key existiert bereits.",
+          "imageRequired": "Bitte lade ein Bild fuer dieses Garten-Asset hoch.",
+          "notFound": "Garten-Asset nicht gefunden."
+        }
+      }
+    },
     "auth": {
       "brand": "Herzgarten",
       "invalidPassword": "Administrationspasswort ist ungültig.",
@@ -641,6 +700,7 @@
         "couples": "Paarräume",
         "content": "Inhalte",
         "garden": "Garten",
+        "gardenAssets": "Garten-Assets",
         "categories": "Kategorien",
         "taxonomies": "Taxonomien",
         "messages": "Nachrichten",
@@ -800,7 +860,11 @@
       "editTitle": "Stufe {stage} bearbeiten",
       "newTitle": "Neue Stufe",
       "saveWarning": "Beim Speichern werden bestehende Gärten neu berechnet. Objekte in gesperrten Bereichen werden in den höchsten offenen Bereich verschoben.",
-      "assetWarning": "Lege für diese neue Gartenstufe auch ein passendes Hintergrundbild im Ordner public/garden-backgrounds an und verdrahte es im Gartenkatalog.",
+      "accent": "Akzentfarbe",
+      "backgroundImage": "Hintergrundbild",
+      "backgroundRequiredHelp": "Erforderlich: exakt 700 x 520 px als PNG, JPEG oder WebP.",
+      "backgroundOptionalHelp": "Optional: neues Bild ersetzt den aktuellen Hintergrund. Erwartet werden exakt 700 x 520 px.",
+      "visual": "Visual",
       "pointsToNext": "Punkte bis zur naechsten Stufe",
       "pointsFromPrevious": "Punkte von der bisherigen letzten Stufe bis hierher",
       "lastStageHelp": "Optional für die letzte Stufe; wird relevant, sobald eine weitere Stufe angelegt wird.",
@@ -813,8 +877,32 @@
         "newPoints": "Bitte gib die Punkte ein, die bis zu dieser neuen Stufe nötig sind.",
         "nextPoints": "Bitte gib für diese Stufe positive Punkte bis zur nächsten Stufe ein.",
         "positivePoints": "Punkte bis zur nächsten Stufe müssen positiv sein.",
+        "accent": "Bitte waehle eine gueltige Akzentfarbe.",
+        "background": "Bitte lade ein Hintergrundbild mit 700 x 520 px hoch.",
         "save": "Gartenstufe konnte nicht gespeichert werden.",
         "delete": "Gartenstufe konnte nicht gelöscht werden."
+      }
+    },
+    "gardenAssets": {
+      "title": "Garten-Assets",
+      "subtitle": "Objekte und Bilder",
+      "help": "Hier verwaltest du die Assets, die Gartenobjekte visuell darstellen.",
+      "editTitle": "Asset bearbeiten",
+      "newTitle": "Neues Asset",
+      "preview": "Vorschau",
+      "objectType": "Objekttyp",
+      "sourceTypes": "Quellen",
+      "stageUnlock": "Freigabe ab Stufe",
+      "size": "Groesse",
+      "anchorX": "Anker X",
+      "anchorY": "Anker Y",
+      "image": "Asset-Bild",
+      "errors": {
+        "key": "Bitte gib einen technischen Key mit Kleinbuchstaben, Zahlen und Unterstrichen ein.",
+        "label": "Bitte gib ein Label ein.",
+        "stage": "Die Freigabestufe muss mindestens 1 sein.",
+        "image": "Bitte lade ein Bild hoch.",
+        "save": "Garten-Asset konnte nicht gespeichert werden."
       }
     },
     "messages": {
@@ -830,6 +918,7 @@
       "parameters": "Parameter",
       "errors": {
         "defaultTranslationRequired": "Die Standard-Übersetzung darf nicht leer sein.",
+        "validation": "Bitte pruefe die markierten Uebersetzungen.",
         "save": "Nachrichtenvorlage konnte nicht gespeichert werden."
       }
     }

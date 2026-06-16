@@ -1,4 +1,4 @@
-import { fallbackAreaKey, gardenAssets } from './catalog.js';
+import { fallbackAreaKey } from './catalog.js';
 
 export interface GardenObjectRow {
   id: string;
@@ -43,10 +43,6 @@ export function assetKeyForGardenObject(type: string, sourceType: string, catego
   if (type === 'stone') return 'memory_stone';
   if (type === 'light') return 'warm_lantern';
   return 'garden_decor';
-}
-
-export function objectTypeForAsset(assetKey: string) {
-  return gardenAssets.find((asset) => asset.key === assetKey)?.objectType ?? 'decoration';
 }
 
 export function mapGardenObject(row: GardenObjectRow) {

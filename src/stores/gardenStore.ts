@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { apiRequest } from '@/services/api';
+import { resolveAssetUrl } from '@/services/assetUrls';
 import { localizeApiError } from '@/services/errorMessages';
 import type {
   Couple,
@@ -85,10 +86,19 @@ export const useGardenStore = defineStore('garden', {
           progress: GardenProgress;
         }>('/api/garden');
         this.objects = payload.objects;
-        this.areas = payload.areas ?? [];
+        this.areas = (payload.areas ?? []).map((area) => ({
+          ...area,
+          backgroundImage: resolveAssetUrl(area.backgroundImage),
+        }));
         this.unlocks = payload.unlocks ?? [];
-        this.availableAssets = payload.availableAssets ?? [];
-        this.assetCatalog = payload.assetCatalog ?? payload.availableAssets ?? [];
+        this.availableAssets = (payload.availableAssets ?? []).map((asset) => ({
+          ...asset,
+          image: resolveAssetUrl(asset.image),
+        }));
+        this.assetCatalog = (payload.assetCatalog ?? payload.availableAssets ?? []).map((asset) => ({
+          ...asset,
+          image: resolveAssetUrl(asset.image),
+        }));
         this.nextUnlock = payload.nextUnlock ?? null;
         this.progress = payload.progress;
         useCoupleStore().setCouple(payload.couple);

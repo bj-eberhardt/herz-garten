@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { apiDeleteRaw, apiGetRaw, apiPostRaw, registerByApi } from '../helpers/api';
+import { shouldSendPushForMode } from '../../../backend/src/api/notifications/notificationPolicy';
+import { apiDeleteRaw, apiGetRaw, apiPatchRaw, apiPostRaw, registerByApi, setupCoupleByApi } from '../helpers/api';
 import { expectApiError, expectJson } from '../helpers/apiAssertions';
 import { testRunId, testUser } from '../helpers/testUsers';
 
@@ -77,5 +78,35 @@ test.describe('push api', () => {
       400,
       'common.validation',
     );
+  });
+
+  test('filters push payloads by notification mode without hiding in-app notifications', async ({ request }) => {
+    expect(shouldSendPushForMode('all', 'daily_revealed')).toBe(true);
+    expect(shouldSendPushForMode('actions_only', 'daily_revealed')).toBe(false);
+    expect(shouldSendPushForMode('actions_only', 'daily_answer_waiting')).toBe(true);
+    expect(shouldSendPushForMode('actions_only', 'love_jar_note')).toBe(true);
+
+    const runId = testRunId();
+    const { partnerA, partnerB } = await setupCoupleByApi(
+      request,
+      testUser('api-push-filter-a', runId),
+      testUser('api-push-filter-b', runId),
+    );
+
+    await expectJson(
+      await apiPatchRaw(
+        request,
+        '/api/me/preferences',
+        { preferences: { pushNotificationMode: 'actions_only' } },
+        partnerB.token,
+      ),
+    );
+    await expectJson(await apiPostRaw(request, '/api/today/answer', { answerText: 'Antwort A' }, partnerA.token));
+    await expectJson(await apiPostRaw(request, '/api/today/answer', { answerText: 'Antwort B' }, partnerB.token));
+
+    const notifications = await expectJson<{ notifications: Array<{ type: string }> }>(
+      await apiGetRaw(request, '/api/notifications', partnerB.token),
+    );
+    expect(notifications.notifications.some((item) => item.type === 'daily_revealed')).toBeTruthy();
   });
 });

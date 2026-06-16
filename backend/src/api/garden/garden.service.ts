@@ -1,7 +1,8 @@
 import {
   fallbackAreaKey,
-  gardenAreas,
-  gardenAssets,
+  listGardenAreas,
+  listGardenAssets,
+  type GardenArea,
 } from './catalog.js';
 import { listGardenObjects, updateGardenObjectPlacement, type GardenPlacementUpdate } from './garden.repository.js';
 import { mapGardenObject } from './garden.mapper.js';
@@ -13,8 +14,8 @@ import {
 
 export const gardenObjectIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function areaForStage(stage: number) {
-  return gardenAreas.filter((area) => area.stageUnlock <= Math.max(1, stage));
+export function areaForStage(stage: number, areas: GardenArea[]) {
+  return areas.filter((area) => area.stageUnlock <= Math.max(1, stage));
 }
 
 export function areaKeyForSource(sourceType: string, questCategory = '') {
@@ -32,9 +33,10 @@ export function areaKeyForSource(sourceType: string, questCategory = '') {
   return fallbackAreaKey;
 }
 
-export function highestUnlockedAreaForReward(coupleStage: number, sourceType: string, questCategory = '') {
+export async function highestUnlockedAreaForReward(coupleStage: number, sourceType: string, questCategory = '') {
+  const areas = await listGardenAreas();
   const targetAreaKey = areaKeyForSource(sourceType, questCategory);
-  const unlockedAreas = areaForStage(coupleStage);
+  const unlockedAreas = areaForStage(coupleStage, areas);
   const targetArea = unlockedAreas.find((area) => area.key === targetAreaKey);
   return targetArea?.key ?? unlockedAreas[unlockedAreas.length - 1]?.key ?? fallbackAreaKey;
 }
@@ -56,14 +58,16 @@ export interface GardenPlacementBody {
 
 export async function buildGardenPayload(couple: CurrentCouple, locale = 'de') {
   const objects = await listGardenObjects(couple.id);
+  const areas = await listGardenAreas(locale);
+  const assets = await listGardenAssets(undefined, [...new Set(objects.map((object) => object.assetKey).filter(Boolean).map(String))]);
   const unlocks = await gardenUnlocksForLocale(locale);
   return {
     couple,
     objects: objects.map(mapGardenObject),
-    areas: gardenAreas,
+    areas,
     unlocks,
-    availableAssets: gardenAssets.filter((asset) => asset.stageUnlock <= Math.max(1, couple.gardenStage)),
-    assetCatalog: gardenAssets,
+    availableAssets: assets.filter((asset) => asset.active && asset.stageUnlock <= Math.max(1, couple.gardenStage)),
+    assetCatalog: assets,
     nextUnlock: await nextGardenUnlock(couple.heartPoints, locale),
     progress: await buildGardenProgress(couple.id),
   };
@@ -80,8 +84,9 @@ export function normalizeGardenPlacement(body: GardenPlacementBody) {
   return placement;
 }
 
-export function isUnlockedGardenArea(areaKey: string, gardenStage: number) {
-  return gardenAreas.some((area) => area.key === areaKey && area.stageUnlock <= Math.max(1, gardenStage));
+export async function isUnlockedGardenArea(areaKey: string, gardenStage: number) {
+  const areas = await listGardenAreas();
+  return areas.some((area) => area.key === areaKey && area.stageUnlock <= Math.max(1, gardenStage));
 }
 
 export async function placeGardenObject(couple: CurrentCouple, objectId: string, placement: GardenPlacementUpdate) {

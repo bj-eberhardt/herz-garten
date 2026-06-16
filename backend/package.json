@@ -7,14 +7,18 @@
     "dev": "npm run db:migrate && tsx watch --clear-screen=false src/server.ts",
     "db:migrate": "tsx src/migrate.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "start:prod": "node dist/migrate.js && node dist/server.js"
   },
   "dependencies": {
+    "@types/multer": "^2.1.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "image-size": "^2.0.2",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.2.0",
     "pg": "^8.13.1",
     "web-push": "^3.6.7",
     "zod": "^4.4.3"

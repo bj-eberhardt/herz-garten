@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext, type Browser, type Page } from '@playwright/test';
-import { apiGet, apiPatchRaw, apiPost, authenticatePage, setupCoupleByApi } from './helpers/api';
+import { apiGet, apiPatchRaw, apiPost, authenticatePage, createCoupleByApi, registerByApi, setupCoupleByApi } from './helpers/api';
 import { expectJson } from './helpers/apiAssertions';
 import { testRunId, testUser } from './helpers/testUsers';
 
@@ -9,14 +9,14 @@ async function setupPages(browser: Browser, request: APIRequestContext, prefix: 
   const runId = testRunId();
   const userA = testUser(`${prefix}-a`, runId);
   const userB = testUser(`${prefix}-b`, runId);
-  const { partnerA, partnerB } = await setupCoupleByApi(request, userA, userB);
+  const { partnerA, partnerB, inviteCode } = await setupCoupleByApi(request, userA, userB);
   const contextA = await browser.newContext();
   const contextB = await browser.newContext();
   const pageA = await contextA.newPage();
   const pageB = await contextB.newPage();
   await authenticatePage(contextA, pageA, partnerA.token);
   await authenticatePage(contextB, pageB, partnerB.token);
-  return { contextA, contextB, pageA, pageB, partnerA, partnerB };
+  return { contextA, contextB, pageA, pageB, partnerA, partnerB, inviteCode };
 }
 
 async function openNotifications(page: Page) {
@@ -89,6 +89,9 @@ test('daily question reveal creates notifications and a garden detail', async ({
   await pageA.getByTestId('garden-history-toggle').click();
   await expect(pageA.getByTestId('garden-history-next-level')).toContainText('Punkte');
   const firstHistoryItem = pageA.getByTestId('garden-history-item').first();
+  await expect
+    .poll(() => firstHistoryItem.evaluate((element) => Math.round(element.getBoundingClientRect().top)))
+    .toBeLessThanOrEqual(80);
   await expect(firstHistoryItem).toContainText('Tagesfrage');
   await expect(firstHistoryItem).toContainText('+10');
   await expect(firstHistoryItem.getByTestId('garden-history-date')).toBeVisible();
@@ -541,9 +544,10 @@ test('notifications can be opened and marked read', async ({ browser, request })
 });
 
 test('settings expose export logout and leave couple flows', async ({ browser, request }) => {
-  const { contextA, contextB, pageA, partnerA } = await setupPages(browser, request, 'settings');
+  const { contextA, contextB, pageA, partnerA, inviteCode } = await setupPages(browser, request, 'settings');
   const updatedEmail = partnerA.user.email.replace('@', '+updated@');
   const updatedPassword = 'new-password-123';
+  await contextA.grantPermissions(['clipboard-read', 'clipboard-write']);
 
   await pageA.goto('/settings');
   await expect(pageA.getByTestId('privacy-details')).toContainText('Datenschutz auf einen Blick');
@@ -552,6 +556,10 @@ test('settings expose export logout and leave couple flows', async ({ browser, r
   await expect(pageA.getByTestId('settings-profile-panel')).toContainText('Ausgewogen');
   await expect(pageA.getByTestId('settings-profile-panel')).not.toContainText('mixed');
   await expect(pageA.getByTestId('settings-profile-panel')).not.toContainText('balanced');
+  await expect(pageA.getByTestId('settings-couple-code')).toHaveText(inviteCode);
+  await pageA.getByTestId('settings-copy-couple-code').click();
+  await expect(pageA.getByTestId('settings-copy-couple-code')).toContainText('Kopiert');
+  await expect.poll(() => pageA.evaluate(() => navigator.clipboard.readText())).toBe(inviteCode);
   await expect(pageA.getByTestId('settings-display-name-value')).toContainText(partnerA.user.displayName);
   await pageA.getByTestId('settings-display-name-edit').click();
   await pageA.getByTestId('settings-display-name-input').fill('   ');
@@ -598,6 +606,29 @@ test('settings expose export logout and leave couple flows', async ({ browser, r
   await pageA.getByTestId('auth-password').fill(updatedPassword);
   await pageA.getByTestId('auth-submit').click();
   await expect(pageA.getByTestId('couple-code-panel')).toBeVisible();
+
+  await contextA.close();
+  await contextB.close();
+});
+
+test('settings persist push notification mode', async ({ browser, request }) => {
+  const { contextA, contextB, pageA, partnerA } = await setupPages(browser, request, 'settings-push-mode');
+
+  await pageA.goto('/settings');
+  await expect(pageA.getByTestId('settings-push-mode-all')).toHaveAttribute('aria-pressed', 'true');
+  await expect(pageA.getByTestId('settings-push-mode-actions-only')).toHaveAttribute('aria-pressed', 'false');
+
+  await pageA.getByTestId('settings-push-mode-actions-only').click();
+  await expect(pageA.getByTestId('settings-push-mode-success')).toContainText('Push-Auswahl wurde gespeichert');
+  await expect(pageA.getByTestId('settings-push-mode-actions-only')).toHaveAttribute('aria-pressed', 'true');
+
+  const meResponse = await apiGetRaw(request, '/api/me', partnerA.token);
+  expect(meResponse.ok()).toBeTruthy();
+  const mePayload = await meResponse.json();
+  expect(mePayload.user.preferences.pushNotificationMode).toBe('actions_only');
+
+  await pageA.reload();
+  await expect(pageA.getByTestId('settings-push-mode-actions-only')).toHaveAttribute('aria-pressed', 'true');
 
   await contextA.close();
   await contextB.close();
@@ -778,11 +809,40 @@ test('settings allow leaving the couple room', async ({ browser, request }) => {
 
   await pageA.goto('/settings');
   await pageA.getByTestId('settings-leave-couple').click();
+  await expect(pageA.getByTestId('settings-confirm-dialog')).toContainText('Paarraum verlassen');
   await expect(pageA.getByTestId('settings-confirm-dialog')).toContainText('sofort und unwiderruflich');
+  await expect(pageA.getByTestId('settings-confirm-dialog')).not.toContainText('leere Raum gelöscht');
+  await expect(pageA.getByTestId('settings-confirm-accept')).toContainText('Paarraum verlassen');
   await pageA.getByTestId('settings-confirm-accept').click();
   await expect(pageA).toHaveURL(/\/onboarding$/);
   await expect(pageA.getByTestId('join-couple-form')).toBeVisible();
 
   await contextA.close();
   await contextB.close();
+});
+
+test('settings explain deleting an empty couple room when leaving alone', async ({ browser, request }) => {
+  const runId = testRunId();
+  const owner = await registerByApi(request, testUser('leave-empty-owner', runId));
+  const couple = await createCoupleByApi(request, owner.token);
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await authenticatePage(context, page, owner.token);
+
+  await page.goto('/settings');
+  await expect(page.getByTestId('settings-couple-code')).toHaveText(couple.couple.inviteCode);
+  await page.getByTestId('settings-leave-couple').click();
+  await expect(page.getByTestId('settings-confirm-dialog')).toContainText('Leeren Paarraum verlassen');
+  await expect(page.getByTestId('settings-confirm-dialog')).toContainText('leere Raum gelöscht');
+  await expect(page.getByTestId('settings-confirm-dialog')).toContainText('Paarcode funktioniert danach nicht mehr');
+  await expect(page.getByTestId('settings-confirm-accept')).toContainText('Paarraum löschen');
+  await page.getByTestId('settings-confirm-accept').click();
+
+  await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page.getByTestId('join-couple-form')).toBeVisible();
+  await page.getByTestId('invite-code-input').fill(couple.couple.inviteCode);
+  await page.getByTestId('join-couple-submit').click();
+  await expect(page.getByTestId('couple-error')).toContainText('Diesen Paar-Code konnten wir nicht finden');
+
+  await context.close();
 });

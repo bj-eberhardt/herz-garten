@@ -1,173 +1,240 @@
-export const gardenAreas = [
-  { key: 'heart_bed', label: 'Herzbeet', stageUnlock: 1, startX: 0, width: 520, accent: '#f08a82', backgroundImage: '/garden-backgrounds/heart-bed.png' },
-  { key: 'flower_meadow', label: 'Blumenwiese', stageUnlock: 2, startX: 520, width: 520, accent: '#e7a86f', backgroundImage: '/garden-backgrounds/flower-meadow.png' },
-  { key: 'bench_grove', label: 'Banklichtung', stageUnlock: 3, startX: 1040, width: 520, accent: '#8fb66b', backgroundImage: '/garden-backgrounds/bench-grove.png' },
-  { key: 'memory_tree', label: 'Erinnerungsbereich', stageUnlock: 4, startX: 1560, width: 560, accent: '#7ca37b', backgroundImage: '/garden-backgrounds/memory-tree-area.png' },
-  { key: 'light_meadow', label: 'Lichterwiese', stageUnlock: 5, startX: 2120, width: 560, accent: '#e9bd62', backgroundImage: '/garden-backgrounds/light-meadow.png' },
-  { key: 'pond', label: 'Teich der Ruhe', stageUnlock: 6, startX: 2680, width: 560, accent: '#6fb5c7', backgroundImage: '/garden-backgrounds/pond-area.png' },
-  { key: 'picnic', label: 'Picknickplatz', stageUnlock: 7, startX: 3240, width: 560, accent: '#d87964', backgroundImage: '/garden-backgrounds/picnic-area.png' },
-  { key: 'star_meadow', label: 'Sternenwiese', stageUnlock: 8, startX: 3800, width: 560, accent: '#727bb9', backgroundImage: '/garden-backgrounds/star-meadow.png' },
-  { key: 'wishing_well', label: 'Wunschbrunnen', stageUnlock: 9, startX: 4360, width: 560, accent: '#8b90a8', backgroundImage: '/garden-backgrounds/wishing-well-area.png' },
-  { key: 'garden_fest', label: 'Gartenfest', stageUnlock: 10, startX: 4920, width: 600, accent: '#d89d52', backgroundImage: '/garden-backgrounds/garden-fest.png' },
-];
+import { pool } from '../../db.js';
 
-export const gardenAssets = [
-  {
-    key: 'conversation_flower',
-    label: 'Gespraechsblume',
-    objectType: 'flower',
-    sourceTypes: ['question'],
-    stageUnlock: 1,
-    image: '/garden-assets/conversation-flower.png',
-    width: 86,
-    height: 108,
-    anchorX: 0.5,
-    anchorY: 0.9,
-  },
-  {
-    key: 'heart_flower',
-    label: 'Herzblume',
-    objectType: 'flower',
-    sourceTypes: ['know_me', 'quest'],
-    stageUnlock: 2,
-    image: '/garden-assets/heart-flower.png',
-    width: 92,
-    height: 112,
-    anchorX: 0.5,
-    anchorY: 0.9,
-  },
-  {
-    key: 'memory_tree',
-    label: 'Erinnerungsbaum',
-    objectType: 'tree',
-    sourceTypes: ['quest', 'milestone'],
-    stageUnlock: 4,
-    image: '/garden-assets/memory-tree.png',
-    width: 150,
-    height: 178,
-    anchorX: 0.5,
-    anchorY: 0.94,
-  },
-  {
-    key: 'memory_stone',
-    label: 'Erinnerungsstein',
-    objectType: 'stone',
-    sourceTypes: ['memory', 'quest'],
-    stageUnlock: 4,
-    image: '/garden-assets/memory-stone.png',
-    width: 108,
-    height: 82,
-    anchorX: 0.5,
-    anchorY: 0.82,
-  },
-  {
-    key: 'warm_lantern',
-    label: 'Liebesglas-Licht',
-    objectType: 'light',
-    sourceTypes: ['love_jar', 'quest'],
-    stageUnlock: 5,
-    image: '/garden-assets/warm-lantern.png',
-    width: 76,
-    height: 118,
-    anchorX: 0.5,
-    anchorY: 0.92,
-  },
-  {
-    key: 'couple_bench',
-    label: 'Paarbank',
-    objectType: 'bench',
-    sourceTypes: ['milestone'],
-    stageUnlock: 3,
-    image: '/garden-assets/couple-bench.png',
-    width: 148,
-    height: 100,
-    anchorX: 0.5,
-    anchorY: 0.84,
-  },
-  {
-    key: 'quiet_pond',
-    label: 'Teich der Ruhe',
-    objectType: 'pond',
-    sourceTypes: ['milestone'],
-    stageUnlock: 6,
-    image: '/garden-assets/quiet-pond.png',
-    width: 190,
-    height: 112,
-    anchorX: 0.5,
-    anchorY: 0.78,
-  },
-  {
-    key: 'picnic_blanket',
-    label: 'Picknickdecke',
-    objectType: 'decoration',
-    sourceTypes: ['quest'],
-    stageUnlock: 7,
-    image: '/garden-assets/picnic-blanket.png',
-    width: 148,
-    height: 96,
-    anchorX: 0.5,
-    anchorY: 0.78,
-  },
-  {
-    key: 'wishing_well',
-    label: 'Wunschbrunnen',
-    objectType: 'decoration',
-    sourceTypes: ['milestone'],
-    stageUnlock: 9,
-    image: '/garden-assets/wishing-well.png',
-    width: 128,
-    height: 152,
-    anchorX: 0.5,
-    anchorY: 0.9,
-  },
-  {
-    key: 'date_pavilion',
-    label: 'Date-Pavillon',
-    objectType: 'decoration',
-    sourceTypes: ['quest'],
-    stageUnlock: 10,
-    image: '/garden-assets/date-pavilion.png',
-    width: 174,
-    height: 154,
-    anchorX: 0.5,
-    anchorY: 0.92,
-  },
-  {
-    key: 'distance_bridge',
-    label: 'Fernbeziehungs-Bruecke',
-    objectType: 'decoration',
-    sourceTypes: ['quest'],
-    stageUnlock: 8,
-    image: '/garden-assets/distance-bridge.png',
-    width: 184,
-    height: 112,
-    anchorX: 0.5,
-    anchorY: 0.82,
-  },
-  {
-    key: 'polaroid_frame',
-    label: 'Polaroid-Ort',
-    objectType: 'decoration',
-    sourceTypes: ['memory'],
-    stageUnlock: 4,
-    image: '/garden-assets/polaroid-frame.png',
-    width: 94,
-    height: 118,
-    anchorX: 0.5,
-    anchorY: 0.9,
-  },
-  {
-    key: 'garden_decor',
-    label: 'Gartendeko',
-    objectType: 'decoration',
-    sourceTypes: ['quest', 'milestone'],
-    stageUnlock: 1,
-    image: '/garden-assets/garden-decor.png',
-    width: 92,
-    height: 94,
-    anchorX: 0.5,
-    anchorY: 0.86,
-  },
-] as const;
+export interface Queryable {
+  query: typeof pool.query;
+}
 
+export interface GardenArea {
+  key: string;
+  label: string;
+  stageUnlock: number;
+  startX: number;
+  width: number;
+  accent: string;
+  backgroundImage: string;
+}
+
+export interface GardenAsset {
+  key: string;
+  label: string;
+  objectType: string;
+  sourceTypes: string[];
+  stageUnlock: number;
+  image: string;
+  width: number;
+  height: number;
+  anchorX: number;
+  anchorY: number;
+  active: boolean;
+  sortOrder: number;
+}
+
+export interface GardenAssetInput {
+  key?: string;
+  label: string;
+  objectType: string;
+  sourceTypes: string[];
+  stageUnlock: number;
+  image?: string;
+  width?: number;
+  height?: number;
+  anchorX: number;
+  anchorY: number;
+  active: boolean;
+  sortOrder?: number;
+}
+
+const areaWidth = 700;
 export const fallbackAreaKey = 'heart_bed';
+
+function mapGardenAsset(row: Record<string, unknown>): GardenAsset {
+  return {
+    key: String(row.key),
+    label: String(row.label),
+    objectType: String(row.objectType),
+    sourceTypes: Array.isArray(row.sourceTypes) ? row.sourceTypes.map(String) : [],
+    stageUnlock: Number(row.stageUnlock),
+    image: String(row.image),
+    width: Number(row.width),
+    height: Number(row.height),
+    anchorX: Number(row.anchorX),
+    anchorY: Number(row.anchorY),
+    active: Boolean(row.active),
+    sortOrder: Number(row.sortOrder ?? 0),
+  };
+}
+
+export async function listGardenAreas(locale = 'de', client: Queryable = pool): Promise<GardenArea[]> {
+  const result = await client.query<{ areaKey: string; stage: number; label: string; accent: string; backgroundImage: string }>(
+    `
+      select
+        gl.area_key as "areaKey",
+        gl.stage,
+        coalesce(requested.name, fallback.name, gl.name) as label,
+        gl.accent,
+        gl.background_image as "backgroundImage"
+      from garden_levels gl
+      left join garden_level_translations requested on requested.level_id = gl.id and requested.locale = $1
+      left join garden_level_translations fallback on fallback.level_id = gl.id and fallback.locale = 'de'
+      order by gl.stage
+    `,
+    [locale],
+  );
+
+  return result.rows.map((level) => ({
+    key: level.areaKey,
+    label: level.label,
+    stageUnlock: Number(level.stage),
+    startX: (Number(level.stage) - 1) * areaWidth,
+    width: areaWidth,
+    accent: level.accent,
+    backgroundImage: level.backgroundImage,
+  }));
+}
+
+export async function listGardenAssets(client: Queryable = pool, referencedKeys: string[] = []) {
+  const result = await client.query(
+    `
+      select
+        key,
+        label,
+        object_type as "objectType",
+        source_types as "sourceTypes",
+        stage_unlock as "stageUnlock",
+        image,
+        width,
+        height,
+        anchor_x as "anchorX",
+        anchor_y as "anchorY",
+        active,
+        sort_order as "sortOrder"
+      from garden_assets
+      where active = true or key = any($1::text[])
+      order by sort_order, key
+    `,
+    [referencedKeys],
+  );
+  return result.rows.map(mapGardenAsset);
+}
+
+export async function listAdminGardenAssets(client: Queryable = pool) {
+  const result = await client.query(
+    `
+      select
+        key,
+        label,
+        object_type as "objectType",
+        source_types as "sourceTypes",
+        stage_unlock as "stageUnlock",
+        image,
+        width,
+        height,
+        anchor_x as "anchorX",
+        anchor_y as "anchorY",
+        active,
+        sort_order as "sortOrder"
+      from garden_assets
+      order by sort_order, key
+    `,
+  );
+  return result.rows.map(mapGardenAsset);
+}
+
+export async function gardenAssetExists(key: string, client: Queryable = pool) {
+  const result = await client.query<{ one: number }>('select 1 as one from garden_assets where key = $1 limit 1', [key]);
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function gardenAssetObjectType(key: string, client: Queryable = pool) {
+  const result = await client.query<{ objectType: string }>('select object_type as "objectType" from garden_assets where key = $1', [key]);
+  return result.rows[0]?.objectType ?? 'decoration';
+}
+
+export async function saveGardenAsset(input: GardenAssetInput, existingKey?: string, client: Queryable = pool) {
+  if (existingKey) {
+    const result = await client.query(
+      `
+        update garden_assets
+        set
+          label = $2,
+          object_type = $3,
+          source_types = $4,
+          stage_unlock = $5,
+          image = coalesce($6, image),
+          width = coalesce($7, width),
+          height = coalesce($8, height),
+          anchor_x = $9,
+          anchor_y = $10,
+          active = $11,
+          sort_order = $12,
+          updated_at = now()
+        where key = $1
+        returning
+          key,
+          label,
+          object_type as "objectType",
+          source_types as "sourceTypes",
+          stage_unlock as "stageUnlock",
+          image,
+          width,
+          height,
+          anchor_x as "anchorX",
+          anchor_y as "anchorY",
+          active,
+          sort_order as "sortOrder"
+      `,
+      [
+        existingKey,
+        input.label,
+        input.objectType,
+        input.sourceTypes,
+        input.stageUnlock,
+        input.image ?? null,
+        input.width ?? null,
+        input.height ?? null,
+        input.anchorX,
+        input.anchorY,
+        input.active,
+        input.sortOrder ?? 0,
+      ],
+    );
+    return result.rows[0] ? mapGardenAsset(result.rows[0]) : null;
+  }
+
+  const result = await client.query(
+    `
+      insert into garden_assets (
+        key, label, object_type, source_types, stage_unlock, image, width, height, anchor_x, anchor_y, active, sort_order, updated_at
+      )
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now())
+      returning
+        key,
+        label,
+        object_type as "objectType",
+        source_types as "sourceTypes",
+        stage_unlock as "stageUnlock",
+        image,
+        width,
+        height,
+        anchor_x as "anchorX",
+        anchor_y as "anchorY",
+        active,
+        sort_order as "sortOrder"
+    `,
+    [
+      input.key,
+      input.label,
+      input.objectType,
+      input.sourceTypes,
+      input.stageUnlock,
+      input.image,
+      input.width,
+      input.height,
+      input.anchorX,
+      input.anchorY,
+      input.active,
+      input.sortOrder ?? 0,
+    ],
+  );
+  return mapGardenAsset(result.rows[0]);
+}
