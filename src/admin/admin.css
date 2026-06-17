@@ -206,6 +206,10 @@
   grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.6fr);
 }
 
+.admin-even-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .admin-table-wrap {
   overflow: auto;
 }
@@ -249,6 +253,14 @@
 .admin-chip-button:hover,
 .admin-chip-button:focus-visible {
   background: #dbeed0;
+}
+
+.admin-audit-resource-id {
+  color: #5d6b63;
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 0.82rem;
+  margin-top: 4px;
 }
 
 .admin-small-button {
@@ -367,6 +379,79 @@
   max-width: min(100%, 420px);
   object-fit: contain;
   padding: 8px;
+}
+
+.admin-anchor-preview-wrap {
+  align-self: start;
+  display: grid;
+  gap: 8px;
+  width: min(100%, 420px);
+}
+
+.admin-anchor-preview {
+  align-items: center;
+  background: #f8faf6;
+  border: 1px solid #d8dfd3;
+  border-radius: 8px;
+  cursor: crosshair;
+  display: inline-grid;
+  justify-self: start;
+  max-height: 260px;
+  max-width: min(100%, 420px);
+  padding: 8px;
+  position: relative;
+  touch-action: none;
+  user-select: none;
+}
+
+.admin-anchor-preview.is-dragging {
+  cursor: grabbing;
+}
+
+.admin-anchor-preview img {
+  display: block;
+  max-height: 240px;
+  max-width: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.admin-anchor-image-frame {
+  display: inline-block;
+  line-height: 0;
+  position: relative;
+}
+
+.admin-anchor-point {
+  background: #d84f3f;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(36, 48, 43, 0.4), 0 8px 18px rgba(36, 48, 43, 0.18);
+  height: 16px;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 16px;
+}
+
+.admin-anchor-point::before,
+.admin-anchor-point::after {
+  background: rgba(36, 48, 43, 0.45);
+  content: "";
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.admin-anchor-point::before {
+  height: 2px;
+  width: 28px;
+}
+
+.admin-anchor-point::after {
+  height: 28px;
+  width: 2px;
 }
 
 .admin-background-preview {

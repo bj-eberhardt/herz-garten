@@ -7,6 +7,12 @@ import { ApiError } from '@/services/api';
 import { resolveAssetUrl } from '@/services/assetUrls';
 import type { GardenAsset, GardenObjectType, GardenSourceType } from '@/types/domain';
 
+interface GardenLevelOption {
+  id: string;
+  stage: number;
+  localizedName: string;
+}
+
 interface GardenAssetForm {
   key: string;
   label: string;
@@ -24,6 +30,7 @@ interface GardenAssetForm {
 
 const { t } = useI18n();
 const items = ref<GardenAsset[]>([]);
+const levels = ref<GardenLevelOption[]>([]);
 const showForm = ref(false);
 const saving = ref(false);
 const error = ref('');
@@ -31,11 +38,20 @@ const imageFile = ref<File | null>(null);
 const imagePreview = ref('');
 const editingKey = ref('');
 const formAnchor = ref<HTMLElement | null>(null);
+const anchorPreview = ref<HTMLElement | null>(null);
+const draggingAnchor = ref(false);
 const form = reactive<GardenAssetForm>(emptyForm());
 
 const objectTypes: GardenObjectType[] = ['flower', 'tree', 'bench', 'light', 'stone', 'pond', 'decoration'];
 const sourceTypes: GardenSourceType[] = ['question', 'quest', 'memory', 'love_jar', 'milestone', 'know_me'];
 const isEditing = computed(() => Boolean(editingKey.value));
+const assetSizeLabel = computed(() => (form.width && form.height ? `${form.width} x ${form.height} px` : t('admin.gardenAssets.sizeUnknown')));
+const stageOptions = computed(() => {
+  if (!form.stageUnlock || levels.value.some((level) => level.stage === form.stageUnlock)) return levels.value;
+  return [...levels.value, { id: `stage-${form.stageUnlock}`, stage: form.stageUnlock, localizedName: t('admin.gardenAssets.unknownStage') }].sort(
+    (left, right) => left.stage - right.stage,
+  );
+});
 
 function normalizeAsset(asset: GardenAsset): GardenAsset {
   return {
@@ -115,6 +131,17 @@ async function loadItems() {
   items.value = payload.items.map(normalizeAsset);
 }
 
+async function loadLevels() {
+  const payload = await adminApiRequest<{ items: GardenLevelOption[] }>('/api/admin/garden/levels');
+  levels.value = payload.items
+    .map((level) => ({
+      id: level.id,
+      stage: level.stage,
+      localizedName: level.localizedName,
+    }))
+    .sort((left, right) => left.stage - right.stage);
+}
+
 function validateForm() {
   if (!isEditing.value && !/^[a-z0-9_]+$/.test(form.key)) return t('admin.gardenAssets.errors.key');
   if (!form.label.trim()) return t('admin.gardenAssets.errors.label');
@@ -132,11 +159,56 @@ function localizeAdminError(caught: unknown, fallbackKey: string) {
   return t(fallbackKey);
 }
 
+function clampUnit(value: number) {
+  return Math.min(1, Math.max(0, value));
+}
+
+function roundAnchor(value: number) {
+  return Math.round(clampUnit(value) * 100) / 100;
+}
+
+function updateAnchorFromPointer(event: PointerEvent) {
+  const element = anchorPreview.value;
+  if (!element) return;
+  const rect = element.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  form.anchorX = roundAnchor((event.clientX - rect.left) / rect.width);
+  form.anchorY = roundAnchor((event.clientY - rect.top) / rect.height);
+}
+
+function beginAnchorDrag(event: PointerEvent) {
+  if (!imagePreview.value && !form.image) return;
+  draggingAnchor.value = true;
+  updateAnchorFromPointer(event);
+  const target = event.currentTarget;
+  if (target instanceof HTMLElement) target.setPointerCapture(event.pointerId);
+}
+
+function moveAnchorDrag(event: PointerEvent) {
+  if (!draggingAnchor.value) return;
+  updateAnchorFromPointer(event);
+}
+
+function endAnchorDrag(event: PointerEvent) {
+  draggingAnchor.value = false;
+  const target = event.currentTarget;
+  if (target instanceof HTMLElement && target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);
+}
+
 function onImageSelected(event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0] ?? null;
   imageFile.value = file;
   imagePreview.value = file ? URL.createObjectURL(file) : '';
+  if (!file || !imagePreview.value) return;
+  form.width = 0;
+  form.height = 0;
+  const image = new Image();
+  image.onload = () => {
+    form.width = image.naturalWidth;
+    form.height = image.naturalHeight;
+  };
+  image.src = imagePreview.value;
 }
 
 async function saveAsset() {
@@ -163,7 +235,9 @@ async function saveAsset() {
   }
 }
 
-onMounted(loadItems);
+onMounted(async () => {
+  await Promise.all([loadItems(), loadLevels()]);
+});
 </script>
 
 <template>
@@ -190,26 +264,30 @@ onMounted(loadItems);
       </label>
       <label>
         {{ t('admin.gardenAssets.stageUnlock') }}
-        <input v-model.number="form.stageUnlock" type="number" min="1" />
+        <select v-model.number="form.stageUnlock">
+          <option v-for="level in stageOptions" :key="level.id" :value="level.stage">{{ level.stage }} ({{ level.localizedName }})</option>
+        </select>
       </label>
       <label class="admin-checkbox"><input v-model="form.active" type="checkbox" />{{ t('admin.common.active') }}</label>
 
-      <section class="admin-translation-box">
-        <h2>{{ t('admin.gardenAssets.sourceTypes') }}</h2>
-        <label v-for="sourceType in sourceTypes" :key="sourceType" class="admin-checkbox">
-          <input v-model="form.sourceTypes" type="checkbox" :value="sourceType" />
-          {{ sourceType }}
-        </label>
-      </section>
+      <label>
+        {{ t('admin.gardenAssets.sourceTypes') }}
+        <select v-model="form.sourceTypes" multiple size="6">
+          <option v-for="sourceType in sourceTypes" :key="sourceType" :value="sourceType">{{ sourceType }}</option>
+        </select>
+        <small>{{ t('admin.gardenAssets.sourceTypesHelp') }}</small>
+      </label>
 
-      <div class="admin-grid-two">
+      <div class="admin-grid-two admin-even-grid">
         <label>
           {{ t('admin.gardenAssets.anchorX') }}
           <input v-model.number="form.anchorX" type="number" min="0" max="1" step="0.01" />
+          <small>{{ t('admin.gardenAssets.anchorXHelp') }}</small>
         </label>
         <label>
           {{ t('admin.gardenAssets.anchorY') }}
           <input v-model.number="form.anchorY" type="number" min="0" max="1" step="0.01" />
+          <small>{{ t('admin.gardenAssets.anchorYHelp') }}</small>
         </label>
       </div>
 
@@ -217,7 +295,28 @@ onMounted(loadItems);
         {{ t('admin.gardenAssets.image') }}
         <input type="file" accept="image/png,image/jpeg,image/webp" data-testid="admin-garden-asset-image" @change="onImageSelected" />
       </label>
-      <img v-if="imagePreview || form.image" class="admin-image-preview" :src="imagePreview || form.image" alt="" data-testid="admin-garden-asset-preview" />
+      <div v-if="imagePreview || form.image" class="admin-anchor-preview-wrap">
+        <div
+          class="admin-anchor-preview"
+          :class="{ 'is-dragging': draggingAnchor }"
+          data-testid="admin-garden-asset-preview"
+          @pointerdown="beginAnchorDrag"
+          @pointermove="moveAnchorDrag"
+          @pointerup="endAnchorDrag"
+          @pointercancel="endAnchorDrag"
+        >
+          <div ref="anchorPreview" class="admin-anchor-image-frame">
+            <img :src="imagePreview || form.image" alt="" draggable="false" />
+            <span
+              class="admin-anchor-point"
+              :style="{ left: `${clampUnit(form.anchorX) * 100}%`, top: `${clampUnit(form.anchorY) * 100}%` }"
+              :aria-label="t('admin.gardenAssets.anchorPoint')"
+            ></span>
+          </div>
+        </div>
+        <small>{{ t('admin.gardenAssets.anchorDragHelp') }}</small>
+      </div>
+      <p class="muted">{{ t('admin.gardenAssets.detectedSize', { size: assetSizeLabel }) }}</p>
 
       <button class="primary-button" type="button" :disabled="saving" data-testid="admin-garden-asset-save" @click="saveAsset">
         <Save :size="18" aria-hidden="true" />
@@ -243,7 +342,6 @@ onMounted(loadItems);
             <th>{{ t('admin.gardenAssets.objectType') }}</th>
             <th>{{ t('admin.gardenAssets.sourceTypes') }}</th>
             <th>{{ t('admin.gardenAssets.stageUnlock') }}</th>
-            <th>{{ t('admin.gardenAssets.size') }}</th>
             <th>{{ t('admin.common.status') }}</th>
             <th></th>
           </tr>
@@ -254,9 +352,10 @@ onMounted(loadItems);
             <td><code>{{ asset.key }}</code></td>
             <td>{{ asset.label }}</td>
             <td>{{ asset.objectType }}</td>
-            <td>{{ asset.sourceTypes.join(', ') }}</td>
+            <td>
+              <span v-for="sourceType in asset.sourceTypes" :key="sourceType" class="admin-chip">{{ sourceType }}</span>
+            </td>
             <td>{{ asset.stageUnlock }}</td>
-            <td>{{ asset.width }} x {{ asset.height }}</td>
             <td>{{ asset.active ? t('admin.common.active') : t('admin.common.inactive') }}</td>
             <td class="admin-actions">
               <button class="secondary-button admin-small-button" type="button" @click="editAsset(asset)">{{ t('admin.common.edit') }}</button>

@@ -409,7 +409,7 @@ export function adminRouter(): Router {
       }
       uploadedImage = await saveUploadedImage(request.file, 'garden-assets');
       const item = await saveGardenAsset(gardenAssetMultipartBody(request, uploadedImage));
-      await audit('create', 'garden-asset', key, { key });
+      await audit('create', 'garden-asset', null, { key });
       response.status(201).json({ item, items: await listAdminGardenAssets() });
     } catch (error) {
       if (uploadedImage) await deleteUploadedImageIfManaged(uploadedImage.path);
@@ -435,7 +435,7 @@ export function adminRouter(): Router {
       }
       const item = await saveGardenAsset(gardenAssetMultipartBody(request, uploadedImage ?? undefined), key);
       if (uploadedImage) await deleteUploadedImageIfManaged(existing.image);
-      await audit('update', 'garden-asset', key, { key });
+      await audit('update', 'garden-asset', null, { key });
       response.json({ item, items: await listAdminGardenAssets() });
     } catch (error) {
       if (uploadedImage) await deleteUploadedImageIfManaged(uploadedImage.path);

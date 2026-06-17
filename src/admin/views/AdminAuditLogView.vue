@@ -15,6 +15,15 @@ interface AuditEntry {
 const entries = ref<AuditEntry[]>([]);
 const { t } = useI18n();
 
+function metadataValue(entry: AuditEntry, key: string) {
+  const value = entry.metadata?.[key];
+  return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+}
+
+function resourceLabel(entry: AuditEntry) {
+  return entry.resourceId ?? metadataValue(entry, 'key') ?? metadataValue(entry, 'value') ?? '';
+}
+
 async function loadAuditLog() {
   const payload = await adminApiRequest<{ items: AuditEntry[] }>('/api/admin/audit-log');
   entries.value = payload.items;
@@ -44,7 +53,10 @@ onMounted(loadAuditLog);
           <tr v-for="entry in entries" :key="entry.id">
             <td>{{ new Date(entry.createdAt).toLocaleString('de-DE') }}</td>
             <td>{{ entry.action }}</td>
-            <td>{{ entry.resourceType }} · {{ entry.resourceId }}</td>
+            <td>
+              <strong>{{ entry.resourceType }}</strong>
+              <span v-if="resourceLabel(entry)" class="admin-audit-resource-id">{{ resourceLabel(entry) }}</span>
+            </td>
             <td><code>{{ JSON.stringify(entry.metadata) }}</code></td>
           </tr>
         </tbody>

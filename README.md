@@ -173,6 +173,7 @@ Windows PowerShell:
 
 ```powershell
 $tag = "0.1.0"
+docker buildx rm herzgarten-builder
 docker buildx create --use --name herzgarten-builder
 docker buildx build `
   --platform linux/amd64,linux/arm64 `
@@ -185,6 +186,7 @@ Linux/macOS Shell:
 
 ```bash
 tag=0.1.0
+docker buildx rm herzgarten-builder
 docker buildx create --use --name herzgarten-builder
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
