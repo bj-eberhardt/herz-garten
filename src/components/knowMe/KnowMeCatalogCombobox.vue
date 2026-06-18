@@ -25,7 +25,8 @@ const filteredCatalogQuestions = computed(() => {
   const search = props.modelValue.trim().toLowerCase();
   return props.questions.filter((question) => {
     if (!search) return true;
-    return question.questionText.toLowerCase().includes(search) || question.category.toLowerCase().includes(search);
+    const categoryLabel = question.categoryLabel ?? question.category;
+    return question.questionText.toLowerCase().includes(search) || categoryLabel.toLowerCase().includes(search);
   });
 });
 const questionSourceLabel = computed(() =>
@@ -104,7 +105,7 @@ function selectFirstCatalogQuestion() {
         @mousedown.prevent="selectCatalogQuestion(question)"
       >
         <span>{{ question.questionText }}</span>
-        <small>{{ question.category }}</small>
+        <small>{{ question.categoryLabel ?? question.category }}</small>
       </button>
       <p v-if="!filteredCatalogQuestions.length" class="catalog-empty" data-testid="know-me-catalog-empty">
         {{ t('knowMe.catalogEmpty') }}

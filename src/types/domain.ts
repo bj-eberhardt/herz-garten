@@ -231,6 +231,7 @@ export interface KnowMeCatalogQuestion {
   id: string;
   questionText: string;
   category: string;
+  categoryLabel?: string;
 }
 
 export interface KnowMeRound {

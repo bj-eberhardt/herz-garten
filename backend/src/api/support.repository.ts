@@ -230,6 +230,7 @@ export interface KnowMeCatalogQuestionRow {
   id: string;
   questionText: string;
   category: string;
+  categoryLabel: string;
 }
 
 export interface NotificationRow {
@@ -1023,6 +1024,7 @@ export function mapKnowMeCatalogQuestion(row: KnowMeCatalogQuestionRow) {
     id: row.id,
     questionText: row.questionText,
     category: row.category,
+    categoryLabel: row.categoryLabel,
   };
 }
 
@@ -1290,7 +1292,8 @@ export async function buildKnowMePayload(userId: string, locale = 'de') {
       select
         c.id,
         coalesce(requested.question_text, fallback.question_text, c.question_text) as "questionText",
-        coalesce(requested.category_label, fallback.category_label, category_label.label, c.category) as category
+        c.category,
+        coalesce(category_label.label, requested.category_label, fallback.category_label, c.category) as "categoryLabel"
       from know_me_catalog_questions c
       left join know_me_catalog_question_translations requested
         on requested.catalog_question_id = c.id and requested.locale = $3
