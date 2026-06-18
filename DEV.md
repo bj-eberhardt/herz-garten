@@ -39,6 +39,8 @@ Lokale Standarddatenbank-Zugangsdaten (Dev):
 
 Frontend und Backend laufen im Watch-Modus.
 
+Uploads aus dem Adminbereich werden im Docker-Volume `backend_uploads` gespeichert. Sie liegen bewusst nicht im `public/uploads`-Ordner, damit Git-Operationen oder lokale Cleanups keine hochgeladenen Gartenbilder entfernen.
+
 ### Stoppen
 
 ```bash
@@ -51,6 +53,8 @@ docker compose down
 docker compose down -v
 docker compose up --build
 ```
+
+Hinweis: `docker compose down -v` loescht neben der Datenbank auch das Upload-Volume. Nutze fuer normales Stoppen ohne Datenverlust nur `docker compose down`.
 
 ---
 

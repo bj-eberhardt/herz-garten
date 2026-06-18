@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import jwt, { type SignOptions } from 'jsonwebtoken';
+import { getAuthSettings } from './admin/settings.service.js';
 import { config } from './config.js';
 import { sendApiError } from './errors.js';
 
@@ -16,12 +17,13 @@ declare global {
   }
 }
 
-export function signAdminToken() {
+export async function signAdminToken() {
+  const { adminJwtTtlMinutes } = await getAuthSettings();
   const options: SignOptions = {
     subject: 'admin',
     issuer: config.jwtIssuer,
     audience: config.adminJwtAudience,
-    expiresIn: config.adminTokenTtl as SignOptions['expiresIn'],
+    expiresIn: adminJwtTtlMinutes * 60,
   };
 
   return jwt.sign({ type: 'admin' }, config.adminJwtSecret, {

@@ -71,6 +71,17 @@ export const messageTemplateBodySchema = z
   })
   .strict();
 
+export const adminSettingsBodySchema = z
+  .object({
+    auth: z
+      .object({
+        adminJwtTtlMinutes: z.number().int().positive().max(1440),
+        userJwtTtlMinutes: z.number().int().positive().max(43200),
+      })
+      .strict(),
+  })
+  .strict();
+
 export const gardenLevelBodySchema = z
   .object({
     name: trimmedString.pipe(z.string().min(1)),

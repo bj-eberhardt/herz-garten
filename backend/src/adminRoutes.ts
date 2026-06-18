@@ -9,6 +9,7 @@ import { deleteUploadedImageIfManaged, saveUploadedImage, upload } from './admin
 import {
   adminCouplePreferencesBodySchema,
   adminLoginBodySchema,
+  adminSettingsBodySchema,
   categoryBodySchema,
   messageTemplateBodySchema,
   preferenceBodySchema,
@@ -27,6 +28,7 @@ import {
   savePreference,
   type PreferenceKind,
 } from './admin/preferences.repository.js';
+import { getAdminSettings, saveAdminSettings } from './admin/settings.service.js';
 import {
   buildOverview,
   getCoupleDetail,
@@ -132,17 +134,21 @@ function sendAdminError(response: Response, status: number, errorKey: string, er
 export function adminRouter(): Router {
   const router = createRouter();
 
-  router.post('/auth/login', adminAuthRateLimit, validateBody(adminLoginBodySchema), (request, response) => {
+  router.post('/auth/login', adminAuthRateLimit, validateBody(adminLoginBodySchema), async (request, response) => {
     const password = normalizeText(request.body.password);
     if (!password || password !== config.adminPassword) {
       sendApiError(response, 401, 'auth.invalidCredentials');
       return;
     }
 
-    response.json({
-      token: signAdminToken(),
-      usesDefaultAdminPassword: config.adminPassword === 'admin',
-    });
+    try {
+      response.json({
+        token: await signAdminToken(),
+        usesDefaultAdminPassword: config.adminPassword === 'admin',
+      });
+    } catch (error) {
+      handleError(response, error);
+    }
   });
 
   router.get('/auth/me', requireAdminAuth, (_request, response) => {
@@ -248,6 +254,24 @@ export function adminRouter(): Router {
   router.get('/audit-log', requireAdminAuth, async (_request, response) => {
     try {
       response.json(await buildAuditLogPayload());
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.get('/settings', requireAdminAuth, async (_request, response) => {
+    try {
+      response.json(await getAdminSettings());
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.patch('/settings', requireAdminAuth, validateBody(adminSettingsBodySchema), async (request, response) => {
+    try {
+      const settings = await saveAdminSettings(request.body);
+      await audit('update', 'app-settings', null, { keys: ['auth.adminJwtTtlMinutes', 'auth.userJwtTtlMinutes'] });
+      response.json(settings);
     } catch (error) {
       handleError(response, error);
     }

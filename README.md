@@ -44,10 +44,12 @@ POSTGRES_DB=herzgarten
 POSTGRES_USER=herzgarten
 POSTGRES_PASSWORD=changeme
 
-# JWT / Admin (wichtig in production)
+# JWT-Secrets / Admin (wichtig in production)
 JWT_SECRET=your-strong-jwt-secret
 ADMIN_JWT_SECRET=your-strong-admin-jwt-secret
 ADMIN_PASSWORD=your-admin-password
+
+# JWT-Laufzeiten werden nicht per .env gesetzt. Sie werden im Adminbereich unter Einstellungen gepflegt und gelten fuer neu ausgestellte Tokens.
 
 # Optional: Browser Push (Web Push / VAPID)
 PUSH_ENABLED=true

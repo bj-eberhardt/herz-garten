@@ -42,7 +42,7 @@ async function toggleNotification(notification: NotificationItem) {
   if (!notification.readAt) {
     await notificationStore.markRead(notification.id);
   }
-  if (notification.sourceType === 'account_deletion') {
+  if (notification.sourceType === 'account_deletion' || notification.type === 'couple_joined') {
     await authStore.refreshMe();
   }
 }

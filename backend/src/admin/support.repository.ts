@@ -199,17 +199,16 @@ export async function listCouples(request: Request) {
         c.garden_stage as "gardenStage",
         c.created_at as "createdAt",
         coalesce(
-          json_agg(
-            json_build_object(
+          jsonb_agg(
+            distinct jsonb_build_object(
               'id', p.id,
               'email', p.email,
               'displayName', p.display_name,
               'role', cm.role,
               'joinedAt', cm.joined_at
             )
-            order by cm.joined_at
           ) filter (where p.id is not null),
-          '[]'::json
+          '[]'::jsonb
         ) as members,
         count(distinct dqa.id)::int as "dailyAnswerCount",
         count(distinct cq.id) filter (where cq.status = 'completed')::int as "completedQuestCount",

@@ -5,6 +5,7 @@ const actionNotificationTypes = new Set([
   'quest_waiting_confirmation',
   'know_me_question',
   'love_jar_note',
+  'couple_joined',
 ]);
 
 export function normalizePushNotificationMode(value: unknown): PushNotificationMode {

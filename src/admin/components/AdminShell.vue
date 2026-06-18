@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { RouterLink, RouterView, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { ClipboardList, FileText, FolderTree, Image, LayoutDashboard, LogOut, MessageSquare, Sprout, Tags, Users, Workflow } from '@lucide/vue';
+import { ClipboardList, FileText, FolderTree, Image, LayoutDashboard, LogOut, MessageSquare, Settings, Sprout, Tags, Users, Workflow } from '@lucide/vue';
 import { useAdminStore } from '@/admin/stores/adminStore';
 import '@/admin/admin.css';
 
@@ -23,43 +23,47 @@ function logout() {
         <span>{{ t('admin.shell.brand') }}</span>
       </RouterLink>
       <nav class="admin-nav" :aria-label="t('admin.shell.navLabel')">
-        <RouterLink to="/admin" class="admin-nav-item">
+        <RouterLink to="/admin" class="admin-nav-item" data-testid="admin-nav-dashboard">
           <LayoutDashboard :size="18" aria-hidden="true" />
           {{ t('admin.shell.nav.dashboard') }}
         </RouterLink>
-        <RouterLink to="/admin/users" class="admin-nav-item">
+        <RouterLink to="/admin/users" class="admin-nav-item" data-testid="admin-nav-users">
           <Users :size="18" aria-hidden="true" />
           {{ t('admin.shell.nav.users') }}
         </RouterLink>
-        <RouterLink to="/admin/couples" class="admin-nav-item">
+        <RouterLink to="/admin/couples" class="admin-nav-item" data-testid="admin-nav-couples">
           <Workflow :size="18" aria-hidden="true" />
           {{ t('admin.shell.nav.couples') }}
         </RouterLink>
-        <RouterLink to="/admin/content" class="admin-nav-item">
+        <RouterLink to="/admin/content" class="admin-nav-item" data-testid="admin-nav-content">
           <FileText :size="18" aria-hidden="true" />
           {{ t('admin.shell.nav.content') }}
         </RouterLink>
-        <RouterLink to="/admin/garden" class="admin-nav-item">
+        <RouterLink to="/admin/garden" class="admin-nav-item" data-testid="admin-nav-garden">
           <Sprout :size="18" aria-hidden="true" />
           {{ t('admin.shell.nav.garden') }}
         </RouterLink>
-        <RouterLink to="/admin/garden-assets" class="admin-nav-item">
+        <RouterLink to="/admin/garden-assets" class="admin-nav-item" data-testid="admin-nav-garden-assets">
           <Image :size="18" aria-hidden="true" />
           {{ t('admin.shell.nav.gardenAssets') }}
         </RouterLink>
-        <RouterLink to="/admin/categories" class="admin-nav-item">
+        <RouterLink to="/admin/categories" class="admin-nav-item" data-testid="admin-nav-categories">
           <FolderTree :size="18" aria-hidden="true" />
           {{ t('admin.shell.nav.categories') }}
         </RouterLink>
-        <RouterLink to="/admin/taxonomies" class="admin-nav-item">
+        <RouterLink to="/admin/taxonomies" class="admin-nav-item" data-testid="admin-nav-taxonomies">
           <Tags :size="18" aria-hidden="true" />
           {{ t('admin.shell.nav.taxonomies') }}
         </RouterLink>
-        <RouterLink to="/admin/messages" class="admin-nav-item">
+        <RouterLink to="/admin/messages" class="admin-nav-item" data-testid="admin-nav-messages">
           <MessageSquare :size="18" aria-hidden="true" />
           {{ t('admin.shell.nav.messages') }}
         </RouterLink>
-        <RouterLink to="/admin/audit-log" class="admin-nav-item">
+        <RouterLink to="/admin/settings" class="admin-nav-item" data-testid="admin-nav-settings">
+          <Settings :size="18" aria-hidden="true" />
+          {{ t('admin.shell.nav.settings') }}
+        </RouterLink>
+        <RouterLink to="/admin/audit-log" class="admin-nav-item" data-testid="admin-nav-audit-log">
           <ClipboardList :size="18" aria-hidden="true" />
           {{ t('admin.shell.nav.auditLog') }}
         </RouterLink>

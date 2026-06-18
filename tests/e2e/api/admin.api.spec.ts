@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
-import { apiDeleteRaw, apiGet, apiGetRaw, apiPatchRaw, apiPostRaw, registerByApi, setupCoupleByApi } from '../helpers/api';
+import { apiDeleteRaw, apiGet, apiGetRaw, apiPatchRaw, apiPost, apiPostRaw, registerByApi, setupCoupleByApi } from '../helpers/api';
 import { expectApiError, expectJson } from '../helpers/apiAssertions';
 import { runDbSql } from '../helpers/db';
 import { testRunId, testUser } from '../helpers/testUsers';
@@ -11,6 +11,11 @@ async function adminLogin(request: APIRequestContext) {
   const payload = await expectJson<{ token: string; usesDefaultAdminPassword: boolean }>(response);
   expect(payload.token).toBeTruthy();
   return payload.token;
+}
+
+function jwtPayload(token: string) {
+  const payload = token.split('.')[1];
+  return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { iat: number; exp: number };
 }
 
 function pngHeader(width: number, height: number) {
@@ -67,12 +72,74 @@ test.describe('admin api', () => {
     await expectApiError(userTokenResponse, 401, 'auth.invalidToken');
   });
 
+  test('manages auth settings and applies jwt ttl to new tokens', async ({ request }) => {
+    const token = await adminLogin(request);
+    const original = await apiGet<{
+      auth: { adminJwtTtlMinutes: number; userJwtTtlMinutes: number };
+    }>(request, '/api/admin/settings', token);
+
+    expect(original.auth.adminJwtTtlMinutes).toBeGreaterThanOrEqual(1);
+    expect(original.auth.adminJwtTtlMinutes).toBeLessThanOrEqual(1440);
+    expect(original.auth.userJwtTtlMinutes).toBeGreaterThanOrEqual(1);
+    expect(original.auth.userJwtTtlMinutes).toBeLessThanOrEqual(43200);
+
+    const invalidSettingsPayloads = [
+      {},
+      { auth: {} },
+      { auth: { userJwtTtlMinutes: original.auth.userJwtTtlMinutes } },
+      { auth: { adminJwtTtlMinutes: original.auth.adminJwtTtlMinutes } },
+      { auth: { adminJwtTtlMinutes: 0, userJwtTtlMinutes: original.auth.userJwtTtlMinutes } },
+      { auth: { adminJwtTtlMinutes: -1, userJwtTtlMinutes: original.auth.userJwtTtlMinutes } },
+      { auth: { adminJwtTtlMinutes: 60.5, userJwtTtlMinutes: original.auth.userJwtTtlMinutes } },
+      { auth: { adminJwtTtlMinutes: 1441, userJwtTtlMinutes: original.auth.userJwtTtlMinutes } },
+      { auth: { adminJwtTtlMinutes: original.auth.adminJwtTtlMinutes, userJwtTtlMinutes: 0 } },
+      { auth: { adminJwtTtlMinutes: original.auth.adminJwtTtlMinutes, userJwtTtlMinutes: -1 } },
+      { auth: { adminJwtTtlMinutes: original.auth.adminJwtTtlMinutes, userJwtTtlMinutes: 60.5 } },
+      { auth: { adminJwtTtlMinutes: original.auth.adminJwtTtlMinutes, userJwtTtlMinutes: 43201 } },
+    ];
+
+    for (const payload of invalidSettingsPayloads) {
+      await expectApiError(await apiPatchRaw(request, '/api/admin/settings', payload, token), 400, 'common.validation');
+    }
+
+    const next = {
+      auth: {
+        adminJwtTtlMinutes: 61,
+        userJwtTtlMinutes: 10081,
+      },
+    };
+
+    try {
+      const saved = await expectJson<typeof next>(await apiPatchRaw(request, '/api/admin/settings', next, token));
+      expect(saved).toEqual(next);
+
+      const adminToken = await adminLogin(request);
+      const adminPayload = jwtPayload(adminToken);
+      expect(adminPayload.exp - adminPayload.iat).toBe(61 * 60);
+
+      const auth = await registerByApi(request, testUser('settings-ttl-user', testRunId()));
+      const userPayload = jwtPayload(auth.token);
+      expect(userPayload.exp - userPayload.iat).toBe(10081 * 60);
+
+      const audit = await apiGet<{ items: Array<{ action: string; resourceType: string }> }>(
+        request,
+        '/api/admin/audit-log',
+        token,
+      );
+      expect(audit.items.some((entry) => entry.action === 'update' && entry.resourceType === 'app-settings')).toBe(true);
+    } finally {
+      await apiPatchRaw(request, '/api/admin/settings', original, token);
+    }
+  });
+
   test('lists overview, users and couples without private text content and exports csv', async ({ request }) => {
     const runId = testRunId();
     const userA = testUser('admin-list-a', runId);
     const userB = testUser('admin-list-b', runId);
     const setup = await setupCoupleByApi(request, userA, userB);
     await apiPostRaw(request, '/api/today/answer', { answerText: 'private answer text' }, setup.partnerA.token);
+    await apiPostRaw(request, '/api/love-jar', { text: 'private jar note one', category: 'compliment' }, setup.partnerA.token);
+    await apiPostRaw(request, '/api/love-jar', { text: 'private jar note two', category: 'compliment' }, setup.partnerB.token);
 
     const token = await adminLogin(request);
     const overview = await apiGet<{ userCount: number; coupleCount: number; usesDefaultAdminPassword: boolean }>(
@@ -99,8 +166,9 @@ test.describe('admin api', () => {
     expect(injectedUsersPayload.total).toBe(0);
 
     const couplesResponse = await apiGetRaw(request, `/api/admin/couples?search=${setup.inviteCode}`, token);
-    const couplesPayload = await expectJson<{ items: Array<{ id: string; inviteCode: string }> }>(couplesResponse);
+    const couplesPayload = await expectJson<{ items: Array<{ id: string; inviteCode: string; members: unknown[] }> }>(couplesResponse);
     expect(couplesPayload.items[0]?.inviteCode).toBe(setup.inviteCode);
+    expect(couplesPayload.items[0]?.members).toHaveLength(2);
     expect(JSON.stringify(couplesPayload)).not.toContain('private answer text');
 
     const injectedCouplesResponse = await apiGetRaw(
@@ -124,6 +192,61 @@ test.describe('admin api', () => {
     expect(csvResponse.ok()).toBe(true);
     expect(csvResponse.headers()['content-type']).toContain('text/csv');
     expect(await csvResponse.text()).toContain('email');
+  });
+
+  test('lists a one-member couple once even when joined content creates many rows', async ({ request }) => {
+    const runId = testRunId();
+    const owner = await registerByApi(request, testUser('admin-one-member-couple', runId));
+    const couple = await apiPost<{ couple: { id: string; inviteCode: string; memberCount: number } }>(
+      request,
+      '/api/couples',
+      { relationshipType: 'mixed', contentPreference: 'balanced' },
+      owner.token,
+    );
+    await apiPostRaw(request, '/api/today/answer', { answerText: 'private one-member answer' }, owner.token);
+    await apiPostRaw(request, '/api/love-jar', { text: 'private one-member note one', category: 'compliment' }, owner.token);
+    await apiPostRaw(request, '/api/love-jar', { text: 'private one-member note two', category: 'compliment' }, owner.token);
+    await expectJson(
+      await apiPostRaw(
+        request,
+        '/api/know-me',
+        {
+          questionText: 'Welche Farbe mag ich gerade?',
+          options: ['Gruen', 'Blau'],
+          correctOptionIndex: 0,
+        },
+        owner.token,
+      ),
+      201,
+    );
+
+    const token = await adminLogin(request);
+    const couplesResponse = await apiGetRaw(request, `/api/admin/couples?search=${couple.couple.inviteCode}`, token);
+    const payload = await expectJson<{
+      items: Array<{
+        id: string;
+        inviteCode: string;
+        members: Array<{ email: string }>;
+        dailyAnswerCount: number;
+        loveJarNoteCount: number;
+        knowMeRoundCount: number;
+      }>;
+    }>(couplesResponse);
+
+    expect(payload.items).toHaveLength(1);
+    expect(payload.items[0]).toEqual(
+      expect.objectContaining({
+        id: couple.couple.id,
+        inviteCode: couple.couple.inviteCode,
+        dailyAnswerCount: 1,
+        loveJarNoteCount: 2,
+        knowMeRoundCount: 0,
+      }),
+    );
+    expect(payload.items[0].members).toHaveLength(1);
+    expect(payload.items[0].members[0].email).toBe(owner.user.email);
+    expect(JSON.stringify(payload)).not.toContain('private one-member answer');
+    expect(JSON.stringify(payload)).not.toContain('private one-member note');
   });
 
   test('manages content, writes audit log and serves love jar templates', async ({ request }) => {
@@ -429,6 +552,16 @@ test.describe('admin api', () => {
     expect(template).toBeTruthy();
     expect(template!.requiredParams.sort()).toEqual(['name', 'title']);
     const originalText = template!.translations.de.text;
+    const coupleJoinedTitle = listed.items.find((item) => item.key === 'notifications.titles.coupleJoined');
+    const coupleJoinedBody = listed.items.find((item) => item.key === 'notifications.bodies.coupleJoined');
+    expect(coupleJoinedTitle).toBeTruthy();
+    expect(coupleJoinedTitle!.requiredParams).toEqual(['name']);
+    expect(coupleJoinedTitle!.translations.de.text).toBe('Dein Partner ist da');
+    expect(coupleJoinedBody).toBeTruthy();
+    expect(coupleJoinedBody!.requiredParams).toEqual(['name']);
+    expect(coupleJoinedBody!.translations.de.text).toBe(
+      'Toll, {name} hat deinen Paarraum betreten. Ihr koennt nun gemeinsam an eurem Garten arbeiten.',
+    );
 
     await expectApiError(
       await apiPatchRaw(

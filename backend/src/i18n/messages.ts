@@ -11,6 +11,7 @@ const de = {
   'notifications.titles.knowMeAnsweredHit': 'Treffer im Kennst-du-mich-Spiel',
   'notifications.titles.knowMeAnsweredMiss': 'Eine Antwort ist da',
   'notifications.titles.coupleDisconnected': 'Paarung wurde getrennt',
+  'notifications.titles.coupleJoined': 'Dein Partner ist da',
   'notifications.bodies.dailyAnswerWaiting': '{name} hat die Tagesfrage beantwortet. Jetzt fehlst noch du.',
   'notifications.bodies.dailyRevealed': 'Ihr habt beide geantwortet. Eine neue Blume ist gewachsen.',
   'notifications.bodies.questWaitingConfirmation':
@@ -23,6 +24,8 @@ const de = {
   'notifications.bodies.knowMeAnsweredMiss': '{name} hat geraten. Nicht getroffen, aber ein neuer Gesprächsanlass.',
   'notifications.bodies.coupleDisconnected':
     '{name} hat das Konto gelöscht. Eure Paarung wurde deshalb getrennt. Du kannst dich jetzt neu paaren.',
+  'notifications.bodies.coupleJoined':
+    'Toll, {name} hat deinen Paarraum betreten. Ihr koennt nun gemeinsam an eurem Garten arbeiten.',
   'errors.common.unexpected': 'Da ist etwas schiefgelaufen. Bitte versuche es gleich noch einmal.',
   'errors.common.validation': 'Bitte prüfe deine Eingaben.',
   'errors.common.rateLimited': 'Zu viele Versuche. Bitte warte einen Moment und versuche es dann erneut.',

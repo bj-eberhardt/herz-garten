@@ -14,9 +14,11 @@ import {
   expectExportPayload,
   expectJson,
   expectMePayload,
+  expectNotificationsPayload,
   type AuthPayload,
   type ExportPayload,
   type MePayload,
+  type NotificationsPayload,
 } from '../helpers/apiAssertions';
 import { testRunId, testUser } from '../helpers/testUsers';
 
@@ -42,6 +44,41 @@ test.describe('me and couples api', () => {
       await apiPostRaw(request, '/api/couples/join', { inviteCode: created.couple.inviteCode.toLowerCase() }, partnerB.token),
     );
     expect(joined.couple.memberCount).toBe(2);
+
+    const ownerNotifications = await expectJson<NotificationsPayload>(await apiGetRaw(request, '/api/notifications', partnerA.token));
+    expectNotificationsPayload(ownerNotifications);
+    const joinedNotifications = ownerNotifications.notifications.filter((item) => item.type === 'couple_joined');
+    expect(joinedNotifications).toHaveLength(1);
+    expect(joinedNotifications[0]).toEqual(
+      expect.objectContaining({
+        titleKey: 'notifications.titles.coupleJoined',
+        bodyKey: 'notifications.bodies.coupleJoined',
+        title: 'Dein Partner ist da',
+        body: `Toll, ${partnerB.user.displayName} hat deinen Paarraum betreten. Ihr koennt nun gemeinsam an eurem Garten arbeiten.`,
+        sourceType: 'couple',
+        sourceId: created.couple.id,
+        params: { name: partnerB.user.displayName },
+      }),
+    );
+
+    const joiningUserNotifications = await expectJson<NotificationsPayload>(await apiGetRaw(request, '/api/notifications', partnerB.token));
+    expect(joiningUserNotifications.notifications.filter((item) => item.type === 'couple_joined')).toHaveLength(0);
+
+    await expectApiError(
+      await apiPostRaw(request, '/api/couples/join', { inviteCode: created.couple.inviteCode }, partnerB.token),
+      409,
+      'couple.alreadyConnected',
+    );
+    const thirdUser = await registerByApi(request, testUser('api-couple-third', runId));
+    await expectApiError(
+      await apiPostRaw(request, '/api/couples/join', { inviteCode: created.couple.inviteCode }, thirdUser.token),
+      409,
+      'couple.full',
+    );
+    const ownerNotificationsAfterInvalidJoins = await expectJson<NotificationsPayload>(
+      await apiGetRaw(request, '/api/notifications', partnerA.token),
+    );
+    expect(ownerNotificationsAfterInvalidJoins.notifications.filter((item) => item.type === 'couple_joined')).toHaveLength(1);
 
     const meWithCouple = await expectJson<MePayload>(await apiGetRaw(request, '/api/me', partnerB.token));
     expectMePayload(meWithCouple);

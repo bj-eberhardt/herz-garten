@@ -28,6 +28,7 @@
     "memories": "Momente",
     "settings": "Profil",
     "notifications": "Benachrichtigungen",
+    "logout": "Ausloggen",
     "partnerCode": "Partnercode eingeben",
     "coupleRoom": "Paarraum"
   },
@@ -42,9 +43,13 @@
     "adEyebrow": "Für euch beide",
     "adTitle": "Lasst kleine Momente sichtbar wachsen.",
     "adText": "Herzgarten verwandelt Fragen, Komplimente, Erinnerungen und gemeinsame Aufgaben in einen wachsenden Garten. Ihr baut keinen Score auf, sondern einen geschützten Ort für eure Beziehung.",
+    "returningEyebrow": "Willkommen zurück",
+    "returningTitle": "Schön, dass du euren Garten weiter pflegen möchtest.",
+    "returningText": "Melde dich an und schau nach, was in eurem Herzgarten neu gewachsen ist.",
     "modeLabel": "Auth Modus",
     "register": "Registrieren",
     "login": "Login",
+    "sessionExpired": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
     "createAccount": "Konto erstellen",
     "loginAction": "Einloggen",
     "rememberEmail": "E-Mail-Adresse in diesem Browser merken",
@@ -52,6 +57,10 @@
     "coupleCodeText": "Euer Paar-Code ist {code}. Dein Partner kann ihn auch später nach dem Login eingeben.",
     "coupleCodePrefix": "Euer Paar-Code ist",
     "coupleCodeSuffix": "Dein Partner kann ihn auch später nach dem Login eingeben.",
+    "waitingPartnerEyebrow": "Partner fehlt noch",
+    "waitingPartnerTitle": "Dein Paarraum wartet auf deinen Partner.",
+    "waitingPartnerText": "Du hast aktuell noch keinen Partner in diesem Paarraum. Der Garten funktioniert erst, wenn sich dein Partner registriert oder einloggt und deinen Paar-Code im Onboarding eingibt.",
+    "waitingPartnerShareText": "Teile diesen Code mit deinem Partner. Sobald er beitritt, koennt ihr gemeinsam an eurem Garten arbeiten.",
     "copyCode": "Code kopieren",
     "inviteModalTitle": "Euer Paarcode ist bereit.",
     "inviteModalText": "Gib diesen Code deinem Partner weiter. Sobald er den Code im Onboarding eingibt, seid ihr beide mit demselben Garten verbunden.",
@@ -354,8 +363,8 @@
     "title": "Kleine Hinweise aus eurem Herzgarten.",
     "howTitle": "Was ist das?",
     "howText": "Hier landen Hinweise, wenn im Paarraum etwas auf dich wartet: Antworten, Aufgaben-Bestätigungen, neue Zettel, Erinnerungen oder Spielrunden.",
-    "unread": "keine ungelesenen Hinweise | ein ungelesener Hinweis | {count} ungelesene Hinweise",
-    "hint": "Hier landen nur sanfte In-App-Hinweise, keine Push-Nachrichten.",
+    "unread": "Keine ungelesenen Hinweise | Ein ungelesener Hinweis | {count} ungelesene Hinweise",
+    "hint": "Hier landen deine persönlichen Hinweis-Nachrichten.",
     "push": {
       "eyebrow": "Browser-Push",
       "text": "Du kannst neue Hinweise auch als Browser-Push erhalten.",
@@ -375,7 +384,8 @@
       "knowMeQuestion": "Eine Kennst-du-mich-Frage wartet",
       "knowMeAnsweredHit": "Treffer im Kennst-du-mich-Spiel",
       "knowMeAnsweredMiss": "Eine Antwort ist da",
-      "coupleDisconnected": "Paarung wurde getrennt"
+      "coupleDisconnected": "Paarung wurde getrennt",
+      "coupleJoined": "Dein Partner ist da"
     },
     "bodies": {
       "dailyAnswerWaiting": "{name} hat die Tagesfrage beantwortet. Jetzt fehlst noch du.",
@@ -387,7 +397,8 @@
       "knowMeQuestion": "{name} hat eine Frage über sich gestellt. Was schätzt du?",
       "knowMeAnsweredHit": "{name} hat dich richtig eingeschätzt. Eine besondere Blume ist gewachsen.",
       "knowMeAnsweredMiss": "{name} hat geraten. Nicht getroffen, aber ein neuer Gesprächsanlass.",
-      "coupleDisconnected": "{name} hat das Konto gelöscht. Eure Paarung wurde deshalb getrennt. Du kannst dich jetzt neu paaren."
+      "coupleDisconnected": "{name} hat das Konto gelöscht. Eure Paarung wurde deshalb getrennt. Du kannst dich jetzt neu paaren.",
+      "coupleJoined": "Toll, {name} hat deinen Paarraum betreten. Ihr koennt nun gemeinsam an eurem Garten arbeiten."
     },
     "states": {
       "unread": "Ungelesen",
@@ -704,6 +715,7 @@
         "categories": "Kategorien",
         "taxonomies": "Taxonomien",
         "messages": "Nachrichten",
+        "settings": "Einstellungen",
         "auditLog": "Protokoll"
       }
     },
@@ -928,6 +940,25 @@
         "defaultTranslationRequired": "Die Standard-Übersetzung darf nicht leer sein.",
         "validation": "Bitte pruefe die markierten Uebersetzungen.",
         "save": "Nachrichtenvorlage konnte nicht gespeichert werden."
+      }
+    },
+    "settings": {
+      "title": "Einstellungen",
+      "subtitle": "Authentifizierung",
+      "intro": "Hier kannst du Server-Einstellungen vornehmen.",
+      "jwt": {
+        "title": "JWT-Tokens",
+        "intro": "Hier steuerst du, wie lange neu ausgestellte JWT-Tokens gueltig bleiben."
+      },
+      "adminJwtTtlMinutes": "Admin-Token-Laufzeit (Minuten)",
+      "userJwtTtlMinutes": "User-Token-Laufzeit (Minuten)",
+      "adminJwtTtlHelp": "Erlaubt sind 1 bis 1440 Minuten.",
+      "userJwtTtlHelp": "Erlaubt sind 1 bis 43200 Minuten.",
+      "saved": "Einstellungen gespeichert.",
+      "errors": {
+        "adminJwtTtl": "Bitte gib fuer Admin-Tokens 1 bis 1440 Minuten ein.",
+        "userJwtTtl": "Bitte gib fuer User-Tokens 1 bis 43200 Minuten ein.",
+        "save": "Einstellungen konnten nicht gespeichert werden."
       }
     }
   },

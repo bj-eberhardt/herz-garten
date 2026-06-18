@@ -85,6 +85,7 @@ test.describe('push api', () => {
     expect(shouldSendPushForMode('actions_only', 'daily_revealed')).toBe(false);
     expect(shouldSendPushForMode('actions_only', 'daily_answer_waiting')).toBe(true);
     expect(shouldSendPushForMode('actions_only', 'love_jar_note')).toBe(true);
+    expect(shouldSendPushForMode('actions_only', 'couple_joined')).toBe(true);
 
     const runId = testRunId();
     const { partnerA, partnerB } = await setupCoupleByApi(

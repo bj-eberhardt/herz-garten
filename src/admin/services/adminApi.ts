@@ -15,6 +15,14 @@ export function clearAdminToken() {
   localStorage.removeItem(ADMIN_TOKEN_KEY);
 }
 
+function handleExpiredAdminSession(errorKey?: string) {
+  if (errorKey !== 'auth.invalidToken' && errorKey !== 'auth.missingToken') return;
+  if (!getAdminToken()) return;
+
+  clearAdminToken();
+  window.dispatchEvent(new CustomEvent('herzgarten:admin-session-expired'));
+}
+
 export async function adminApiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getAdminToken();
   const headers = new Headers(options.headers);
@@ -46,6 +54,7 @@ export async function adminApiRequest<T>(path: string, options: RequestInit = {}
           ? payload.errorKey
           : undefined;
     const params = payload?.params && typeof payload.params === 'object' ? payload.params : undefined;
+    if (response.status === 401) handleExpiredAdminSession(errorKey);
     throw new ApiError(errorKey ?? serverMessage ?? 'api.requestFailed', response.status, errorKey, params, serverMessage);
   }
 

@@ -25,8 +25,8 @@ export async function createCoupleViaUi(page: Page) {
   const inviteCode = (await page.getByTestId('invite-modal-code').innerText()).trim();
   await expect(page.getByTestId('invite-modal-code')).toContainText(/^[a-z]+-[a-z]+-\d{4}$/);
   await page.getByTestId('invite-modal-confirm').click();
-  await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByTestId('header-couple-link')).toContainText(/^[a-z]+-[a-z]+-\d{4}$/);
+  await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page.getByTestId('couple-code-panel')).toContainText(inviteCode);
   return inviteCode;
 }
 

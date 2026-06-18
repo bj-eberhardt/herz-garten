@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import { getAuthSettings } from './admin/settings.service.js';
 import { config } from './config.js';
 import { pool } from './db.js';
 import { sendApiError } from './errors.js';
@@ -22,12 +23,13 @@ interface JwtPayload {
   sub: string;
 }
 
-export function signToken(userId: string) {
+export async function signToken(userId: string) {
+  const { userJwtTtlMinutes } = await getAuthSettings();
   return jwt.sign({}, config.jwtSecret, {
     subject: userId,
     issuer: config.jwtIssuer,
     audience: config.userJwtAudience,
-    expiresIn: '7d',
+    expiresIn: userJwtTtlMinutes * 60,
   });
 }
 

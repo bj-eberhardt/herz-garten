@@ -26,6 +26,7 @@ const actionTypes = new Set<NotificationType>([
   'quest_waiting_confirmation',
   'know_me_question',
   'love_jar_note',
+  'couple_joined',
 ]);
 
 const notificationMetaByType: Record<NotificationType, NotificationMeta> = {
@@ -91,6 +92,13 @@ const notificationMetaByType: Record<NotificationType, NotificationMeta> = {
     tone: 'warning',
     icon: Trash2,
     needsAction: false,
+  },
+  couple_joined: {
+    featureKey: 'notifications.features.garden',
+    actionKey: 'notifications.actions.viewGarden',
+    tone: 'action',
+    icon: HeartHandshake,
+    needsAction: true,
   },
 };
 

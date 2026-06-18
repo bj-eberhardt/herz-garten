@@ -38,7 +38,8 @@ export type NotificationType =
   | 'memory_created'
   | 'know_me_question'
   | 'know_me_answered'
-  | 'couple_disconnected';
+  | 'couple_disconnected'
+  | 'couple_joined';
 
 export interface User {
   id: string;

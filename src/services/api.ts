@@ -1,6 +1,7 @@
 import { i18n } from '@/i18n';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+export const SESSION_EXPIRED_MESSAGE_KEY = 'herzgarten_session_expired_message';
 
 export class ApiError extends Error {
   constructor(
@@ -24,6 +25,15 @@ export function setToken(token: string) {
 
 export function clearToken() {
   localStorage.removeItem('herzgarten_token');
+}
+
+function handleExpiredSession(errorKey?: string) {
+  if (errorKey !== 'auth.invalidToken' && errorKey !== 'auth.missingToken') return;
+  if (!getToken()) return;
+
+  clearToken();
+  sessionStorage.setItem(SESSION_EXPIRED_MESSAGE_KEY, '1');
+  window.dispatchEvent(new CustomEvent('herzgarten:session-expired'));
 }
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -59,6 +69,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
           ? payload.errorKey
           : undefined;
     const params = payload?.params && typeof payload.params === 'object' ? payload.params : undefined;
+    if (response.status === 401) handleExpiredSession(errorKey);
     throw new ApiError(errorKey ?? serverMessage ?? 'api.requestFailed', response.status, errorKey, params, serverMessage);
   }
 

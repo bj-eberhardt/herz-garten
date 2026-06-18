@@ -38,7 +38,27 @@ test.describe('admin ui', () => {
     const warningBox = await page.getByTestId('admin-default-password-warning').boundingBox();
     expect(warningBox?.height ?? 999).toBeLessThan(80);
 
-    await page.getByRole('link', { name: 'Nutzer' }).click();
+    await page.getByTestId('admin-nav-settings').click();
+    await expect(page.getByTestId('admin-settings')).toBeVisible();
+    await expect(page.getByTestId('admin-settings')).toContainText('Hier kannst du Server-Einstellungen vornehmen.');
+    await expect(page.getByTestId('admin-settings-jwt-block')).toContainText('JWT-Tokens');
+    await expect(page.getByTestId('admin-settings-jwt-block')).toContainText('Hier steuerst du, wie lange neu ausgestellte JWT-Tokens gueltig bleiben.');
+    await expect(page.getByTestId('admin-settings-admin-jwt-ttl')).toHaveValue(/[1-9]\d*/);
+    await expect(page.getByTestId('admin-settings-user-jwt-ttl')).toHaveValue(/[1-9]\d*/);
+    const originalAdminTtl = await page.getByTestId('admin-settings-admin-jwt-ttl').inputValue();
+    const originalUserTtl = await page.getByTestId('admin-settings-user-jwt-ttl').inputValue();
+    await page.getByTestId('admin-settings-admin-jwt-ttl').fill('0');
+    await page.getByTestId('admin-settings-save').click();
+    await expect(page.getByTestId('admin-settings-error')).toHaveText('Bitte gib fuer Admin-Tokens 1 bis 1440 Minuten ein.');
+    await page.getByTestId('admin-settings-admin-jwt-ttl').fill(originalAdminTtl);
+    await page.getByTestId('admin-settings-user-jwt-ttl').fill('43201');
+    await page.getByTestId('admin-settings-save').click();
+    await expect(page.getByTestId('admin-settings-error')).toHaveText('Bitte gib fuer User-Tokens 1 bis 43200 Minuten ein.');
+    await page.getByTestId('admin-settings-user-jwt-ttl').fill(originalUserTtl);
+    await page.getByTestId('admin-settings-save').click();
+    await expect(page.getByTestId('admin-settings-success')).toHaveText('Einstellungen gespeichert.');
+
+    await page.getByTestId('admin-nav-users').click();
     await expect(page.getByTestId('admin-users')).toBeVisible();
     await page.getByTestId('admin-users-search').fill(userA.email);
     await page.getByTestId('admin-users-search-submit').click();
@@ -53,17 +73,17 @@ test.describe('admin ui', () => {
     await page.getByTestId('admin-couple-preferences-save').click();
     await expect(page.getByText('Einstellungen gespeichert.')).toBeVisible();
 
-    await page.getByRole('link', { name: 'Paarräume' }).click();
+    await page.getByTestId('admin-nav-couples').click();
     await page.getByTestId('admin-couples-search').fill(setup.inviteCode);
     await page.getByRole('button', { name: 'Suchen' }).click();
     await page.getByRole('button', { name: userA.displayName }).click();
     await expect(page).toHaveURL(new RegExp(`/admin/users\\?search=${userA.email}`));
     await expect(page.getByTestId('admin-users-search')).toHaveValue(userA.email);
 
-    await page.getByRole('link', { name: 'Kategorien' }).click();
+    await page.getByTestId('admin-nav-categories').click();
     await expect(page.getByTestId('admin-categories')).toBeVisible();
     await expect(page.getByTestId('admin-preference-new')).toHaveCount(0);
-    await page.getByRole('link', { name: 'Garten' }).click();
+    await page.getByTestId('admin-nav-garden').click();
     await expect(page.getByTestId('admin-garden')).toBeVisible();
     await expect(page.locator('.admin-table')).toContainText('Heart Bed');
     await page.getByTestId('admin-garden-level-new').click();
@@ -81,11 +101,11 @@ test.describe('admin ui', () => {
     await expect(page.locator('.admin-table')).toContainText(`UI Garten ${runId}`);
     await page.getByTestId('admin-garden-level-delete').last().click();
     await expect(page.locator('.admin-table')).not.toContainText(`UI Garten ${runId}`);
-    await page.getByRole('link', { name: 'Garten-Assets' }).click();
+    await page.getByTestId('admin-nav-garden-assets').click();
     await expect(page.getByTestId('admin-garden-assets')).toBeVisible();
     await page.getByRole('button', { name: 'Bearbeiten' }).first().click();
     await expect(page.getByTestId('admin-garden-asset-preview')).toBeVisible();
-    await page.getByRole('link', { name: 'Taxonomien' }).click();
+    await page.getByTestId('admin-nav-taxonomies').click();
     await expect(page.getByTestId('admin-taxonomies')).toBeVisible();
     await expect(page.getByTestId('admin-preference-new')).toBeVisible();
     await page.getByTestId('admin-preference-new').click();
@@ -94,14 +114,14 @@ test.describe('admin ui', () => {
     await page.getByTestId('admin-preference-label').fill(`UI Beziehung ${runId}`);
     await page.getByTestId('admin-preference-save').click();
     await expect(page.getByTestId('admin-preference-form')).toHaveCount(0);
-    await page.getByRole('link', { name: 'Kategorien' }).click();
+    await page.getByTestId('admin-nav-categories').click();
     await expect(page.getByTestId('admin-categories')).toBeVisible();
     await page.getByTestId('admin-category-new').click();
     await expect(page.getByTestId('admin-category-form')).toBeVisible();
     await expect(page.getByTestId('admin-category-relationship-modes')).toBeVisible();
     await expect(page.getByTestId('admin-category-content-styles')).toBeVisible();
 
-    await page.getByRole('link', { name: 'Inhalte' }).click();
+    await page.getByTestId('admin-nav-content').click();
     await expect(page.getByTestId('admin-content')).toBeVisible();
     await page.getByRole('button', { name: 'Liebesglas' }).click();
     await expect(page.locator('.admin-heading span')).toHaveText('Liebesglas');
@@ -123,7 +143,7 @@ test.describe('admin ui', () => {
     await page.getByRole('button', { name: 'Bearbeiten' }).first().click();
     await expect(page.getByTestId('admin-content-form')).toBeVisible();
 
-    await page.getByRole('link', { name: 'Protokoll' }).click();
+    await page.getByTestId('admin-nav-audit-log').click();
     await expect(page.getByTestId('admin-audit-log')).toBeVisible();
     await expect(page.getByTestId('admin-audit-log')).toContainText('love-jar-templates');
 

@@ -21,6 +21,7 @@ const AdminGardenView = () => import('@/admin/views/AdminGardenView.vue');
 const AdminGardenAssetsView = () => import('@/admin/views/AdminGardenAssetsView.vue');
 const AdminLoginView = () => import('@/admin/views/AdminLoginView.vue');
 const AdminMessageTemplatesView = () => import('@/admin/views/AdminMessageTemplatesView.vue');
+const AdminSettingsView = () => import('@/admin/views/AdminSettingsView.vue');
 const AdminTaxonomiesView = () => import('@/admin/views/AdminTaxonomiesView.vue');
 const AdminUsersView = () => import('@/admin/views/AdminUsersView.vue');
 
@@ -57,6 +58,7 @@ const router = createRouter({
         { path: 'categories', name: 'adminCategories', component: AdminCategoriesView },
         { path: 'taxonomies', name: 'adminTaxonomies', component: AdminTaxonomiesView },
         { path: 'messages', name: 'adminMessages', component: AdminMessageTemplatesView },
+        { path: 'settings', name: 'adminSettings', component: AdminSettingsView },
         { path: 'audit-log', name: 'adminAuditLog', component: AdminAuditLogView },
       ],
     },
@@ -89,11 +91,11 @@ router.beforeEach(async (to) => {
     return '/onboarding';
   }
 
-  if (!allowedWithoutCouple.has(to.path) && !authStore.hasCouple) {
+  if (!allowedWithoutCouple.has(to.path) && !authStore.hasCompleteCouple) {
     return '/onboarding';
   }
 
-  if (to.path === '/onboarding' && authStore.isAuthenticated && authStore.hasCouple) {
+  if (to.path === '/onboarding' && authStore.isAuthenticated && authStore.hasCompleteCouple) {
     return '/today';
   }
 

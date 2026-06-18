@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { apiRequest, clearToken, getToken, setToken } from '@/services/api';
+import { SESSION_EXPIRED_MESSAGE_KEY, apiRequest, clearToken, getToken, setToken } from '@/services/api';
 import { localizeApiError } from '@/services/errorMessages';
 import type {
   ContentPreference,
@@ -26,6 +26,12 @@ const defaultPreferences: UserPreferences = {
   featureExplainers: Object.fromEntries(featureExplainerKeys.map((key) => [key, true])) as UserPreferences['featureExplainers'],
   pushNotificationMode: 'all',
 };
+
+function consumeSessionExpiredMessage() {
+  if (sessionStorage.getItem(SESSION_EXPIRED_MESSAGE_KEY) !== '1') return '';
+  sessionStorage.removeItem(SESSION_EXPIRED_MESSAGE_KEY);
+  return 'auth.sessionExpired';
+}
 
 interface AuthUser {
   id: string;
@@ -54,10 +60,12 @@ export const useAuthStore = defineStore('auth', {
     contentStyles: [] as PreferenceOption[],
     loading: false,
     error: '',
+    sessionExpiredMessageKey: consumeSessionExpiredMessage(),
   }),
   getters: {
     isAuthenticated: (state) => Boolean(state.token && state.user),
     hasCouple: (state) => Boolean(state.couple),
+    hasCompleteCouple: (state) => Boolean(state.couple && (state.couple.memberCount ?? 0) >= 2),
     pushNotificationMode: (state): PushNotificationMode => state.user?.preferences?.pushNotificationMode ?? 'all',
   },
   actions: {
@@ -104,6 +112,7 @@ export const useAuthStore = defineStore('auth', {
         setToken(result.token);
         this.token = result.token;
         this.user = result.user;
+        this.sessionExpiredMessageKey = '';
         await this.refreshMe();
       } catch (error) {
         this.error = localizeApiError(error, 'errors.fallback.auth');
@@ -191,6 +200,14 @@ export const useAuthStore = defineStore('auth', {
       this.token = null;
       this.user = null;
       this.couple = null;
+      this.sessionExpiredMessageKey = '';
+    },
+    expireSession() {
+      clearToken();
+      this.token = null;
+      this.user = null;
+      this.couple = null;
+      this.sessionExpiredMessageKey = 'auth.sessionExpired';
     },
     async leaveCouple() {
       const result = await apiRequest<{ user: AuthUser; couple: null }>('/api/couples/leave', {

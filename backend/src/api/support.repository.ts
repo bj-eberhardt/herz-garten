@@ -464,7 +464,8 @@ export async function createNotifications(
       | 'memory_created'
       | 'know_me_question'
       | 'know_me_answered'
-      | 'couple_disconnected';
+      | 'couple_disconnected'
+      | 'couple_joined';
     sourceType: string;
     sourceId?: string | null;
     titleKey: NotificationMessageKey;

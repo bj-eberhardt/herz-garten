@@ -20,8 +20,8 @@ export async function insertCouple(coupleId: string, inviteCode: string, relatio
   return result.rows[0];
 }
 
-export async function findCoupleByInviteCode(inviteCode: string) {
-  const result = await pool.query(
+export async function findCoupleByInviteCode(inviteCode: string, client: Queryable = pool) {
+  const result = await client.query(
     `
       select
         id,
@@ -39,13 +39,13 @@ export async function findCoupleByInviteCode(inviteCode: string) {
   return result.rows[0] ?? null;
 }
 
-export async function countCoupleMembers(coupleId: string) {
-  const result = await pool.query('select count(*)::int as count from couple_members where couple_id = $1', [coupleId]);
+export async function countCoupleMembers(coupleId: string, client: Queryable = pool) {
+  const result = await client.query('select count(*)::int as count from couple_members where couple_id = $1', [coupleId]);
   return Number(result.rows[0]?.count ?? 0);
 }
 
-export async function insertCoupleMember(coupleId: string, userId: string, role: 'owner' | 'partner') {
-  await pool.query('insert into couple_members (couple_id, user_id, role) values ($1, $2, $3)', [coupleId, userId, role]);
+export async function insertCoupleMember(coupleId: string, userId: string, role: 'owner' | 'partner', client: Queryable = pool) {
+  await client.query('insert into couple_members (couple_id, user_id, role) values ($1, $2, $3)', [coupleId, userId, role]);
 }
 
 export async function deleteCoupleMember(client: Queryable, coupleId: string, userId: string) {

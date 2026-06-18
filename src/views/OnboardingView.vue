@@ -22,12 +22,16 @@ const inviteCode = ref('');
 const relationshipType = ref<RelationshipType>('mixed');
 const contentPreference = ref<ContentPreference>('balanced');
 const formError = ref('');
+const joinError = ref('');
+const createError = ref('');
 const copied = ref(false);
 const showInviteModal = ref(false);
 const authSubmitAttempted = ref(false);
 const joinSubmitAttempted = ref(false);
 const createSubmitAttempted = ref(false);
 const showGuestAd = computed(() => !authStore.isAuthenticated && mode.value === 'register');
+const showReturningUserPanel = computed(() => !authStore.isAuthenticated && mode.value === 'login');
+const authErrorMessage = computed(() => formError.value || authStore.error || (authStore.sessionExpiredMessageKey ? t(authStore.sessionExpiredMessageKey) : ''));
 const relationshipOptions = computed(() =>
   authStore.relationshipModes.length
     ? authStore.relationshipModes
@@ -59,6 +63,7 @@ function saveRememberedEmail() {
 
 async function submitAuth() {
   formError.value = '';
+  authStore.sessionExpiredMessageKey = '';
   try {
     if (mode.value === 'register') {
       await authStore.register(displayName.value, email.value, password.value);
@@ -66,13 +71,17 @@ async function submitAuth() {
       await authStore.login(email.value, password.value);
     }
     saveRememberedEmail();
+    if (authStore.hasCompleteCouple) {
+      await router.push('/today');
+    }
   } catch (error) {
     formError.value = localizeApiError(error, 'errors.fallback.auth');
   }
 }
 
 async function createCouple() {
-  formError.value = '';
+  createError.value = '';
+  joinError.value = '';
   try {
     await authStore.createCouple({
       relationshipType: relationshipType.value,
@@ -80,17 +89,20 @@ async function createCouple() {
     });
     showInviteModal.value = true;
   } catch (error) {
-    formError.value = localizeApiError(error, 'errors.fallback.createCouple');
+    createError.value = localizeApiError(error, 'errors.fallback.createCouple');
   }
 }
 
 async function joinCouple() {
-  formError.value = '';
+  joinError.value = '';
+  createError.value = '';
   try {
     await authStore.joinCouple(inviteCode.value);
-    await router.push('/today');
+    if (authStore.hasCompleteCouple) {
+      await router.push('/today');
+    }
   } catch (error) {
-    formError.value = localizeApiError(error, 'errors.fallback.joinCouple');
+    joinError.value = localizeApiError(error, 'errors.fallback.joinCouple');
   }
 }
 
@@ -120,7 +132,9 @@ async function copyInviteCode() {
 
 async function continueToToday() {
   showInviteModal.value = false;
-  await router.push('/today');
+  if (authStore.hasCompleteCouple) {
+    await router.push('/today');
+  }
 }
 </script>
 
@@ -141,6 +155,15 @@ async function continueToToday() {
         <p class="eyebrow">{{ t('auth.adEyebrow') }}</p>
         <h2>{{ t('auth.adTitle') }}</h2>
         <p>{{ t('auth.adText') }}</p>
+      </div>
+    </section>
+
+    <section v-if="showReturningUserPanel" class="panel feature-explainer onboarding-returning" data-testid="onboarding-returning">
+      <Sprout class="feature-explainer-icon" aria-hidden="true" />
+      <div>
+        <p class="eyebrow">{{ t('auth.returningEyebrow') }}</p>
+        <h2>{{ t('auth.returningTitle') }}</h2>
+        <p>{{ t('auth.returningText') }}</p>
       </div>
     </section>
 
@@ -171,7 +194,7 @@ async function continueToToday() {
         <label for="password">{{ t('common.password') }}</label>
         <input id="password" v-model="password" autocomplete="current-password" type="password" minlength="8" data-testid="auth-password" required />
 
-        <p v-if="formError || authStore.error" class="form-error" data-testid="auth-error">{{ formError || authStore.error }}</p>
+        <p v-if="authErrorMessage" class="form-error" data-testid="auth-error">{{ authErrorMessage }}</p>
 
         <button class="primary-button" type="submit" :disabled="authStore.loading" data-testid="auth-submit" @click="authSubmitAttempted = true">
           {{ mode === 'register' ? t('auth.createAccount') : t('auth.loginAction') }}
@@ -182,7 +205,28 @@ async function continueToToday() {
     <section v-else class="panel auth-panel">
       <p class="eyebrow">{{ t('nav.coupleRoom') }}</p>
       <h2>{{ t('auth.hello', { name: authStore.user?.displayName }) }}</h2>
-      <div v-if="authStore.couple" class="couple-code" data-testid="couple-code-panel">
+      <div v-if="authStore.couple && !authStore.hasCompleteCouple" class="waiting-partner-panel" data-testid="waiting-partner-panel">
+        <div class="next-step-note waiting-partner-note">
+          <HeartHandshake :size="22" aria-hidden="true" />
+          <div>
+            <p class="eyebrow">{{ t('auth.waitingPartnerEyebrow') }}</p>
+            <h3>{{ t('auth.waitingPartnerTitle') }}</h3>
+            <p>{{ t('auth.waitingPartnerText') }}</p>
+          </div>
+        </div>
+
+        <div class="couple-code waiting-partner-code" data-testid="couple-code-panel">
+          <p>
+            {{ t('auth.waitingPartnerShareText') }}
+            <strong data-testid="couple-code">{{ authStore.couple.inviteCode }}</strong>
+          </p>
+          <button class="secondary-button inline-button" type="button" data-testid="copy-couple-code" @click="copyInviteCode">
+            <Clipboard :size="18" aria-hidden="true" />
+            {{ copied ? t('common.copied') : t('auth.copyCode') }}
+          </button>
+        </div>
+      </div>
+      <div v-else-if="authStore.couple" class="couple-code" data-testid="couple-code-panel">
         <p>
           {{ t('auth.coupleCodePrefix') }}
           <strong data-testid="couple-code">{{ authStore.couple.inviteCode }}</strong>.
@@ -216,6 +260,7 @@ async function continueToToday() {
                 <Link2 :size="18" aria-hidden="true" />
                 {{ t('auth.connectPartner') }}
               </button>
+              <p v-if="joinError" class="form-error" data-testid="join-couple-error">{{ joinError }}</p>
             </form>
           </article>
 
@@ -243,11 +288,11 @@ async function continueToToday() {
                 <Sprout :size="18" aria-hidden="true" />
                 {{ t('auth.createGarden') }}
               </button>
+              <p v-if="createError" class="form-error" data-testid="create-couple-error">{{ createError }}</p>
             </form>
           </article>
         </div>
       </div>
-      <p v-if="formError" class="form-error" data-testid="couple-error">{{ formError }}</p>
     </section>
 
     <div v-if="showInviteModal && authStore.couple" class="confirm-overlay" role="presentation">

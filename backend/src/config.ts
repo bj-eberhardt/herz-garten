@@ -18,7 +18,6 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET ?? defaultJwtSecret,
   adminPassword: process.env.ADMIN_PASSWORD ?? defaultAdminPassword,
   adminJwtSecret: process.env.ADMIN_JWT_SECRET ?? process.env.JWT_SECRET ?? defaultJwtSecret,
-  adminTokenTtl: process.env.ADMIN_TOKEN_TTL ?? '8h',
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
   staticDir: process.env.STATIC_DIR ?? '',
   uploadDir: process.env.UPLOAD_DIR ?? defaultUploadDir,

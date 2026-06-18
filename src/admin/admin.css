@@ -167,7 +167,7 @@
   display: grid;
   gap: 16px;
   margin: 0 auto;
-  max-width: 420px;
+  max-width: 520px;
   width: 100%;
 }
 
@@ -368,6 +368,24 @@
 .admin-field-error {
   color: #9f3f35;
   font-weight: 800;
+}
+
+.admin-settings-block {
+  margin-top: 18px;
+}
+
+.admin-settings-actions {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  margin-top: 18px;
+}
+
+.admin-settings-field-error {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 4px 0 0;
+  padding: 8px 10px;
 }
 
 .admin-image-preview {

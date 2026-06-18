@@ -44,6 +44,7 @@ a {
 .topbar {
   align-items: center;
   display: flex;
+  gap: 12px;
   justify-content: space-between;
   margin: 0 auto 22px;
   max-width: 1120px;
@@ -52,12 +53,21 @@ a {
 .brand,
 .invite-code,
 .notification-link,
+.header-logout,
 .stats-row span,
 .quest-meta span,
 .privacy-note {
   align-items: center;
   display: inline-flex;
   gap: 8px;
+}
+
+.topbar-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .brand {
@@ -94,6 +104,18 @@ a {
   justify-content: center;
   position: relative;
   width: 40px;
+}
+
+.header-logout {
+  background: #fff8f2;
+  border: 1px solid #efd7ca;
+  border-radius: 999px;
+  color: #7e4a3f;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 800;
+  min-height: 40px;
+  padding: 8px 12px;
 }
 
 .notification-badge {
@@ -2083,6 +2105,40 @@ textarea {
   margin-bottom: 0;
 }
 
+.waiting-partner-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.waiting-partner-note {
+  background: #fff7df;
+  border-color: #e3c46d;
+  color: #6f5423;
+}
+
+.waiting-partner-note h3 {
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+
+.waiting-partner-code {
+  align-items: center;
+  background: #fffaf6;
+  border: 1px solid #efd7ca;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.waiting-partner-code p {
+  flex: 1 1 260px;
+  margin-bottom: 0;
+}
+
+.waiting-partner-code strong {
+  display: inline-block;
+  margin-left: 4px;
+}
+
 .onboarding-flow-grid {
   align-items: stretch;
   display: grid;
@@ -2732,5 +2788,16 @@ textarea {
 
   .nav-item span {
     display: none;
+  }
+
+  .header-logout span {
+    display: none;
+  }
+
+  .header-logout {
+    height: 40px;
+    justify-content: center;
+    padding: 0;
+    width: 40px;
   }
 }

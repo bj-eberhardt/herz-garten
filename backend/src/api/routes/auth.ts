@@ -27,7 +27,7 @@ export function registerAuthRoutes(router: Router) {
 
     try {
       const user = await registerUser(email, displayName, password);
-      response.status(201).json({ token: signToken(user.id), user });
+      response.status(201).json({ token: await signToken(user.id), user });
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
         sendApiError(response, 409, 'auth.emailAlreadyRegistered');
@@ -53,7 +53,7 @@ export function registerAuthRoutes(router: Router) {
         return;
       }
 
-      response.json({ token: signToken(user.id), user });
+      response.json({ token: await signToken(user.id), user });
     } catch (error) {
       handleError(response, error);
     }

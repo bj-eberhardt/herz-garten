@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { withTransaction } from '../../db/transaction.js';
 import {
-  countCoupleMembers,
   deleteCoupleMember,
   deleteEmptyCouple,
   findCoupleByInviteCode,
@@ -9,7 +8,7 @@ import {
   insertCoupleMember,
 } from './couples.repository.js';
 import { preferenceValueExists } from '../../admin/preferences.repository.js';
-import { createUniqueInviteCode, getCurrentCouple, getPublicUser } from '../support.repository.js';
+import { createNotifications, createUniqueInviteCode, getCoupleMemberIds, getCurrentCouple, getPublicUser } from '../support.repository.js';
 
 export async function createCoupleForUser(userId: string, locale: string, relationshipType: string, contentPreference: string) {
   if (await getCurrentCouple(userId)) return { status: 'alreadyConnected' as const };
@@ -30,14 +29,33 @@ export async function createCoupleForUser(userId: string, locale: string, relati
 export async function joinCoupleForUser(userId: string, inviteCode: string) {
   if (await getCurrentCouple(userId)) return { status: 'alreadyConnected' as const };
 
-  const couple = await findCoupleByInviteCode(inviteCode);
-  if (!couple) return { status: 'notFound' as const };
+  const joinedUser = await getPublicUser(userId);
 
-  const memberCount = await countCoupleMembers(couple.id);
-  if (memberCount >= 2) return { status: 'full' as const };
+  return withTransaction(async (client) => {
+    const couple = await findCoupleByInviteCode(inviteCode, client);
+    if (!couple) return { status: 'notFound' as const };
 
-  await insertCoupleMember(couple.id, userId, 'partner');
-  return { status: 'joined' as const, couple: { ...couple, memberCount: memberCount + 1 } };
+    const existingMemberIds = await getCoupleMemberIds(client, couple.id);
+    if (existingMemberIds.length >= 2) return { status: 'full' as const };
+
+    await insertCoupleMember(couple.id, userId, 'partner', client);
+
+    const memberCount = existingMemberIds.length + 1;
+    if (memberCount === 2) {
+      await createNotifications(client, {
+        coupleId: couple.id,
+        userIds: existingMemberIds.filter((memberId) => memberId !== userId),
+        type: 'couple_joined',
+        sourceType: 'couple',
+        sourceId: couple.id,
+        titleKey: 'notifications.titles.coupleJoined',
+        bodyKey: 'notifications.bodies.coupleJoined',
+        params: { name: joinedUser?.displayName ?? 'Dein Partner' },
+      });
+    }
+
+    return { status: 'joined' as const, couple: { ...couple, memberCount } };
+  });
 }
 
 export async function leaveCoupleForUser(userId: string) {
