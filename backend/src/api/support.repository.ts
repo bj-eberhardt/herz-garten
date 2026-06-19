@@ -1,5 +1,6 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import type { Request } from 'express';
+import { config } from '../config.js';
 import { pool } from '../db.js';
 import { type NotificationMessageKey, translateNotificationBackend } from '../i18n/messages.js';
 import {
@@ -322,7 +323,8 @@ export function parseAcceptLanguage(headerValue: string | undefined) {
 }
 
 export async function resolveLocale(request: Request) {
-  const requestedLocale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
+  const requestedLocale =
+    normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || config.i18nDefaultLocale;
   const result = await pool.query<{ locale: string; isDefault: boolean }>(
     `
       select locale, is_default as "isDefault"
@@ -331,7 +333,10 @@ export async function resolveLocale(request: Request) {
     `,
   );
   const supported = result.rows;
-  const defaultLocale = supported.find((locale) => locale.isDefault)?.locale ?? 'de';
+  const defaultLocale =
+    supported.find((locale) => locale.locale === config.i18nDefaultLocale)?.locale ??
+    supported.find((locale) => locale.isDefault)?.locale ??
+    config.i18nDefaultLocale;
   return supported.some((locale) => locale.locale === requestedLocale) ? requestedLocale : defaultLocale;
 }
 
@@ -412,16 +417,16 @@ export async function getPublicUser(userId: string) {
   return result.rows[0] ? publicUser(result.rows[0]) : null;
 }
 
-export async function getCurrentCouple(userId: string, locale = 'de') {
+export async function getCurrentCouple(userId: string, locale = config.i18nDefaultLocale) {
   const result = await pool.query<CurrentCouple>(
     `
       select
         c.id,
         c.invite_code as "inviteCode",
         c.relationship_type as "relationshipType",
-        coalesce(requested_mode.label, fallback_mode.label, mode.label, c.relationship_type) as "relationshipTypeLabel",
+        coalesce(requested_mode.label, fallback_mode.label, c.relationship_type) as "relationshipTypeLabel",
         c.content_preference as "contentPreference",
-        coalesce(requested_style.label, fallback_style.label, style.label, c.content_preference) as "contentPreferenceLabel",
+        coalesce(requested_style.label, fallback_style.label, c.content_preference) as "contentPreferenceLabel",
         c.heart_points as "heartPoints",
         c.garden_stage as "gardenStage",
         c.created_at as "createdAt",
@@ -431,16 +436,16 @@ export async function getCurrentCouple(userId: string, locale = 'de') {
       join couple_members cm on cm.couple_id = c.id
       left join relationship_modes mode on mode.value = c.relationship_type
       left join relationship_mode_translations requested_mode on requested_mode.mode_id = mode.id and requested_mode.locale = $2
-      left join relationship_mode_translations fallback_mode on fallback_mode.mode_id = mode.id and fallback_mode.locale = 'de'
+      left join relationship_mode_translations fallback_mode on fallback_mode.mode_id = mode.id and fallback_mode.locale = $3
       left join content_styles style on style.value = c.content_preference
       left join content_style_translations requested_style on requested_style.style_id = style.id and requested_style.locale = $2
-      left join content_style_translations fallback_style on fallback_style.style_id = style.id and fallback_style.locale = 'de'
+      left join content_style_translations fallback_style on fallback_style.style_id = style.id and fallback_style.locale = $3
       where own_membership.user_id = $1
-      group by c.id, requested_mode.label, fallback_mode.label, mode.label, requested_style.label, fallback_style.label, style.label
+      group by c.id, requested_mode.label, fallback_mode.label, requested_style.label, fallback_style.label
       order by c.created_at desc
       limit 1
     `,
-    [userId, locale],
+    [userId, locale, config.i18nDefaultLocale],
   );
 
   return result.rows[0] ?? null;
@@ -718,8 +723,8 @@ export function mapQuest(row: QuestRow) {
   };
 }
 
-export async function buildTodayPayload(userId: string, locale = 'de') {
-  const couple = await getCurrentCouple(userId);
+export async function buildTodayPayload(userId: string, locale = config.i18nDefaultLocale) {
+  const couple = await getCurrentCouple(userId, locale);
   if (!couple) {
     return null;
   }
@@ -729,17 +734,17 @@ export async function buildTodayPayload(userId: string, locale = 'de') {
     `
       select
         q.id,
-        coalesce(requested.text, fallback.text, q.text) as text,
+        coalesce(requested.text, fallback.text) as text,
         q.category,
         q.depth_level as "depthLevel",
         q.long_distance_suitable as "longDistanceSuitable",
         q.active
       from daily_questions q
       left join daily_question_translations requested on requested.question_id = q.id and requested.locale = $2
-      left join daily_question_translations fallback on fallback.question_id = q.id and fallback.locale = 'de'
+      left join daily_question_translations fallback on fallback.question_id = q.id and fallback.locale = $3
       where q.id = $1
     `,
-    [instance.questionId, locale],
+    [instance.questionId, locale, config.i18nDefaultLocale],
   );
   const answersResult = await pool.query(
     `
@@ -800,8 +805,8 @@ export function normalizeQuestFilters(query: Request['query']): QuestFilters {
   };
 }
 
-export async function buildQuestPayload(userId: string, filters: QuestFilters = {}, locale = 'de') {
-  const couple = await getCurrentCouple(userId);
+export async function buildQuestPayload(userId: string, filters: QuestFilters = {}, locale = config.i18nDefaultLocale) {
+  const couple = await getCurrentCouple(userId, locale);
   if (!couple) {
     return null;
   }
@@ -809,7 +814,7 @@ export async function buildQuestPayload(userId: string, filters: QuestFilters = 
   const validEffortLevels = new Set(['low', 'medium', 'high']);
   const validModes = new Set(['solo', 'together', 'long_distance']);
   const whereClauses = ['q.active = true'];
-  const params: unknown[] = [couple.id, locale];
+  const params: unknown[] = [couple.id, locale, config.i18nDefaultLocale];
 
   if (filters.category) {
     params.push(filters.category);
@@ -836,10 +841,10 @@ export async function buildQuestPayload(userId: string, filters: QuestFilters = 
     `
       select
         q.id,
-        coalesce(requested.title, fallback.title, q.title) as title,
-        coalesce(requested.description, fallback.description, q.description) as description,
+        coalesce(requested.title, fallback.title) as title,
+        coalesce(requested.description, fallback.description) as description,
         q.category,
-        coalesce(requested_category.label, fallback_category.label, category.label, q.category) as "categoryLabel",
+        coalesce(requested_category.label, fallback_category.label, q.category) as "categoryLabel",
         q.estimated_minutes as "estimatedMinutes",
         q.effort_level as "effortLevel",
         q.reward_points as "rewardPoints",
@@ -853,10 +858,10 @@ export async function buildQuestPayload(userId: string, filters: QuestFilters = 
       from quests q
       left join couple_quests cq on cq.quest_id = q.id and cq.couple_id = $1
       left join quest_translations requested on requested.quest_id = q.id and requested.locale = $2
-      left join quest_translations fallback on fallback.quest_id = q.id and fallback.locale = 'de'
+      left join quest_translations fallback on fallback.quest_id = q.id and fallback.locale = $3
       left join content_categories category on category.content_type = 'quests' and category.value = q.category
       left join content_category_translations requested_category on requested_category.category_id = category.id and requested_category.locale = $2
-      left join content_category_translations fallback_category on fallback_category.category_id = category.id and fallback_category.locale = 'de'
+      left join content_category_translations fallback_category on fallback_category.category_id = category.id and fallback_category.locale = $3
       where ${whereClauses.join(' and ')}
       order by
         ${filters.category || filters.mode ? '' : `
@@ -865,7 +870,7 @@ export async function buildQuestPayload(userId: string, filters: QuestFilters = 
         case when coalesce(cardinality(category.relationship_modes), 0) = 0 and coalesce(cardinality(category.content_styles), 0) = 0 then 0 else 1 end,
         coalesce(category.sort_order, 9999),
         `}
-        coalesce(requested.title, fallback.title, q.title)
+        coalesce(requested.title, fallback.title)
     `,
     filters.category || filters.mode ? params : [...params, couple.relationshipType, couple.contentPreference],
   );
@@ -873,10 +878,10 @@ export async function buildQuestPayload(userId: string, filters: QuestFilters = 
     `
       select
         c.value,
-        coalesce(requested.label, fallback.label, c.label) as label
+        coalesce(requested.label, fallback.label, c.value) as label
       from content_categories c
       left join content_category_translations requested on requested.category_id = c.id and requested.locale = $1
-      left join content_category_translations fallback on fallback.category_id = c.id and fallback.locale = 'de'
+      left join content_category_translations fallback on fallback.category_id = c.id and fallback.locale = $4
       where c.content_type = 'quests' and c.active = true
       order by
         case when $2 = any(coalesce(c.relationship_modes, '{}')) then 0 else 1 end,
@@ -885,7 +890,7 @@ export async function buildQuestPayload(userId: string, filters: QuestFilters = 
         c.sort_order,
         label
     `,
-    [locale, couple.relationshipType, couple.contentPreference],
+    [locale, couple.relationshipType, couple.contentPreference, config.i18nDefaultLocale],
   );
 
   return {
@@ -902,10 +907,10 @@ export async function buildContentCategoryPayload(contentType: string, locale = 
     `
       select
         c.value,
-        coalesce(requested.label, fallback.label, c.label) as label
+        coalesce(requested.label, fallback.label, c.value) as label
       from content_categories c
       left join content_category_translations requested on requested.category_id = c.id and requested.locale = $2
-      left join content_category_translations fallback on fallback.category_id = c.id and fallback.locale = 'de'
+      left join content_category_translations fallback on fallback.category_id = c.id and fallback.locale = $5
       where c.content_type = $1 and c.active = true
       order by
         case when $3 = any(coalesce(c.relationship_modes, '{}')) then 0 else 1 end,
@@ -914,7 +919,7 @@ export async function buildContentCategoryPayload(contentType: string, locale = 
         c.sort_order,
         label
     `,
-    [contentType, locale, couple?.relationshipType ?? '', couple?.contentPreference ?? ''],
+    [contentType, locale, couple?.relationshipType ?? '', couple?.contentPreference ?? '', config.i18nDefaultLocale],
   );
   return result.rows;
 }
@@ -1185,7 +1190,7 @@ export async function buildNotificationDetailPayload(userId: string, notificatio
 }
 
 export async function buildMemoryPayload(userId: string, locale = 'de') {
-  const couple = await getCurrentCouple(userId);
+  const couple = await getCurrentCouple(userId, locale);
   if (!couple) {
     return null;
   }
@@ -1205,7 +1210,6 @@ export async function buildMemoryPayload(userId: string, locale = 'de') {
         coalesce(
           requested_category.label,
           fallback_category.label,
-          category.label,
           case
             when $2 = 'en' then
               case m.category
@@ -1236,11 +1240,11 @@ export async function buildMemoryPayload(userId: string, locale = 'de') {
       left join content_category_translations requested_category
         on requested_category.category_id = category.id and requested_category.locale = $2
       left join content_category_translations fallback_category
-        on fallback_category.category_id = category.id and fallback_category.locale = 'de'
+        on fallback_category.category_id = category.id and fallback_category.locale = $3
       where m.couple_id = $1
       order by m.date desc, m.created_at desc
     `,
-    [couple.id, locale],
+    [couple.id, locale, config.i18nDefaultLocale],
   );
 
   return {
@@ -1250,8 +1254,8 @@ export async function buildMemoryPayload(userId: string, locale = 'de') {
   };
 }
 
-export async function buildKnowMePayload(userId: string, locale = 'de') {
-  const couple = await getCurrentCouple(userId);
+export async function buildKnowMePayload(userId: string, locale = config.i18nDefaultLocale) {
+  const couple = await getCurrentCouple(userId, locale);
   if (!couple) {
     return null;
   }
@@ -1291,21 +1295,21 @@ export async function buildKnowMePayload(userId: string, locale = 'de') {
     `
       select
         c.id,
-        coalesce(requested.question_text, fallback.question_text, c.question_text) as "questionText",
+        coalesce(requested.question_text, fallback.question_text) as "questionText",
         c.category,
         coalesce(category_label.label, requested.category_label, fallback.category_label, c.category) as "categoryLabel"
       from know_me_catalog_questions c
       left join know_me_catalog_question_translations requested
         on requested.catalog_question_id = c.id and requested.locale = $3
       left join know_me_catalog_question_translations fallback
-        on fallback.catalog_question_id = c.id and fallback.locale = 'de'
+        on fallback.catalog_question_id = c.id and fallback.locale = $6
       left join content_categories category on category.content_type = 'know-me-catalog' and category.value = c.category
       left join content_category_translations requested_category
         on requested_category.category_id = category.id and requested_category.locale = $3
       left join content_category_translations fallback_category
-        on fallback_category.category_id = category.id and fallback_category.locale = 'de'
+        on fallback_category.category_id = category.id and fallback_category.locale = $6
       left join lateral (
-        select coalesce(requested_category.label, fallback_category.label, category.label) as label
+        select coalesce(requested_category.label, fallback_category.label, c.category) as label
       ) category_label on true
       where c.active = true
         and not exists (
@@ -1321,9 +1325,9 @@ export async function buildKnowMePayload(userId: string, locale = 'de') {
         case when coalesce(cardinality(category.relationship_modes), 0) = 0 and coalesce(cardinality(category.content_styles), 0) = 0 then 0 else 1 end,
         coalesce(category.sort_order, 9999),
         c.sort_order,
-        coalesce(requested.question_text, fallback.question_text, c.question_text)
+        coalesce(requested.question_text, fallback.question_text)
     `,
-    [couple.id, userId, locale, couple.relationshipType, couple.contentPreference],
+    [couple.id, userId, locale, couple.relationshipType, couple.contentPreference, config.i18nDefaultLocale],
   );
 
   return {
@@ -1375,8 +1379,8 @@ export async function createKnowMeFlower(client: Queryable, coupleId: string, qu
   await client.query('update know_me_questions set reward_applied_at = now() where id = $1', [questionId]);
 }
 
-export async function buildGardenObjectDetail(userId: string, objectId: string, locale = 'de') {
-  const couple = await getCurrentCouple(userId);
+export async function buildGardenObjectDetail(userId: string, objectId: string, locale = config.i18nDefaultLocale) {
+  const couple = await getCurrentCouple(userId, locale);
   if (!couple) {
     return null;
   }
@@ -1420,7 +1424,7 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
         select
           i.id,
           i.date,
-          q.text as question,
+          coalesce(requested.text, fallback.text) as question,
           json_agg(
             json_build_object(
               'displayName', p.display_name,
@@ -1431,12 +1435,14 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
           ) as answers
         from daily_question_instances i
         join daily_questions q on q.id = i.question_id
+        left join daily_question_translations requested on requested.question_id = q.id and requested.locale = $3
+        left join daily_question_translations fallback on fallback.question_id = q.id and fallback.locale = $4
         left join daily_question_answers a on a.couple_id = i.couple_id and a.question_id = i.question_id
         left join profiles p on p.id = a.user_id
         where i.id = $1 and i.couple_id = $2
-        group by i.id, q.text
+        group by i.id, requested.text, fallback.text
       `,
-      [object.sourceId, couple.id],
+      [object.sourceId, couple.id, locale, config.i18nDefaultLocale],
     );
     source = result.rows[0] ? { type: 'question', ...result.rows[0] } : null;
   }
@@ -1446,16 +1452,18 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
       `
         select
           cq.id,
-          q.title,
-          q.description,
+          coalesce(requested.title, fallback.title) as title,
+          coalesce(requested.description, fallback.description) as description,
           q.category,
           q.reward_points as "rewardPoints",
           cq.completed_at as "completedAt"
         from couple_quests cq
         join quests q on q.id = cq.quest_id
+        left join quest_translations requested on requested.quest_id = q.id and requested.locale = $3
+        left join quest_translations fallback on fallback.quest_id = q.id and fallback.locale = $4
         where cq.id = $1 and cq.couple_id = $2
       `,
-      [object.sourceId, couple.id],
+      [object.sourceId, couple.id, locale, config.i18nDefaultLocale],
     );
     source = result.rows[0] ? { type: 'quest', ...result.rows[0] } : null;
   }
@@ -1468,7 +1476,7 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
           p.display_name as "authorName",
           case when n.is_drawn then n.text else null end as text,
           n.category,
-          coalesce(requested_category.label, fallback_category.label, category.label, n.category) as "categoryLabel",
+          coalesce(requested_category.label, fallback_category.label, n.category) as "categoryLabel",
           n.is_drawn as "isDrawn",
           n.drawn_at as "drawnAt",
           n.created_at as "createdAt"
@@ -1478,10 +1486,10 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
         left join content_category_translations requested_category
           on requested_category.category_id = category.id and requested_category.locale = $3
         left join content_category_translations fallback_category
-          on fallback_category.category_id = category.id and fallback_category.locale = 'de'
+          on fallback_category.category_id = category.id and fallback_category.locale = $4
         where n.id = $1 and n.couple_id = $2
       `,
-      [object.sourceId, couple.id, locale],
+      [object.sourceId, couple.id, locale, config.i18nDefaultLocale],
     );
     source = result.rows[0] ? { type: 'love_jar', ...result.rows[0] } : null;
   }
@@ -1499,7 +1507,6 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
           coalesce(
             requested_category.label,
             fallback_category.label,
-            category.label,
             case
               when $3 = 'en' then
                 case m.category
@@ -1529,10 +1536,10 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
         left join content_category_translations requested_category
           on requested_category.category_id = category.id and requested_category.locale = $3
         left join content_category_translations fallback_category
-          on fallback_category.category_id = category.id and fallback_category.locale = 'de'
+          on fallback_category.category_id = category.id and fallback_category.locale = $4
         where m.id = $1 and m.couple_id = $2
       `,
-      [object.sourceId, couple.id, locale],
+      [object.sourceId, couple.id, locale, config.i18nDefaultLocale],
     );
     source = result.rows[0] ? { type: 'memory', ...result.rows[0] } : null;
   }
@@ -1626,7 +1633,7 @@ export async function buildLoveJarPayload(userId: string, locale = 'de') {
         p.display_name as "authorName",
         n.text,
         n.category,
-        coalesce(requested_category.label, fallback_category.label, category.label, n.category) as "categoryLabel",
+        coalesce(requested_category.label, fallback_category.label, n.category) as "categoryLabel",
         n.is_drawn as "isDrawn",
         n.drawn_at as "drawnAt",
         n.created_at as "createdAt"
@@ -1636,11 +1643,11 @@ export async function buildLoveJarPayload(userId: string, locale = 'de') {
       left join content_category_translations requested_category
         on requested_category.category_id = category.id and requested_category.locale = $2
       left join content_category_translations fallback_category
-        on fallback_category.category_id = category.id and fallback_category.locale = 'de'
+        on fallback_category.category_id = category.id and fallback_category.locale = $3
       where n.couple_id = $1
       order by n.created_at desc
     `,
-    [couple.id, locale],
+    [couple.id, locale, config.i18nDefaultLocale],
   );
   const statusResult = await pool.query<LoveJarDrawStatusRow>(
     `
@@ -1673,23 +1680,23 @@ export async function buildLoveJarPayload(userId: string, locale = 'de') {
   };
 }
 
-export async function buildLoveJarTemplatePayload(userId: string, locale = 'de') {
+export async function buildLoveJarTemplatePayload(userId: string, locale = config.i18nDefaultLocale) {
   const couple = await getCurrentCouple(userId, locale);
   const result = await pool.query<LoveJarTemplateRow>(
     `
       select
         t.id,
-        coalesce(requested.text, fallback.text, t.text) as text,
+        coalesce(requested.text, fallback.text) as text,
         t.category,
-        coalesce(requested_category.label, fallback_category.label, category.label, t.category) as "categoryLabel"
+        coalesce(requested_category.label, fallback_category.label, t.category) as "categoryLabel"
       from love_jar_templates t
       left join love_jar_template_translations requested on requested.template_id = t.id and requested.locale = $1
-      left join love_jar_template_translations fallback on fallback.template_id = t.id and fallback.locale = 'de'
+      left join love_jar_template_translations fallback on fallback.template_id = t.id and fallback.locale = $4
       left join content_categories category on category.content_type = 'love-jar-templates' and category.value = t.category
       left join content_category_translations requested_category
         on requested_category.category_id = category.id and requested_category.locale = $1
       left join content_category_translations fallback_category
-        on fallback_category.category_id = category.id and fallback_category.locale = 'de'
+        on fallback_category.category_id = category.id and fallback_category.locale = $4
       where t.active = true
       order by
         case when $2 = any(coalesce(category.relationship_modes, '{}')) then 0 else 1 end,
@@ -1697,9 +1704,9 @@ export async function buildLoveJarTemplatePayload(userId: string, locale = 'de')
         case when coalesce(cardinality(category.relationship_modes), 0) = 0 and coalesce(cardinality(category.content_styles), 0) = 0 then 0 else 1 end,
         coalesce(category.sort_order, 9999),
         t.sort_order,
-        t.text
+        coalesce(requested.text, fallback.text)
     `,
-    [locale, couple?.relationshipType ?? '', couple?.contentPreference ?? ''],
+    [locale, couple?.relationshipType ?? '', couple?.contentPreference ?? '', config.i18nDefaultLocale],
   );
 
   return {

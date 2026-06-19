@@ -60,7 +60,7 @@
     "waitingPartnerEyebrow": "Partner fehlt noch",
     "waitingPartnerTitle": "Dein Paarraum wartet auf deinen Partner.",
     "waitingPartnerText": "Du hast aktuell noch keinen Partner in diesem Paarraum. Der Garten funktioniert erst, wenn sich dein Partner registriert oder einloggt und deinen Paar-Code im Onboarding eingibt.",
-    "waitingPartnerShareText": "Teile diesen Code mit deinem Partner. Sobald er beitritt, koennt ihr gemeinsam an eurem Garten arbeiten.",
+    "waitingPartnerShareText": "Teile diesen Code mit deinem Partner. Sobald er beitritt, könnt ihr gemeinsam an eurem Garten arbeiten.",
     "copyCode": "Code kopieren",
     "inviteModalTitle": "Euer Paarcode ist bereit.",
     "inviteModalText": "Gib diesen Code deinem Partner weiter. Sobald er den Code im Onboarding eingibt, seid ihr beide mit demselben Garten verbunden.",
@@ -398,7 +398,7 @@
       "knowMeAnsweredHit": "{name} hat dich richtig eingeschätzt. Eine besondere Blume ist gewachsen.",
       "knowMeAnsweredMiss": "{name} hat geraten. Nicht getroffen, aber ein neuer Gesprächsanlass.",
       "coupleDisconnected": "{name} hat das Konto gelöscht. Eure Paarung wurde deshalb getrennt. Du kannst dich jetzt neu paaren.",
-      "coupleJoined": "Toll, {name} hat deinen Paarraum betreten. Ihr koennt nun gemeinsam an eurem Garten arbeiten."
+      "coupleJoined": "Toll, {name} hat deinen Paarraum betreten. Ihr könnt nun gemeinsam an eurem Garten arbeiten."
     },
     "states": {
       "unread": "Ungelesen",
@@ -463,9 +463,9 @@
     "push": {
       "eyebrow": "Browser-Push",
       "title": "Push-Benachrichtigungen",
-      "text": "Erhalte neue Herzgarten-Hinweise auch dann, wenn die App gerade nicht offen ist. Die Aktivierung gilt nur fuer dieses Geraet und diesen Browser.",
+      "text": "Erhalte neue Herzgarten-Hinweise auch dann, wenn die App gerade nicht offen ist. Die Aktivierung gilt nur für dieses Gerät und diesen Browser.",
       "modeEyebrow": "Push-Auswahl",
-      "modeText": "Lege fest, welche Hinweise als Push-Nachricht auf deinen Geraeten ankommen.",
+      "modeText": "Lege fest, welche Hinweise als Push-Nachricht auf deinen Geräten ankommen.",
       "modeSaved": "Push-Auswahl wurde gespeichert.",
       "modes": {
         "all": "Alle Benachrichtigungen",
@@ -478,7 +478,7 @@
       "test": "Test senden",
       "testing": "Sendet...",
       "status": {
-        "unsupported": "Dieser Browser unterstuetzt Browser-Push nicht.",
+        "unsupported": "Dieser Browser unterstützt Browser-Push nicht.",
         "serverDisabled": "Browser-Push ist auf dem Server noch nicht konfiguriert.",
         "blocked": "Browser-Push ist im Browser blockiert.",
         "inactive": "Browser-Push ist noch nicht aktiv.",
@@ -616,7 +616,7 @@
       "all": "Alle",
       "allCategories": "Alle Kategorien",
       "category": "Kategorie",
-      "close": "Schliessen",
+      "close": "Schließen",
       "code": "Code",
       "created": "Erstellt",
       "deactivate": "Deaktivieren",
@@ -660,35 +660,36 @@
       },
       "upload": {
         "invalidDimensions": "Das Bild hat nicht die erwarteten Maße.",
-        "invalidImage": "Bitte lade ein gueltiges PNG-, JPEG- oder WebP-Bild hoch."
+        "invalidImage": "Bitte lade ein gültiges PNG-, JPEG- oder WebP-Bild hoch."
       },
       "admin": {
-        "couplePreferencesInvalid": "Paarraum-Einstellungen sind ungueltig.",
+        "couplePreferencesInvalid": "Paarraum-Einstellungen sind ungültig.",
         "messageTemplateNotFound": "Nachrichtenvorlage nicht gefunden.",
-        "messageTemplateInvalid": "Nachrichtenvorlage ist ungueltig.",
-        "preferenceInvalid": "Taxonomie-Daten sind ungueltig.",
-        "categoryInvalid": "Kategorie-Daten sind ungueltig.",
+        "messageTemplateInvalid": "Nachrichtenvorlage ist ungültig.",
+        "preferenceInvalid": "Taxonomie-Daten sind ungültig.",
+        "categoryInvalid": "Kategorie-Daten sind ungültig.",
         "categoryNotFound": "Kategorie nicht gefunden.",
         "categoryInUse": "Kategorie wird noch verwendet.",
-        "contentInvalid": "Inhaltsdaten sind ungueltig.",
+        "contentInvalid": "Inhaltsdaten sind ungültig.",
         "gardenLevelNotFound": "Gartenstufe nicht gefunden.",
         "messageTemplate": {
-          "defaultTranslationRequired": "Die Standard-Uebersetzung darf nicht leer sein.",
+          "defaultTranslationRequired": "Die Standard-Übersetzung darf nicht leer sein.",
+          "defaultDescriptionRequired": "Die Beschreibung der Standardsprache darf nicht leer sein.",
           "placeholderMismatch": "Die Platzhalter stimmen nicht."
         },
         "gardenLevel": {
-          "sequenceMustStartAtOne": "Gartenstufen muessen bei Stufe 1 beginnen.",
-          "sequenceMustBeContiguous": "Gartenstufen muessen lueckenlos sortiert sein.",
-          "intermediatePointsRequired": "Alle Stufen ausser der letzten brauchen positive Punkte bis zur naechsten Stufe.",
-          "pointsMustBePositive": "Punkte bis zur naechsten Stufe muessen positiv sein.",
-          "nameRequired": "Bitte gib einen Namen fuer die Gartenstufe ein.",
+          "sequenceMustStartAtOne": "Gartenstufen müssen bei Stufe 1 beginnen.",
+          "sequenceMustBeContiguous": "Gartenstufen müssen lückenlos sortiert sein.",
+          "intermediatePointsRequired": "Alle Stufen außer der letzten brauchen positive Punkte bis zur nächsten Stufe.",
+          "pointsMustBePositive": "Punkte bis zur nächsten Stufe müssen positiv sein.",
+          "nameRequired": "Bitte gib einen Namen für die Gartenstufe ein.",
           "newLevelPointsRequired": "Neue Stufen brauchen positive Punkte von der bisherigen letzten Stufe bis hierher.",
-          "cannotDeleteFirstStage": "Stufe 1 kann nicht geloescht werden."
+          "cannotDeleteFirstStage": "Stufe 1 kann nicht gelöscht werden."
         },
         "gardenAsset": {
           "keyInvalid": "Der Asset-Key darf nur Kleinbuchstaben, Zahlen und Unterstriche enthalten.",
           "keyExists": "Dieser Asset-Key existiert bereits.",
-          "imageRequired": "Bitte lade ein Bild fuer dieses Garten-Asset hoch.",
+          "imageRequired": "Bitte lade ein Bild für dieses Garten-Asset hoch.",
           "notFound": "Garten-Asset nicht gefunden."
         }
       }
@@ -821,7 +822,7 @@
         "title": "Bitte gib einen Titel ein.",
         "description": "Bitte gib eine Beschreibung ein.",
         "estimatedMinutes": "Minuten müssen größer als 0 sein.",
-        "rewardPoints": "Punkte duerfen nicht negativ sein.",
+        "rewardPoints": "Punkte dürfen nicht negativ sein.",
         "questionText": "Bitte gib die Frage ein.",
         "templateText": "Bitte gib den Vorlagentext ein.",
         "save": "{type} konnte nicht gespeichert werden. Prüfe Pflichtfelder und Kategorie."
@@ -877,19 +878,19 @@
       "backgroundRequiredHelp": "Erforderlich: exakt 700 x 520 px als PNG, JPEG oder WebP.",
       "backgroundOptionalHelp": "Optional: neues Bild ersetzt den aktuellen Hintergrund. Erwartet werden exakt 700 x 520 px.",
       "visual": "Visual",
-      "pointsToNext": "Punkte bis zur naechsten Stufe",
+      "pointsToNext": "Punkte bis zur nächsten Stufe",
       "pointsFromPrevious": "Punkte von der bisherigen letzten Stufe bis hierher",
       "lastStageHelp": "Optional für die letzte Stufe; wird relevant, sobald eine weitere Stufe angelegt wird.",
       "deltaHelp": "Administratoren pflegen Delta-Punkte; Mindestpunkte werden daraus berechnet.",
       "stage": "Stufe",
       "minimumPoints": "Mindestpunkte",
-      "untilNext": "Bis naechste",
+      "untilNext": "Bis nächste",
       "errors": {
         "name": "Bitte gib einen Namen ein.",
         "newPoints": "Bitte gib die Punkte ein, die bis zu dieser neuen Stufe nötig sind.",
         "nextPoints": "Bitte gib für diese Stufe positive Punkte bis zur nächsten Stufe ein.",
         "positivePoints": "Punkte bis zur nächsten Stufe müssen positiv sein.",
-        "accent": "Bitte waehle eine gueltige Akzentfarbe.",
+        "accent": "Bitte wähle eine gültige Akzentfarbe.",
         "background": "Bitte lade ein Hintergrundbild mit 700 x 520 px hoch.",
         "save": "Gartenstufe konnte nicht gespeichert werden.",
         "delete": "Gartenstufe konnte nicht gelöscht werden."
@@ -907,9 +908,9 @@
       "sourceTypesHelp": "Mehrfachauswahl: Strg bzw. Cmd gedrückt halten, um mehrere Quellen zu wählen.",
       "stageUnlock": "Freigabe ab Stufe",
       "unknownStage": "unbekannte Stufe",
-      "size": "Groesse",
+      "size": "Größe",
       "sizeUnknown": "noch nicht ermittelt",
-      "detectedSize": "Bildgroesse: {size}.",
+      "detectedSize": "Bildgröße: {size}.",
       "anchorX": "Anker X",
       "anchorY": "Anker Y",
       "anchorXHelp": "Horizontaler Befestigungspunkt im Bild: 0 = links, 0.5 = Mitte, 1 = rechts.",
@@ -936,9 +937,10 @@
       "key": "Schlüssel",
       "text": "Text",
       "parameters": "Parameter",
+      "saved": "Nachrichtenvorlage gespeichert.",
       "errors": {
         "defaultTranslationRequired": "Die Standard-Übersetzung darf nicht leer sein.",
-        "validation": "Bitte pruefe die markierten Uebersetzungen.",
+        "validation": "Bitte prüfe die markierten Übersetzungen.",
         "save": "Nachrichtenvorlage konnte nicht gespeichert werden."
       }
     },
@@ -948,7 +950,7 @@
       "intro": "Hier kannst du Server-Einstellungen vornehmen.",
       "jwt": {
         "title": "JWT-Tokens",
-        "intro": "Hier steuerst du, wie lange neu ausgestellte JWT-Tokens gueltig bleiben."
+        "intro": "Hier steuerst du, wie lange neu ausgestellte JWT-Tokens gültig bleiben."
       },
       "adminJwtTtlMinutes": "Admin-Token-Laufzeit (Minuten)",
       "userJwtTtlMinutes": "User-Token-Laufzeit (Minuten)",
@@ -956,8 +958,8 @@
       "userJwtTtlHelp": "Erlaubt sind 1 bis 43200 Minuten.",
       "saved": "Einstellungen gespeichert.",
       "errors": {
-        "adminJwtTtl": "Bitte gib fuer Admin-Tokens 1 bis 1440 Minuten ein.",
-        "userJwtTtl": "Bitte gib fuer User-Tokens 1 bis 43200 Minuten ein.",
+        "adminJwtTtl": "Bitte gib für Admin-Tokens 1 bis 1440 Minuten ein.",
+        "userJwtTtl": "Bitte gib für User-Tokens 1 bis 43200 Minuten ein.",
         "save": "Einstellungen konnten nicht gespeichert werden."
       }
     }

@@ -84,6 +84,37 @@ export function translationsFromBody(value: unknown) {
   return value as Record<string, Record<string, unknown>>;
 }
 
+function defaultLocale() {
+  return normalizeLocale(config.i18nDefaultLocale) || 'de';
+}
+
+function contentTranslations(body: Record<string, unknown>) {
+  const translations = translationsFromBody(body.translations);
+  const locale = defaultLocale();
+  translations[locale] ??= {};
+  for (const field of ['text', 'title', 'description', 'questionText'] as const) {
+    const value = normalizeText(body[field]);
+    if (value && !normalizeText(translations[locale]?.[field])) {
+      translations[locale][field] = value;
+    }
+  }
+  return translations;
+}
+
+function requiredTranslation(
+  translations: Record<string, Record<string, unknown>>,
+  fields: string[],
+  error = 'default_locale_translation_required',
+) {
+  const locale = defaultLocale();
+  const translation = translations[locale];
+  if (!translation) throw new Error(error);
+  for (const field of fields) {
+    if (!normalizeText(translation[field])) throw new Error(error);
+  }
+  return { locale, translation };
+}
+
 export async function supportedLocales() {
   const result = await pool.query(
     `
@@ -322,13 +353,15 @@ export async function listDailyQuestions(request: Request) {
   }
   if (search) {
     params.push(`%${search.toLowerCase()}%`);
-    where.push(`lower(q.text) like $${params.length}`);
+    where.push(`lower(default_translation.text) like $${params.length}`);
   }
+  params.push(defaultLocale());
+  const defaultLocaleParam = params.length;
   const result = await pool.query(
     `
       select
         q.id,
-        q.text,
+        default_translation.text,
         q.category,
         q.depth_level as "depthLevel",
         q.long_distance_suitable as "longDistanceSuitable",
@@ -336,9 +369,11 @@ export async function listDailyQuestions(request: Request) {
         coalesce(json_object_agg(t.locale, json_build_object('text', t.text)) filter (where t.locale is not null), '{}'::json) as translations
       from daily_questions q
       left join daily_question_translations t on t.question_id = q.id
+      left join daily_question_translations default_translation
+        on default_translation.question_id = q.id and default_translation.locale = $${defaultLocaleParam}
       ${where.length ? `where ${where.join(' and ')}` : ''}
-      group by q.id
-      order by q.active desc, q.category, q.text
+      group by q.id, default_translation.text
+      order by q.active desc, q.category, default_translation.text
     `,
     params,
   );
@@ -346,7 +381,9 @@ export async function listDailyQuestions(request: Request) {
 }
 
 export async function saveDailyQuestion(body: Record<string, unknown>, id: string = randomUUID()) {
-  const text = normalizeText(body.text);
+  const translations = contentTranslations(body);
+  const { locale, translation } = requiredTranslation(translations, ['text']);
+  const text = normalizeText(translation.text);
   const category = normalizeText(body.category);
   const depthLevel = normalizeInteger(body.depthLevel, 1);
   if (!text || !category || depthLevel < 1 || depthLevel > 4 || !(await categoryExists('daily-questions', category))) {
@@ -355,19 +392,17 @@ export async function saveDailyQuestion(body: Record<string, unknown>, id: strin
 
   await pool.query(
     `
-      insert into daily_questions (id, text, category, depth_level, long_distance_suitable, active)
-      values ($1, $2, $3, $4, $5, $6)
+      insert into daily_questions (id, category, depth_level, long_distance_suitable, active)
+      values ($1, $2, $3, $4, $5)
       on conflict (id) do update set
-        text = excluded.text,
         category = excluded.category,
         depth_level = excluded.depth_level,
         long_distance_suitable = excluded.long_distance_suitable,
         active = excluded.active
     `,
-    [id, text, category, depthLevel, normalizeBoolean(body.longDistanceSuitable), normalizeBoolean(body.active)],
+    [id, category, depthLevel, normalizeBoolean(body.longDistanceSuitable), normalizeBoolean(body.active)],
   );
 
-  const translations = translationsFromBody(body.translations);
   for (const [locale, translation] of Object.entries(translations)) {
     const translatedText = normalizeText(translation.text);
     if (!translatedText) continue;
@@ -381,6 +416,7 @@ export async function saveDailyQuestion(body: Record<string, unknown>, id: strin
     );
   }
 
+  if (!translations[locale]) throw new Error('default_locale_translation_required');
   return id;
 }
 
@@ -398,14 +434,16 @@ export async function listQuests(request: Request) {
   }
   if (search) {
     params.push(`%${search.toLowerCase()}%`);
-    where.push(`(lower(q.title) like $${params.length} or lower(q.description) like $${params.length})`);
+    where.push(`(lower(default_translation.title) like $${params.length} or lower(default_translation.description) like $${params.length})`);
   }
+  params.push(defaultLocale());
+  const defaultLocaleParam = params.length;
   const result = await pool.query(
     `
       select
         q.id,
-        q.title,
-        q.description,
+        default_translation.title,
+        default_translation.description,
         q.category,
         q.estimated_minutes as "estimatedMinutes",
         q.effort_level as "effortLevel",
@@ -416,9 +454,11 @@ export async function listQuests(request: Request) {
         coalesce(json_object_agg(t.locale, json_build_object('title', t.title, 'description', t.description)) filter (where t.locale is not null), '{}'::json) as translations
       from quests q
       left join quest_translations t on t.quest_id = q.id
+      left join quest_translations default_translation
+        on default_translation.quest_id = q.id and default_translation.locale = $${defaultLocaleParam}
       ${where.length ? `where ${where.join(' and ')}` : ''}
-      group by q.id
-      order by coalesce(q.active, true) desc, q.category, q.title
+      group by q.id, default_translation.title, default_translation.description
+      order by coalesce(q.active, true) desc, q.category, default_translation.title
     `,
     params,
   );
@@ -426,8 +466,10 @@ export async function listQuests(request: Request) {
 }
 
 export async function saveQuest(body: Record<string, unknown>, id: string = randomUUID()) {
-  const title = normalizeText(body.title);
-  const description = normalizeText(body.description);
+  const translations = contentTranslations(body);
+  const { translation } = requiredTranslation(translations, ['title', 'description']);
+  const title = normalizeText(translation.title);
+  const description = normalizeText(translation.description);
   const category = normalizeText(body.category);
   const effortLevel = normalizeText(body.effortLevel);
   if (!title || !description || !(await categoryExists('quests', category)) || !effortLevels.has(effortLevel)) {
@@ -437,13 +479,11 @@ export async function saveQuest(body: Record<string, unknown>, id: string = rand
   await pool.query(
     `
       insert into quests (
-        id, title, description, category, estimated_minutes, effort_level, reward_points, reward_seed_type,
+        id, category, estimated_minutes, effort_level, reward_points, reward_seed_type,
         requires_both_partners, active
       )
-      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      values ($1, $2, $3, $4, $5, $6, $7, $8)
       on conflict (id) do update set
-        title = excluded.title,
-        description = excluded.description,
         category = excluded.category,
         estimated_minutes = excluded.estimated_minutes,
         effort_level = excluded.effort_level,
@@ -454,8 +494,6 @@ export async function saveQuest(body: Record<string, unknown>, id: string = rand
     `,
     [
       id,
-      title,
-      description,
       category,
       Math.max(normalizeInteger(body.estimatedMinutes, 10), 1),
       effortLevel,
@@ -466,7 +504,6 @@ export async function saveQuest(body: Record<string, unknown>, id: string = rand
     ],
   );
 
-  const translations = translationsFromBody(body.translations);
   for (const [locale, translation] of Object.entries(translations)) {
     const translatedTitle = normalizeText(translation.title);
     const translatedDescription = normalizeText(translation.description);
@@ -498,13 +535,15 @@ export async function listKnowMeCatalog(request: Request) {
   }
   if (search) {
     params.push(`%${search.toLowerCase()}%`);
-    where.push(`lower(q.question_text) like $${params.length}`);
+    where.push(`lower(default_translation.question_text) like $${params.length}`);
   }
+  params.push(defaultLocale());
+  const defaultLocaleParam = params.length;
   const result = await pool.query(
     `
       select
         q.id,
-        q.question_text as "questionText",
+        default_translation.question_text as "questionText",
         q.category,
         q.active,
         q.sort_order as "sortOrder",
@@ -512,9 +551,11 @@ export async function listKnowMeCatalog(request: Request) {
         coalesce(json_object_agg(t.locale, json_build_object('questionText', t.question_text, 'categoryLabel', t.category_label)) filter (where t.locale is not null), '{}'::json) as translations
       from know_me_catalog_questions q
       left join know_me_catalog_question_translations t on t.catalog_question_id = q.id
+      left join know_me_catalog_question_translations default_translation
+        on default_translation.catalog_question_id = q.id and default_translation.locale = $${defaultLocaleParam}
       ${where.length ? `where ${where.join(' and ')}` : ''}
-      group by q.id
-      order by q.active desc, q.sort_order, q.question_text
+      group by q.id, default_translation.question_text
+      order by q.active desc, q.sort_order, default_translation.question_text
     `,
     params,
   );
@@ -522,7 +563,9 @@ export async function listKnowMeCatalog(request: Request) {
 }
 
 export async function saveKnowMeCatalog(body: Record<string, unknown>, id: string = randomUUID()) {
-  const questionText = normalizeText(body.questionText);
+  const translations = contentTranslations(body);
+  const { translation } = requiredTranslation(translations, ['questionText']);
+  const questionText = normalizeText(translation.questionText);
   const category = normalizeText(body.category);
   if (!questionText || !category || !(await categoryExists('know-me-catalog', category))) {
     throw new Error('invalid know me question');
@@ -530,18 +573,16 @@ export async function saveKnowMeCatalog(body: Record<string, unknown>, id: strin
 
   await pool.query(
     `
-      insert into know_me_catalog_questions (id, question_text, category, active, sort_order)
-      values ($1, $2, $3, $4, $5)
+      insert into know_me_catalog_questions (id, category, active, sort_order)
+      values ($1, $2, $3, $4)
       on conflict (id) do update set
-        question_text = excluded.question_text,
         category = excluded.category,
         active = excluded.active,
         sort_order = excluded.sort_order
     `,
-    [id, questionText, category, normalizeBoolean(body.active), normalizeInteger(body.sortOrder, 0)],
+    [id, category, normalizeBoolean(body.active), normalizeInteger(body.sortOrder, 0)],
   );
 
-  const translations = translationsFromBody(body.translations);
   for (const [locale, translation] of Object.entries(translations)) {
     const translatedQuestion = normalizeText(translation.questionText);
     const categoryLabel = normalizeText(translation.categoryLabel) || category;
@@ -575,13 +616,15 @@ export async function listLoveJarTemplates(request: Request) {
   }
   if (search) {
     params.push(`%${search.toLowerCase()}%`);
-    where.push(`lower(t.text) like $${params.length}`);
+    where.push(`lower(default_translation.text) like $${params.length}`);
   }
+  params.push(defaultLocale());
+  const defaultLocaleParam = params.length;
   const result = await pool.query(
     `
       select
         t.id,
-        t.text,
+        default_translation.text,
         t.category,
         t.active,
         t.sort_order as "sortOrder",
@@ -590,9 +633,11 @@ export async function listLoveJarTemplates(request: Request) {
         coalesce(json_object_agg(tr.locale, json_build_object('text', tr.text)) filter (where tr.locale is not null), '{}'::json) as translations
       from love_jar_templates t
       left join love_jar_template_translations tr on tr.template_id = t.id
+      left join love_jar_template_translations default_translation
+        on default_translation.template_id = t.id and default_translation.locale = $${defaultLocaleParam}
       ${where.length ? `where ${where.join(' and ')}` : ''}
-      group by t.id
-      order by t.active desc, t.sort_order, t.text
+      group by t.id, default_translation.text
+      order by t.active desc, t.sort_order, default_translation.text
     `,
     params,
   );
@@ -600,25 +645,25 @@ export async function listLoveJarTemplates(request: Request) {
 }
 
 export async function saveLoveJarTemplate(body: Record<string, unknown>, id: string = randomUUID()) {
-  const text = normalizeText(body.text);
+  const translations = contentTranslations(body);
+  const { translation } = requiredTranslation(translations, ['text']);
+  const text = normalizeText(translation.text);
   const category = normalizeText(body.category) || 'compliment';
   if (!text || !(await categoryExists('love-jar-templates', category))) throw new Error('invalid love jar template');
 
   await pool.query(
     `
-      insert into love_jar_templates (id, text, category, active, sort_order, updated_at)
-      values ($1, $2, $3, $4, $5, now())
+      insert into love_jar_templates (id, category, active, sort_order, updated_at)
+      values ($1, $2, $3, $4, now())
       on conflict (id) do update set
-        text = excluded.text,
         category = excluded.category,
         active = excluded.active,
         sort_order = excluded.sort_order,
         updated_at = now()
     `,
-    [id, text, category, normalizeBoolean(body.active), normalizeInteger(body.sortOrder, 0)],
+    [id, category, normalizeBoolean(body.active), normalizeInteger(body.sortOrder, 0)],
   );
 
-  const translations = translationsFromBody(body.translations);
   for (const [locale, translation] of Object.entries(translations)) {
     const translatedText = normalizeText(translation.text);
     if (!translatedText) continue;

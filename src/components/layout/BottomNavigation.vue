@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { CalendarHeart, ChevronLeft, ChevronRight, Flower2, Gamepad2, GlassWater, HeartHandshake, Images, Settings } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
+import { useAuthStore } from '@/stores/authStore';
 
 const { t } = useI18n();
+const authStore = useAuthStore();
 const navScroll = ref<HTMLElement | null>(null);
 const canScrollLeft = ref(false);
 const canScrollRight = ref(false);
@@ -17,6 +19,8 @@ const items = [
   { to: '/memories', labelKey: 'nav.memories', icon: Images, testId: 'nav-memories' },
   { to: '/settings', labelKey: 'nav.settings', icon: Settings, testId: 'nav-settings' },
 ];
+
+const visibleItems = computed(() => (authStore.hasCompleteCouple ? items : items.filter((item) => item.to === '/garden')));
 
 function updateScrollIndicators() {
   const element = navScroll.value;
@@ -59,7 +63,7 @@ onBeforeUnmount(() => {
       <ChevronLeft :size="18" aria-hidden="true" />
     </button>
     <nav ref="navScroll" class="bottom-nav" :aria-label="t('nav.main')" @scroll="updateScrollIndicators">
-      <RouterLink v-for="item in items" :key="item.to" :to="item.to" class="nav-item" :data-testid="item.testId">
+      <RouterLink v-for="item in visibleItems" :key="item.to" :to="item.to" class="nav-item" :data-testid="item.testId">
         <component :is="item.icon" :size="20" aria-hidden="true" />
         <span>{{ t(item.labelKey) }}</span>
       </RouterLink>

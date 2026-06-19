@@ -2,6 +2,19 @@ import { z } from 'zod';
 
 export const emptyBodySchema = z.object({}).strict();
 
+export const configResponseSchema = z.object({
+  defaultLocale: z.string(),
+  supportedLocales: z.array(
+    z.object({
+      locale: z.string(),
+      label: z.string(),
+      isDefault: z.boolean(),
+    }),
+  ),
+});
+
+export type ConfigResponse = z.infer<typeof configResponseSchema>;
+
 const trimmedString = z.string().transform((value) => value.trim());
 const trimmedNullableString = z
   .string()

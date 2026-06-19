@@ -560,7 +560,7 @@ test.describe('admin api', () => {
     expect(coupleJoinedBody).toBeTruthy();
     expect(coupleJoinedBody!.requiredParams).toEqual(['name']);
     expect(coupleJoinedBody!.translations.de.text).toBe(
-      'Toll, {name} hat deinen Paarraum betreten. Ihr koennt nun gemeinsam an eurem Garten arbeiten.',
+      'Toll, {name} hat deinen Paarraum betreten. Ihr könnt nun gemeinsam an eurem Garten arbeiten.',
     );
 
     await expectApiError(

@@ -1,4 +1,5 @@
 import type { Queryable } from '../support.repository.js';
+import { config } from '../../config.js';
 import { pool } from '../../db.js';
 
 export async function getProfilePreferences(userId: string) {
@@ -67,34 +68,34 @@ export async function exportCoupleData(coupleId: string, locale: string) {
       ),
       pool.query(
         `
-          select a.*, coalesce(requested.text, fallback.text, q.text) as question
+          select a.*, coalesce(requested.text, fallback.text) as question
           from daily_question_answers a
           join daily_questions q on q.id = a.question_id
           left join daily_question_translations requested
             on requested.question_id = q.id and requested.locale = $2
           left join daily_question_translations fallback
-            on fallback.question_id = q.id and fallback.locale = 'de'
+            on fallback.question_id = q.id and fallback.locale = $3
           where a.couple_id = $1
           order by a.created_at
         `,
-        [coupleId, locale],
+        [coupleId, locale, config.i18nDefaultLocale],
       ),
       pool.query(
         `
           select
             cq.*,
-            coalesce(requested.title, fallback.title, q.title) as title,
-            coalesce(requested.description, fallback.description, q.description) as description
+            coalesce(requested.title, fallback.title) as title,
+            coalesce(requested.description, fallback.description) as description
           from couple_quests cq
           join quests q on q.id = cq.quest_id
           left join quest_translations requested
             on requested.quest_id = q.id and requested.locale = $2
           left join quest_translations fallback
-            on fallback.quest_id = q.id and fallback.locale = 'de'
+            on fallback.quest_id = q.id and fallback.locale = $3
           where cq.couple_id = $1
           order by cq.completed_at nulls last
         `,
-        [coupleId, locale],
+        [coupleId, locale, config.i18nDefaultLocale],
       ),
       pool.query('select * from garden_objects where couple_id = $1 order by created_at', [coupleId]),
       pool.query('select * from love_jar_notes where couple_id = $1 order by created_at', [coupleId]),

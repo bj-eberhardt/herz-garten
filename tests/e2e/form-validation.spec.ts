@@ -1,12 +1,18 @@
-import { expect, test, type Browser, type Locator } from '@playwright/test';
-import { registerAndCreateCouple } from './helpers/auth';
+import { expect, test, type APIRequestContext, type Browser, type Locator } from '@playwright/test';
+import { authenticatePage, setupCoupleByApi } from './helpers/api';
 import { testRunId, testUser } from './helpers/testUsers';
 
-async function setupAuthenticatedPage(browser: Browser, prefix: string) {
+async function setupAuthenticatedPage(browser: Browser, request: APIRequestContext, prefix: string) {
   const runId = testRunId();
+  const { partnerA } = await setupCoupleByApi(
+    request,
+    testUser(`${prefix}-a`, runId),
+    testUser(`${prefix}-b`, runId),
+  );
   const context = await browser.newContext();
   const page = await context.newPage();
-  await registerAndCreateCouple(page, testUser(prefix, runId));
+  await authenticatePage(context, page, partnerA.token);
+  await expect(page.getByTestId('nav-love-jar')).toBeVisible();
   return { context, page };
 }
 
@@ -19,8 +25,8 @@ async function expectRequiredFeedback(locator: Locator) {
     .toBe('rgb(214, 69, 61)');
 }
 
-test('memories marks missing title and does not create an entry', async ({ browser }) => {
-  const { context, page } = await setupAuthenticatedPage(browser, 'validation-memory');
+test('memories marks missing title and does not create an entry', async ({ browser, request }) => {
+  const { context, page } = await setupAuthenticatedPage(browser, request, 'validation-memory');
 
   await page.goto('/memories');
   await page.getByTestId('memory-save').click();
@@ -31,11 +37,12 @@ test('memories marks missing title and does not create an entry', async ({ brows
   await context.close();
 });
 
-test('love jar marks missing note text and does not create a note', async ({ browser }) => {
-  const { context, page } = await setupAuthenticatedPage(browser, 'validation-lovejar');
+test('love jar marks missing note text and does not create a note', async ({ browser, request }) => {
+  const { context, page } = await setupAuthenticatedPage(browser, request, 'validation-lovejar');
 
   await page.goto('/love-jar');
-  await expect(page.getByTestId('love-jar-templates')).toBeVisible();
+  await expect(page.getByTestId('love-jar-note-input')).toBeVisible();
+  await expect(page.getByTestId('love-jar-note-input')).not.toHaveValue('');
   await page.getByTestId('love-jar-note-input').fill('');
   await expect(page.getByTestId('love-jar-note-input')).toHaveValue('');
   await expect(page.getByTestId('love-jar-save')).toBeEnabled();
@@ -47,8 +54,8 @@ test('love jar marks missing note text and does not create a note', async ({ bro
   await context.close();
 });
 
-test('today marks missing answer and does not save it', async ({ browser }) => {
-  const { context, page } = await setupAuthenticatedPage(browser, 'validation-today');
+test('today marks missing answer and does not save it', async ({ browser, request }) => {
+  const { context, page } = await setupAuthenticatedPage(browser, request, 'validation-today');
 
   await page.goto('/today');
   await page.getByTestId('today-answer-input').fill('');
@@ -76,8 +83,8 @@ test('onboarding marks required register and login fields', async ({ page }) => 
   await expectRequiredFeedback(page.getByTestId('auth-password'));
 });
 
-test('know me marks missing question and first two answers', async ({ browser }) => {
-  const { context, page } = await setupAuthenticatedPage(browser, 'validation-knowme');
+test('know me marks missing question and first two answers', async ({ browser, request }) => {
+  const { context, page } = await setupAuthenticatedPage(browser, request, 'validation-knowme');
 
   await page.goto('/know-me');
   await page.getByTestId('know-me-create-submit').click();

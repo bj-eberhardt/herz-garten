@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Queryable } from '../support.repository.js';
+import { config } from '../../config.js';
 import { pool } from '../../db.js';
 
 export interface ActiveQuestIdRow {
@@ -43,21 +44,21 @@ export async function acceptQuestForCouple(coupleId: string, questId: string) {
   );
 }
 
-export async function findActiveQuestForCompletion(client: Queryable, questId: string, locale = 'de') {
+export async function findActiveQuestForCompletion(client: Queryable, questId: string, locale = config.i18nDefaultLocale) {
   const result = await client.query<ActiveQuestForCompletion>(
     `
       select
         q.id,
-        coalesce(requested.title, fallback.title, q.title) as title,
+        coalesce(requested.title, fallback.title) as title,
         q.category,
         q.reward_points as "rewardPoints",
         q.requires_both_partners as "requiresBothPartners"
       from quests q
       left join quest_translations requested on requested.quest_id = q.id and requested.locale = $2
-      left join quest_translations fallback on fallback.quest_id = q.id and fallback.locale = 'de'
+      left join quest_translations fallback on fallback.quest_id = q.id and fallback.locale = $3
       where q.id = $1 and coalesce(q.active, true) = true
     `,
-    [questId, locale],
+    [questId, locale, config.i18nDefaultLocale],
   );
   return result.rows[0] ?? null;
 }

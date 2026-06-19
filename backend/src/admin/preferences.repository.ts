@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
+import { config as appConfig } from '../config.js';
 import { pool } from '../db.js';
 
 export type PreferenceKind = 'relationshipModes' | 'contentStyles';
 
-const config = {
+const preferenceTables = {
   relationshipModes: {
     table: 'relationship_modes',
     translationTable: 'relationship_mode_translations',
@@ -34,15 +35,30 @@ function translationsFromBody(value: unknown) {
   return value as Record<string, Record<string, unknown>>;
 }
 
+function defaultLocale() {
+  return appConfig.i18nDefaultLocale;
+}
+
+function preferenceTranslations(body: Record<string, unknown>) {
+  const translations = translationsFromBody(body.translations);
+  const locale = defaultLocale();
+  translations[locale] ??= {};
+  const label = normalizeText(body.label);
+  if (label && !normalizeText(translations[locale].label)) {
+    translations[locale].label = label;
+  }
+  return translations;
+}
+
 export async function listPreferences(kind: PreferenceKind, locale = 'de', activeOnly = false) {
-  const preference = config[kind];
+  const preference = preferenceTables[kind];
   const result = await pool.query(
     `
       select
         item.id,
         item.value,
-        coalesce(requested.label, fallback.label, item.label) as label,
-        item.label as "defaultLabel",
+        coalesce(requested.label, fallback.label) as label,
+        fallback.label as "defaultLabel",
         item.active,
         item.sort_order as "sortOrder",
         item.created_at as "createdAt",
@@ -51,18 +67,18 @@ export async function listPreferences(kind: PreferenceKind, locale = 'de', activ
       from ${preference.table} item
       left join ${preference.translationTable} t on t.${preference.idColumn} = item.id
       left join ${preference.translationTable} requested on requested.${preference.idColumn} = item.id and requested.locale = $1
-      left join ${preference.translationTable} fallback on fallback.${preference.idColumn} = item.id and fallback.locale = 'de'
+      left join ${preference.translationTable} fallback on fallback.${preference.idColumn} = item.id and fallback.locale = $2
       ${activeOnly ? 'where item.active = true' : ''}
       group by item.id, requested.label, fallback.label
       order by item.active desc, item.sort_order, label
     `,
-    [locale],
+    [locale, defaultLocale()],
   );
   return result.rows;
 }
 
 export async function preferenceValueExists(kind: PreferenceKind, value: string, activeOnly = true) {
-  const preference = config[kind];
+  const preference = preferenceTables[kind];
   const result = await pool.query(
     `select 1 from ${preference.table} where value = $1 ${activeOnly ? 'and active = true' : ''} limit 1`,
     [value],
@@ -71,27 +87,26 @@ export async function preferenceValueExists(kind: PreferenceKind, value: string,
 }
 
 export async function savePreference(kind: PreferenceKind, body: Record<string, unknown>, id: string = randomUUID()) {
-  const preference = config[kind];
+  const preference = preferenceTables[kind];
   const value = normalizeText(body.value).toLowerCase().replaceAll(' ', '_');
-  const label = normalizeText(body.label);
+  const translations = preferenceTranslations(body);
+  const label = normalizeText(translations[defaultLocale()]?.label);
   if (!/^[a-z0-9_-]+$/.test(value) || !label) {
     throw new Error('invalid preference');
   }
 
   await pool.query(
     `
-      insert into ${preference.table} (id, value, label, active, sort_order, updated_at)
-      values ($1, $2, $3, $4, $5, now())
+      insert into ${preference.table} (id, value, active, sort_order, updated_at)
+      values ($1, $2, $3, $4, now())
       on conflict (id) do update set
-        label = excluded.label,
         active = excluded.active,
         sort_order = excluded.sort_order,
         updated_at = now()
     `,
-    [id, value, label, normalizeBoolean(body.active), normalizeInteger(body.sortOrder, 0)],
+    [id, value, normalizeBoolean(body.active), normalizeInteger(body.sortOrder, 0)],
   );
 
-  const translations = translationsFromBody(body.translations);
   for (const [locale, translation] of Object.entries(translations)) {
     const translatedLabel = normalizeText(translation.label);
     if (!translatedLabel) continue;

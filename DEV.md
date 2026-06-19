@@ -58,6 +58,26 @@ Hinweis: `docker compose down -v` loescht neben der Datenbank auch das Upload-Vo
 
 ---
 
+## Content-i18n Architektur
+
+User-facing Seed-Content speichert Texte nur noch in den jeweiligen `_translations`-Tabellen. Die Basistabellen enthalten nur Struktur- und Steuerfelder:
+
+- `daily_questions` -> `daily_question_translations.text`
+- `quests` -> `quest_translations.title`, `quest_translations.description`
+- `love_jar_templates` -> `love_jar_template_translations.text`
+- `know_me_catalog_questions` -> `know_me_catalog_question_translations.question_text`
+- `garden_levels` -> `garden_level_translations.name`
+- `relationship_modes` -> `relationship_mode_translations.label`
+- `content_styles` -> `content_style_translations.label`
+- `content_categories` -> `content_category_translations.label`
+- `message_templates` -> `message_template_translations.text`, `message_template_translations.description`
+
+Die Default-Sprache kommt aus `I18N_DEFAULT_LOCALE` und faellt ohne Env-Var auf `de` zurueck. Admin-Schreibpfade muessen immer eine Translation fuer diese Default-Locale mitsenden. Public Queries nutzen `coalesce(requested, default)` und fallen nicht mehr auf Textspalten der Basistabellen zurueck.
+
+Migration `0003_remove_text_columns_use_translations_only.sql` kopiert vorhandene deutsche Basistexte zuerst in die Translation-Tabellen, legt Composite-Indizes fuer `(content_id, locale)` an und entfernt danach die alten Textspalten. Migration `0004_remove_taxonomy_label_columns_use_translations_only.sql` macht dasselbe fuer Taxonomy-Labels. Migration `0005_message_templates_translation_only_descriptions_and_en.sql` verschiebt Message-Template-Beschreibungen in die Translation-Tabelle und legt fehlende englische Notification-Defaults an.
+
+---
+
 ## E2E-Tests mit Playwright
 
 Die Playwright-Tests sind im Repo konfiguriert und nutzen ein eigenes Docker-Setup, damit sie vom lokalen Dev-Stack isoliert laufen.

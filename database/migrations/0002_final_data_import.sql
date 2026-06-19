@@ -1037,7 +1037,7 @@ INSERT INTO public.message_template_translations (template_key, locale, text, cr
 INSERT INTO public.message_template_translations (template_key, locale, text, created_at, updated_at) VALUES ('notifications.bodies.questCompleted', 'de', 'Eure Aufgabe "{title}" hat euren Garten wachsen lassen.', '2026-06-18 04:26:14.696561+00', '2026-06-18 04:26:14.696561+00');
 INSERT INTO public.message_template_translations (template_key, locale, text, created_at, updated_at) VALUES ('notifications.bodies.loveJarNote', 'de', '{name} hat etwas in euer Liebesglas gelegt.', '2026-06-18 04:26:14.696561+00', '2026-06-18 04:26:14.994909+00');
 INSERT INTO public.message_template_translations (template_key, locale, text, created_at, updated_at) VALUES ('notifications.titles.coupleJoined', 'de', 'Dein Partner ist da', '2026-06-18 04:26:15.20095+00', '2026-06-18 04:26:15.20095+00');
-INSERT INTO public.message_template_translations (template_key, locale, text, created_at, updated_at) VALUES ('notifications.bodies.coupleJoined', 'de', 'Toll, {name} hat deinen Haarraum betreten. Ihr könnt nun gemeinsam an eurem Garten arbeiten.', '2026-06-18 04:26:15.20095+00', '2026-06-18 04:26:15.20095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, created_at, updated_at) VALUES ('notifications.bodies.coupleJoined', 'de', 'Toll, {name} hat deinen Paarraum betreten. Ihr könnt nun gemeinsam an eurem Garten arbeiten.', '2026-06-18 04:26:15.20095+00', '2026-06-18 04:26:15.20095+00');
 
 
 

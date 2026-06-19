@@ -46,6 +46,8 @@ const formAnchor = ref<HTMLElement | null>(null);
 const form = reactive<CategoryItem>(emptyForm('daily-questions'));
 
 const filteredItems = computed(() => items.value.filter((item) => item.contentType === selectedType.value));
+const defaultLocale = computed(() => locales.value.find((locale) => locale.isDefault) ?? locales.value[0] ?? null);
+const additionalLocales = computed(() => locales.value.filter((locale) => locale.locale !== defaultLocale.value?.locale));
 const relationshipModeOptions = ref<Array<{ value: string; label: string; active: boolean }>>([]);
 const contentStyleOptions = ref<Array<{ value: string; label: string; active: boolean }>>([]);
 
@@ -57,10 +59,11 @@ function replaceForm(nextForm: CategoryItem) {
 }
 
 function categoryPayload() {
+  const defaultTranslation = defaultLocale.value ? form.translations[defaultLocale.value.locale] ?? {} : {};
   return {
     contentType: form.contentType,
     value: form.value,
-    label: form.label,
+    label: defaultTranslation.label ?? form.label,
     active: form.active,
     sortOrder: form.sortOrder,
     relationshipModes: form.relationshipModes,
@@ -86,6 +89,9 @@ function ensureTranslations() {
   form.translations ??= {};
   for (const locale of locales.value) {
     form.translations[locale.locale] ??= {};
+  }
+  if (defaultLocale.value && form.label && !form.translations[defaultLocale.value.locale].label) {
+    form.translations[defaultLocale.value.locale].label = form.label;
   }
 }
 
@@ -149,7 +155,8 @@ function localizeAdminError(caught: unknown, fallbackKey: string) {
 }
 
 async function saveCategory() {
-  if (!form.value.trim() || !form.label.trim()) {
+  const defaultLabel = defaultLocale.value ? form.translations[defaultLocale.value.locale]?.label : '';
+  if (!form.value.trim() || !defaultLabel?.trim()) {
     error.value = t('admin.categories.errors.required');
     return;
   }
@@ -213,7 +220,6 @@ onMounted(async () => {
         <input v-model="form.value" :disabled="Boolean(form.id)" placeholder="z.B. ritual" data-testid="admin-category-value" />
         <small>{{ t('admin.categories.technicalValueHelp') }}</small>
       </label>
-      <label>{{ t('admin.common.label') }}<input v-model="form.label" data-testid="admin-category-label" /></label>
       <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" /></label>
       <label>
         {{ t('admin.categories.relationshipModes') }}
@@ -231,9 +237,20 @@ onMounted(async () => {
       </label>
       <label class="admin-checkbox"><input v-model="form.active" type="checkbox" /> {{ t('admin.common.active') }}</label>
 
-      <section class="admin-translation-box">
+      <fieldset v-if="defaultLocale" class="admin-translation-box admin-default-translation">
+        <legend>
+          {{ defaultLocale.label }} [{{ defaultLocale.locale }}]
+          <span class="admin-required-badge">{{ t('admin.messages.standardSuffix') }}</span>
+        </legend>
+        <label>
+          {{ t('admin.common.label') }}
+          <input v-model="form.translations[defaultLocale.locale].label" data-testid="admin-category-label" />
+        </label>
+      </fieldset>
+
+      <section v-if="additionalLocales.length > 0" class="admin-translation-box">
         <h2>{{ t('admin.common.translations') }}</h2>
-        <div v-for="locale in locales" :key="locale.locale" class="admin-translation-row">
+        <div v-for="locale in additionalLocales" :key="locale.locale" class="admin-translation-row">
           <strong>{{ locale.locale }}</strong>
           <input v-model="form.translations[locale.locale].label" :placeholder="t('admin.common.labelPlaceholder', { locale: locale.locale })" />
         </div>

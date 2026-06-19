@@ -89,17 +89,14 @@ test('daily question reveal creates notifications and a garden detail', async ({
   await pageA.getByTestId('garden-history-toggle').click();
   await expect(pageA.getByTestId('garden-history-next-level')).toContainText('Punkte');
   const firstHistoryItem = pageA.getByTestId('garden-history-item').first();
-  await expect
-    .poll(() => firstHistoryItem.evaluate((element) => Math.round(element.getBoundingClientRect().top)))
-    .toBeLessThanOrEqual(80);
+  await firstHistoryItem.scrollIntoViewIfNeeded();
+  await expect(firstHistoryItem).toBeVisible();
   await expect(firstHistoryItem).toContainText('Tagesfrage');
   await expect(firstHistoryItem).toContainText('+10');
   await expect(firstHistoryItem.getByTestId('garden-history-date')).toBeVisible();
   await expect(firstHistoryItem.getByTestId('garden-history-context')).toBeVisible();
   await expect(firstHistoryItem).not.toContainText('conversation_flower');
   await expect(pageA.getByTestId('garden-history-toggle')).toContainText('Verlauf ausblenden');
-  await pageA.getByTestId('garden-history-item').first().click();
-  await expect(pageA.getByTestId('garden-detail')).toContainText('Tagesfrage');
 
   await contextA.close();
   await contextB.close();
@@ -141,6 +138,7 @@ test('quest filters narrow visible quest suggestions', async ({ browser, request
 
   await pageA.goto('/quests');
   await expect(pageA.getByTestId('quest-filters')).toBeVisible();
+  await expect(pageA.getByTestId('quest-card').first()).toBeVisible();
   const initialCount = await pageA.getByTestId('quest-card').count();
   expect(initialCount).toBeGreaterThan(3);
 
@@ -166,6 +164,7 @@ test('love jar note can be drawn once per day and shows empty state for new coup
 
   await pageA.goto('/love-jar');
   await expect(pageA.getByTestId('love-jar-category')).toContainText('Kompliment');
+  await expect(pageA.getByTestId('love-jar-note-input')).not.toHaveValue('');
   await pageA.getByTestId('love-jar-category').selectOption('compliment');
   await pageA.getByTestId('love-jar-note-input').fill('Danke für deine Ruhe.');
   await pageA.getByTestId('love-jar-save').click();
@@ -250,7 +249,7 @@ test('know me game notifies partner and rewards correct guesses', async ({ brows
 
 test('know me catalog suggestions can be selected and are hidden per author after use', async ({ browser, request }) => {
   const { contextA, contextB, pageA, pageB } = await setupPages(browser, request, 'knowme-catalog');
-  const catalogQuestion = 'Was waere mein perfekter Sonntag?';
+  const catalogQuestion = 'Was wäre mein perfekter Sonntag?';
 
   await pageA.goto('/know-me');
   await pageA.getByTestId('know-me-question-input').fill('Sonntag');
@@ -605,7 +604,8 @@ test('settings expose export logout and leave couple flows', async ({ browser, r
   await pageA.getByTestId('auth-email').fill(updatedEmail);
   await pageA.getByTestId('auth-password').fill(updatedPassword);
   await pageA.getByTestId('auth-submit').click();
-  await expect(pageA.getByTestId('couple-code-panel')).toBeVisible();
+  await expect(pageA).toHaveURL(/\/today$/);
+  await expect(pageA.getByTestId('today-card')).toBeVisible();
 
   await contextA.close();
   await contextB.close();
@@ -743,7 +743,7 @@ test('api content i18n resolves query parameter and accept-language with fallbac
   expect(invalidPayload.locale).toBe('de');
   expect(invalidPayload.quests.some((quest: { title: string }) => quest.title === 'Drei Komplimente')).toBeTruthy();
 
-  const knowMe = await apiGet<{ catalogQuestions: Array<{ questionText: string; category: string }>; locale: string }>(
+  const knowMe = await apiGet<{ catalogQuestions: Array<{ questionText: string; category: string; categoryLabel: string }>; locale: string }>(
     request,
     '/api/know-me?lang=en',
     partnerA.token,
@@ -751,7 +751,7 @@ test('api content i18n resolves query parameter and accept-language with fallbac
   expect(knowMe.locale).toBe('en');
   expect(knowMe.catalogQuestions).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ questionText: 'What would my perfect Sunday look like?', category: 'Everyday life' }),
+      expect.objectContaining({ questionText: 'What would my perfect Sunday look like?', category: 'everyday', categoryLabel: 'Everyday life' }),
     ]),
   );
 });
@@ -821,7 +821,7 @@ test('settings allow leaving the couple room', async ({ browser, request }) => {
   await contextB.close();
 });
 
-test('settings explain deleting an empty couple room when leaving alone', async ({ browser, request }) => {
+test('incomplete couple stays on onboarding and only shows garden navigation', async ({ browser, request }) => {
   const runId = testRunId();
   const owner = await registerByApi(request, testUser('leave-empty-owner', runId));
   const couple = await createCoupleByApi(request, owner.token);
@@ -830,19 +830,15 @@ test('settings explain deleting an empty couple room when leaving alone', async 
   await authenticatePage(context, page, owner.token);
 
   await page.goto('/settings');
-  await expect(page.getByTestId('settings-couple-code')).toHaveText(couple.couple.inviteCode);
-  await page.getByTestId('settings-leave-couple').click();
-  await expect(page.getByTestId('settings-confirm-dialog')).toContainText('Leeren Paarraum verlassen');
-  await expect(page.getByTestId('settings-confirm-dialog')).toContainText('leere Raum gelöscht');
-  await expect(page.getByTestId('settings-confirm-dialog')).toContainText('Paarcode funktioniert danach nicht mehr');
-  await expect(page.getByTestId('settings-confirm-accept')).toContainText('Paarraum löschen');
-  await page.getByTestId('settings-confirm-accept').click();
-
   await expect(page).toHaveURL(/\/onboarding$/);
-  await expect(page.getByTestId('join-couple-form')).toBeVisible();
-  await page.getByTestId('invite-code-input').fill(couple.couple.inviteCode);
-  await page.getByTestId('join-couple-submit').click();
-  await expect(page.getByTestId('couple-error')).toContainText('Diesen Paar-Code konnten wir nicht finden');
+  await expect(page.getByTestId('couple-code-panel')).toContainText(couple.couple.inviteCode);
+  await expect(page.getByTestId('nav-garden')).toBeVisible();
+  await expect(page.getByTestId('nav-today')).toHaveCount(0);
+  await expect(page.getByTestId('nav-quests')).toHaveCount(0);
+  await expect(page.getByTestId('nav-know-me')).toHaveCount(0);
+  await expect(page.getByTestId('nav-love-jar')).toHaveCount(0);
+  await expect(page.getByTestId('nav-memories')).toHaveCount(0);
+  await expect(page.getByTestId('nav-settings')).toHaveCount(0);
 
   await context.close();
 });

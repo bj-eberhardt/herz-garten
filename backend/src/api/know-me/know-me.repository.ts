@@ -1,18 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import type { Queryable } from '../support.repository.js';
+import { config } from '../../config.js';
 
 export async function findCatalogQuestionText(client: Queryable, catalogQuestionId: string, locale: string) {
   const result = await client.query(
     `
-      select coalesce(requested.question_text, fallback.question_text, c.question_text) as "questionText"
+      select coalesce(requested.question_text, fallback.question_text) as "questionText"
       from know_me_catalog_questions c
       left join know_me_catalog_question_translations requested
         on requested.catalog_question_id = c.id and requested.locale = $2
       left join know_me_catalog_question_translations fallback
-        on fallback.catalog_question_id = c.id and fallback.locale = 'de'
+        on fallback.catalog_question_id = c.id and fallback.locale = $3
       where c.id = $1 and c.active = true
     `,
-    [catalogQuestionId, locale],
+    [catalogQuestionId, locale, config.i18nDefaultLocale],
   );
   return result.rows[0] ?? null;
 }

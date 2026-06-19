@@ -43,6 +43,8 @@ const form = reactive<PreferenceItem>(emptyForm());
 
 const currentItems = computed(() => items.value[selectedKind.value]);
 const currentKindLabel = computed(() => preferenceKinds.value.find((kind) => kind.id === selectedKind.value)?.label ?? '');
+const defaultLocale = computed(() => locales.value.find((locale) => locale.isDefault) ?? locales.value[0] ?? null);
+const additionalLocales = computed(() => locales.value.filter((locale) => locale.locale !== defaultLocale.value?.locale));
 
 function replaceForm(nextForm: PreferenceItem) {
   for (const key of Object.keys(form)) {
@@ -52,9 +54,10 @@ function replaceForm(nextForm: PreferenceItem) {
 }
 
 function preferencePayload() {
+  const defaultTranslation = defaultLocale.value ? form.translations[defaultLocale.value.locale] ?? {} : {};
   return {
     value: form.value,
-    label: form.label,
+    label: defaultTranslation.label ?? form.label,
     active: form.active,
     sortOrder: form.sortOrder,
     translations: form.translations,
@@ -75,6 +78,9 @@ function ensureTranslations() {
   form.translations ??= {};
   for (const locale of locales.value) {
     form.translations[locale.locale] ??= {};
+  }
+  if (defaultLocale.value && form.label && !form.translations[defaultLocale.value.locale].label) {
+    form.translations[defaultLocale.value.locale].label = form.label;
   }
 }
 
@@ -135,7 +141,8 @@ function localizeAdminError(caught: unknown, fallbackKey: string) {
 }
 
 async function savePreference() {
-  if (!form.value.trim() || !form.label.trim()) {
+  const defaultLabel = defaultLocale.value ? form.translations[defaultLocale.value.locale]?.label : '';
+  if (!form.value.trim() || !defaultLabel?.trim()) {
     error.value = t('admin.taxonomies.errors.required');
     return;
   }
@@ -186,13 +193,23 @@ onMounted(async () => {
         <input v-model="form.value" :disabled="Boolean(form.id)" data-testid="admin-preference-value" />
         <small>{{ t('admin.taxonomies.technicalValueHelp') }}</small>
       </label>
-      <label>{{ t('admin.common.label') }}<input v-model="form.label" data-testid="admin-preference-label" /></label>
       <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" /></label>
       <label class="admin-checkbox"><input v-model="form.active" type="checkbox" /> {{ t('admin.common.active') }}</label>
 
-      <section class="admin-translation-box">
+      <fieldset v-if="defaultLocale" class="admin-translation-box admin-default-translation">
+        <legend>
+          {{ defaultLocale.label }} [{{ defaultLocale.locale }}]
+          <span class="admin-required-badge">{{ t('admin.messages.standardSuffix') }}</span>
+        </legend>
+        <label>
+          {{ t('admin.common.label') }}
+          <input v-model="form.translations[defaultLocale.locale].label" data-testid="admin-preference-label" />
+        </label>
+      </fieldset>
+
+      <section v-if="additionalLocales.length > 0" class="admin-translation-box">
         <h2>{{ t('admin.common.translations') }}</h2>
-        <div v-for="locale in locales" :key="locale.locale" class="admin-translation-row">
+        <div v-for="locale in additionalLocales" :key="locale.locale" class="admin-translation-row">
           <strong>{{ locale.locale }}</strong>
           <input v-model="form.translations[locale.locale].label" :placeholder="t('admin.common.labelPlaceholder', { locale: locale.locale })" />
         </div>

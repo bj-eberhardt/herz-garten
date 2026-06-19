@@ -15,6 +15,7 @@ export const config = {
   port: Number(process.env.PORT ?? 3000),
   databaseUrl: process.env.DATABASE_URL ?? 'postgresql://herzgarten:herzgarten@localhost:5432/herzgarten',
   migrationsDir: process.env.MIGRATIONS_DIR ?? '../database/migrations',
+  i18nDefaultLocale: process.env.I18N_DEFAULT_LOCALE ?? 'de',
   jwtSecret: process.env.JWT_SECRET ?? defaultJwtSecret,
   adminPassword: process.env.ADMIN_PASSWORD ?? defaultAdminPassword,
   adminJwtSecret: process.env.ADMIN_JWT_SECRET ?? process.env.JWT_SECRET ?? defaultJwtSecret,

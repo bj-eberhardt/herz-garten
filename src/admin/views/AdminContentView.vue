@@ -66,6 +66,7 @@ const form = reactive<ContentItem>(emptyForm('daily-questions'));
 const currentTypeLabel = computed(() => contentTypes.value.find((type) => type.id === selectedType.value)?.label ?? '');
 const currentCategories = computed(() => categories.value.filter((category) => category.contentType === selectedType.value && category.active));
 const defaultLocale = computed(() => locales.value.find((locale) => locale.isDefault) ?? locales.value[0] ?? null);
+const additionalLocales = computed(() => locales.value.filter((locale) => locale.locale !== defaultLocale.value?.locale));
 const defaultLanguageHint = computed(() =>
   defaultLocale.value
     ? t('admin.content.defaultLanguageHint', { label: defaultLocale.value.label, locale: defaultLocale.value.locale })
@@ -79,12 +80,17 @@ function replaceForm(nextForm: ContentItem) {
   Object.assign(form, nextForm);
 }
 
+function categoryFor(value: string | undefined) {
+  return currentCategories.value.find((category) => category.value === value);
+}
+
 function contentPayload() {
+  const defaultTranslation = defaultLocale.value ? form.translations[defaultLocale.value.locale] ?? {} : {};
   return {
-    text: form.text,
-    title: form.title,
-    description: form.description,
-    questionText: form.questionText,
+    text: defaultTranslation.text ?? form.text,
+    title: defaultTranslation.title ?? form.title,
+    description: defaultTranslation.description ?? form.description,
+    questionText: defaultTranslation.questionText ?? form.questionText,
     category: form.category,
     depthLevel: form.depthLevel,
     longDistanceSuitable: form.longDistanceSuitable,
@@ -124,6 +130,13 @@ function ensureTranslations() {
   for (const locale of locales.value) {
     form.translations[locale.locale] ??= {};
   }
+  if (defaultLocale.value) {
+    const translation = form.translations[defaultLocale.value.locale];
+    if (form.text && !translation.text) translation.text = form.text;
+    if (form.title && !translation.title) translation.title = form.title;
+    if (form.description && !translation.description) translation.description = form.description;
+    if (form.questionText && !translation.questionText) translation.questionText = form.questionText;
+  }
 }
 
 function resetForm(open = false) {
@@ -155,21 +168,22 @@ async function scrollToForm() {
 function validateForm() {
   const nextErrors: Record<string, string> = {};
   if (!form.category) nextErrors.category = t('admin.content.errors.category');
+  const defaultTranslation = defaultLocale.value ? form.translations[defaultLocale.value.locale] ?? {} : {};
 
   if (selectedType.value === 'daily-questions') {
-    if (!form.text?.trim()) nextErrors.text = t('admin.content.errors.text');
+    if (!defaultTranslation.text?.trim()) nextErrors.text = t('admin.content.errors.text');
     if (!form.depthLevel || form.depthLevel < 1 || form.depthLevel > 4) nextErrors.depthLevel = t('admin.content.errors.depthLevel');
   }
   if (selectedType.value === 'quests') {
-    if (!form.title?.trim()) nextErrors.title = t('admin.content.errors.title');
-    if (!form.description?.trim()) nextErrors.description = t('admin.content.errors.description');
+    if (!defaultTranslation.title?.trim()) nextErrors.title = t('admin.content.errors.title');
+    if (!defaultTranslation.description?.trim()) nextErrors.description = t('admin.content.errors.description');
     if (!form.estimatedMinutes || form.estimatedMinutes < 1) nextErrors.estimatedMinutes = t('admin.content.errors.estimatedMinutes');
     if (!form.rewardPoints || form.rewardPoints < 0) nextErrors.rewardPoints = t('admin.content.errors.rewardPoints');
   }
-  if (selectedType.value === 'know-me-catalog' && !form.questionText?.trim()) {
+  if (selectedType.value === 'know-me-catalog' && !defaultTranslation.questionText?.trim()) {
     nextErrors.questionText = t('admin.content.errors.questionText');
   }
-  if (selectedType.value === 'love-jar-templates' && !form.text?.trim()) {
+  if (selectedType.value === 'love-jar-templates' && !defaultTranslation.text?.trim()) {
     nextErrors.text = t('admin.content.errors.templateText');
   }
 
@@ -278,11 +292,17 @@ onMounted(async () => {
       </label>
 
       <template v-if="selectedType === 'daily-questions'">
-        <label>
-          {{ t('admin.content.defaultText') }}
-          <input v-model="form.text" data-testid="admin-content-text" />
-          <small v-if="errors.text" class="admin-field-error">{{ errors.text }}</small>
-        </label>
+        <fieldset v-if="defaultLocale" class="admin-translation-box admin-default-translation">
+          <legend>
+            {{ defaultLocale.label }} [{{ defaultLocale.locale }}]
+            <span class="admin-required-badge">{{ t('admin.messages.standardSuffix') }}</span>
+          </legend>
+          <label>
+            {{ t('admin.content.defaultText') }}
+            <input v-model="form.translations[defaultLocale.locale].text" data-testid="admin-content-text" />
+            <small v-if="errors.text" class="admin-field-error">{{ errors.text }}</small>
+          </label>
+        </fieldset>
         <label>
           {{ t('admin.content.depth') }}
           <input v-model.number="form.depthLevel" min="1" max="4" type="number" />
@@ -297,8 +317,14 @@ onMounted(async () => {
       </template>
 
       <template v-if="selectedType === 'quests'">
-        <label>{{ t('admin.content.defaultTitle') }}<input v-model="form.title" data-testid="admin-content-title" /><small v-if="errors.title" class="admin-field-error">{{ errors.title }}</small></label>
-        <label>{{ t('admin.content.defaultDescription') }}<textarea v-model="form.description" rows="3" data-testid="admin-content-description" /><small v-if="errors.description" class="admin-field-error">{{ errors.description }}</small></label>
+        <fieldset v-if="defaultLocale" class="admin-translation-box admin-default-translation">
+          <legend>
+            {{ defaultLocale.label }} [{{ defaultLocale.locale }}]
+            <span class="admin-required-badge">{{ t('admin.messages.standardSuffix') }}</span>
+          </legend>
+          <label>{{ t('admin.content.defaultTitle') }}<input v-model="form.translations[defaultLocale.locale].title" data-testid="admin-content-title" /><small v-if="errors.title" class="admin-field-error">{{ errors.title }}</small></label>
+          <label>{{ t('admin.content.defaultDescription') }}<textarea v-model="form.translations[defaultLocale.locale].description" rows="3" data-testid="admin-content-description" /><small v-if="errors.description" class="admin-field-error">{{ errors.description }}</small></label>
+        </fieldset>
         <label>{{ t('admin.content.minutes') }}<input v-model.number="form.estimatedMinutes" min="1" type="number" /><small v-if="errors.estimatedMinutes" class="admin-field-error">{{ errors.estimatedMinutes }}</small></label>
         <label>
           {{ t('admin.content.effort') }}
@@ -314,20 +340,33 @@ onMounted(async () => {
       </template>
 
       <template v-if="selectedType === 'know-me-catalog'">
-        <label>{{ t('admin.content.defaultQuestion') }}<input v-model="form.questionText" data-testid="admin-content-question-text" /><small v-if="errors.questionText" class="admin-field-error">{{ errors.questionText }}</small></label>
+        <fieldset v-if="defaultLocale" class="admin-translation-box admin-default-translation">
+          <legend>
+            {{ defaultLocale.label }} [{{ defaultLocale.locale }}]
+            <span class="admin-required-badge">{{ t('admin.messages.standardSuffix') }}</span>
+          </legend>
+          <label>{{ t('admin.content.defaultQuestion') }}<input v-model="form.translations[defaultLocale.locale].questionText" data-testid="admin-content-question-text" /><small v-if="errors.questionText" class="admin-field-error">{{ errors.questionText }}</small></label>
+          <label>{{ t('admin.content.categoryLabelPlaceholder', { locale: defaultLocale.locale }) }}<input v-model="form.translations[defaultLocale.locale].categoryLabel" /></label>
+        </fieldset>
         <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" /></label>
       </template>
 
       <template v-if="selectedType === 'love-jar-templates'">
-        <label>{{ t('admin.content.defaultText') }}<input v-model="form.text" data-testid="admin-content-love-jar-text" /><small v-if="errors.text" class="admin-field-error">{{ errors.text }}</small></label>
+        <fieldset v-if="defaultLocale" class="admin-translation-box admin-default-translation">
+          <legend>
+            {{ defaultLocale.label }} [{{ defaultLocale.locale }}]
+            <span class="admin-required-badge">{{ t('admin.messages.standardSuffix') }}</span>
+          </legend>
+          <label>{{ t('admin.content.defaultText') }}<input v-model="form.translations[defaultLocale.locale].text" data-testid="admin-content-love-jar-text" /><small v-if="errors.text" class="admin-field-error">{{ errors.text }}</small></label>
+        </fieldset>
         <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" /></label>
       </template>
 
-      <section class="admin-translation-box">
+      <section v-if="additionalLocales.length > 0" class="admin-translation-box">
         <h2>{{ t('admin.common.translations') }}</h2>
         <p class="muted">{{ t('admin.content.translationsHelp') }}</p>
-        <div v-for="locale in locales" :key="locale.locale" class="admin-translation-row">
-          <strong>{{ locale.locale }}{{ locale.isDefault ? t('admin.messages.standardSuffix') : '' }}</strong>
+        <div v-for="locale in additionalLocales" :key="locale.locale" class="admin-translation-row">
+          <strong>{{ locale.locale }}</strong>
           <template v-if="selectedType === 'quests'">
             <input v-model="form.translations[locale.locale].title" :placeholder="t('admin.common.titlePlaceholder', { locale: locale.locale })" />
             <textarea v-model="form.translations[locale.locale].description" rows="2" :placeholder="t('admin.common.descriptionPlaceholder', { locale: locale.locale })" />
@@ -381,7 +420,9 @@ onMounted(async () => {
         <tbody>
           <tr v-for="item in items" :key="item.id">
             <td>{{ item.title || item.questionText || item.text }}</td>
-            <td>{{ item.category }}</td>
+            <td>
+              <span class="admin-chip">{{ categoryFor(item.category)?.label ?? item.category }}</span>
+            </td>
             <td>{{ item.active ? t('admin.common.activeLower') : t('admin.common.inactiveLower') }}</td>
             <td class="admin-actions">
               <button class="secondary-button admin-small-button" type="button" @click="editItem(item)">{{ t('admin.common.edit') }}</button>

@@ -57,7 +57,7 @@ export interface GardenPlacementBody {
 }
 
 export async function buildGardenPayload(couple: CurrentCouple, locale = 'de') {
-  const objects = await listGardenObjects(couple.id);
+  const objects = await listGardenObjects(couple.id, locale);
   const areas = await listGardenAreas(locale);
   const assets = await listGardenAssets(undefined, [...new Set(objects.map((object) => object.assetKey).filter(Boolean).map(String))]);
   const unlocks = await gardenUnlocksForLocale(locale);

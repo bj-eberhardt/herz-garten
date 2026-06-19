@@ -280,7 +280,8 @@ export function adminRouter(): Router {
   router.get('/message-templates', requireAdminAuth, async (request, response) => {
     try {
       const namespace = normalizeText(request.query.namespace) || 'notifications';
-      response.json({ items: await listMessageTemplates(namespace) });
+      const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || config.i18nDefaultLocale;
+      response.json({ items: await listMessageTemplates(namespace, locale) });
     } catch (error) {
       handleError(response, error);
     }
@@ -289,7 +290,8 @@ export function adminRouter(): Router {
   router.patch('/message-templates/:key', requireAdminAuth, validateBody(messageTemplateBodySchema), async (request, response) => {
     try {
       const key = String(request.params.key);
-      const result = await saveMessageTemplate(key, request.body);
+      const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || config.i18nDefaultLocale;
+      const result = await saveMessageTemplate(key, request.body, locale);
       if (result.status === 'notFound') {
         sendAdminError(response, 404, 'admin.messageTemplateNotFound', 'Message template not found.');
         return;

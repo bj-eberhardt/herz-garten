@@ -1,4 +1,5 @@
 import { pool } from '../../db.js';
+import { config } from '../../config.js';
 
 export interface Queryable {
   query: typeof pool.query;
@@ -64,21 +65,21 @@ function mapGardenAsset(row: Record<string, unknown>): GardenAsset {
   };
 }
 
-export async function listGardenAreas(locale = 'de', client: Queryable = pool): Promise<GardenArea[]> {
+export async function listGardenAreas(locale = config.i18nDefaultLocale, client: Queryable = pool): Promise<GardenArea[]> {
   const result = await client.query<{ areaKey: string; stage: number; label: string; accent: string; backgroundImage: string }>(
     `
       select
         gl.area_key as "areaKey",
         gl.stage,
-        coalesce(requested.name, fallback.name, gl.name) as label,
+        coalesce(requested.name, fallback.name) as label,
         gl.accent,
         gl.background_image as "backgroundImage"
       from garden_levels gl
       left join garden_level_translations requested on requested.level_id = gl.id and requested.locale = $1
-      left join garden_level_translations fallback on fallback.level_id = gl.id and fallback.locale = 'de'
+      left join garden_level_translations fallback on fallback.level_id = gl.id and fallback.locale = $2
       order by gl.stage
     `,
-    [locale],
+    [locale, config.i18nDefaultLocale],
   );
 
   return result.rows.map((level) => ({

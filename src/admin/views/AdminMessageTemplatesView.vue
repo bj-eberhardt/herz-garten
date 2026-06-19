@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Save } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
@@ -18,7 +18,7 @@ interface MessageTemplateItem {
   description: string;
   requiredParams: string[];
   active: boolean;
-  translations: Record<string, { text: string }>;
+  translations: Record<string, { text: string; description: string }>;
 }
 
 interface MessageTemplateServerValidationError {
@@ -37,8 +37,10 @@ const selectedKey = ref('');
 const savingKey = ref('');
 const loading = ref(false);
 const error = ref('');
+const successMessage = ref('');
 const validationErrors = ref<Record<string, string>>({});
 const formAnchor = ref<HTMLElement | null>(null);
+let successTimer: ReturnType<typeof window.setTimeout> | undefined;
 
 const filteredItems = computed(() => {
   const query = search.value.trim().toLowerCase();
@@ -48,6 +50,7 @@ const filteredItems = computed(() => {
 
 const selectedItem = computed(() => items.value.find((item) => item.key === selectedKey.value) ?? null);
 const defaultLocale = computed(() => locales.value.find((locale) => locale.isDefault)?.locale ?? 'de');
+const activeLocales = computed(() => locales.value.filter((entry) => entry.active));
 
 function placeholdersIn(text: string) {
   return [...new Set([...text.matchAll(placeholderPattern)].map((match) => match[1]))].sort();
@@ -59,8 +62,13 @@ function validateItem(item: MessageTemplateItem) {
 
   for (const locale of locales.value.filter((entry) => entry.active)) {
     const text = item.translations[locale.locale]?.text?.trim() ?? '';
+    const description = item.translations[locale.locale]?.description?.trim() ?? '';
     if (!text && locale.locale !== defaultLocale.value) continue;
     if (!text && locale.locale === defaultLocale.value) {
+      nextErrors[locale.locale] = t('admin.messages.errors.defaultTranslationRequired');
+      continue;
+    }
+    if (!description && locale.locale === defaultLocale.value) {
       nextErrors[locale.locale] = t('admin.messages.errors.defaultTranslationRequired');
       continue;
     }
@@ -78,6 +86,23 @@ function validateItem(item: MessageTemplateItem) {
   return Object.keys(nextErrors).length === 0;
 }
 
+function clearSuccessMessage() {
+  if (successTimer) {
+    window.clearTimeout(successTimer);
+    successTimer = undefined;
+  }
+  successMessage.value = '';
+}
+
+function showSuccessMessage(message: string) {
+  clearSuccessMessage();
+  successMessage.value = message;
+  successTimer = window.setTimeout(() => {
+    successMessage.value = '';
+    successTimer = undefined;
+  }, 5000);
+}
+
 function localizedTemplateValidationError(error: MessageTemplateServerValidationError) {
   if (error.errorCode === 'admin.messageTemplate.placeholderMismatch') {
     const expected = Array.isArray(error.params?.expectedPlaceholders)
@@ -86,6 +111,9 @@ function localizedTemplateValidationError(error: MessageTemplateServerValidation
     return t('admin.messages.expectedPlaceholders', {
       placeholders: expected || t('admin.common.none'),
     });
+  }
+  if (error.errorCode === 'admin.messageTemplate.defaultDescriptionRequired') {
+    return t('admin.serverErrors.admin.messageTemplate.defaultDescriptionRequired');
   }
 
   const key = `admin.serverErrors.${error.errorCode}`;
@@ -111,7 +139,9 @@ function applyServerValidationErrors(apiError: ApiError) {
 
 function ensureTranslations(item: MessageTemplateItem) {
   for (const locale of locales.value) {
-    item.translations[locale.locale] ??= { text: '' };
+    item.translations[locale.locale] ??= { text: '', description: '' };
+    item.translations[locale.locale].text ??= '';
+    item.translations[locale.locale].description ??= '';
   }
 }
 
@@ -123,6 +153,7 @@ async function editItem(item: MessageTemplateItem) {
   selectedKey.value = item.key;
   validationErrors.value = {};
   error.value = '';
+  clearSuccessMessage();
   await nextTick();
   formAnchor.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -151,6 +182,7 @@ async function loadItems() {
 
 async function saveItem(item: MessageTemplateItem) {
   error.value = '';
+  clearSuccessMessage();
   if (!validateItem(item)) return;
 
   savingKey.value = item.key;
@@ -161,8 +193,9 @@ async function saveItem(item: MessageTemplateItem) {
     });
     items.value = payload.items;
     for (const nextItem of items.value) ensureTranslations(nextItem);
-    selectedKey.value = item.key;
+    selectedKey.value = '';
     validationErrors.value = {};
+    showSuccessMessage(t('admin.messages.saved'));
   } catch (caught) {
     if (caught instanceof ApiError && applyServerValidationErrors(caught)) {
       error.value = t('admin.messages.errors.validation');
@@ -178,6 +211,10 @@ onMounted(async () => {
   await loadLocales();
   await loadItems();
 });
+
+onBeforeUnmount(() => {
+  if (successTimer) window.clearTimeout(successTimer);
+});
 </script>
 
 <template>
@@ -187,6 +224,7 @@ onMounted(async () => {
       <span>{{ t('admin.messages.subtitle') }}</span>
     </div>
     <p class="muted">{{ t('admin.messages.intro') }}</p>
+    <p v-if="successMessage" class="success-note" data-testid="admin-message-success">{{ successMessage }}</p>
 
     <div class="admin-table-header admin-message-table-header">
       <div class="admin-toolbar admin-message-toolbar">
@@ -206,8 +244,9 @@ onMounted(async () => {
         <span v-for="param in selectedItem.requiredParams" v-else :key="param" class="admin-chip">{ {{ param }} }</span>
       </div>
 
-      <div v-for="locale in locales.filter((entry) => entry.active)" :key="locale.locale" class="admin-translation-row">
+      <div v-for="locale in activeLocales" :key="locale.locale" class="admin-translation-row">
         <strong>{{ locale.label }} ({{ locale.locale }}){{ locale.locale === defaultLocale ? t('admin.messages.standardSuffix') : '' }}</strong>
+        <input v-model="selectedItem.translations[locale.locale].description" :placeholder="t('admin.common.descriptionPlaceholder', { locale: locale.locale })" />
         <textarea v-model="selectedItem.translations[locale.locale].text" rows="4" :data-testid="`admin-message-text-${locale.locale}`" />
         <small v-if="validationErrors[locale.locale]" class="admin-field-error">{{ validationErrors[locale.locale] }}</small>
       </div>

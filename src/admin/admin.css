@@ -291,6 +291,25 @@
   gap: 10px;
 }
 
+.admin-default-translation {
+  background: #f8faf6;
+  border: 1px solid #cfdcc8;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.admin-required-badge {
+  background: #24302b;
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 800;
+  margin-left: 8px;
+  padding: 2px 8px;
+  vertical-align: middle;
+}
+
 .admin-member-card {
   background: #f8faf6;
   border: 1px solid #d8dfd3;

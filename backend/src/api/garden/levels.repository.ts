@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { config } from '../../config.js';
 import { pool } from '../../db.js';
 import { withTransaction } from '../../db/transaction.js';
 import { fallbackAreaKey, listGardenAreas } from './catalog.js';
@@ -94,6 +95,17 @@ function translationsFromInput(value: unknown) {
   return value as Record<string, { name?: unknown }>;
 }
 
+function levelTranslations(input: GardenLevelInput) {
+  const translations = translationsFromInput(input.translations);
+  const locale = config.i18nDefaultLocale;
+  translations[locale] ??= {};
+  const name = normalizeName(input.name);
+  if (name && !normalizeName(translations[locale].name)) {
+    translations[locale].name = name;
+  }
+  return translations;
+}
+
 function withMinimumPoints<T extends { pointsToNext: number | null }>(rows: T[]) {
   let minimumPoints = 0;
   return rows.map((row, index) => {
@@ -114,17 +126,17 @@ export function calculateGardenStage(points: number, levels: Array<{ stage: numb
   return stage;
 }
 
-export async function listGardenLevels(locale = 'de', client: Queryable = pool) {
+export async function listGardenLevels(locale = config.i18nDefaultLocale, client: Queryable = pool) {
   const result = await client.query(
     `
       select
         gl.id,
         gl.stage,
-        gl.name,
+        coalesce(requested.name, fallback.name) as name,
         gl.area_key as "areaKey",
         gl.background_image as "backgroundImage",
         gl.accent,
-        coalesce(requested.name, fallback.name, gl.name) as "localizedName",
+        coalesce(requested.name, fallback.name) as "localizedName",
         gl.points_to_next as "pointsToNext",
         gl.created_at as "createdAt",
         gl.updated_at as "updatedAt",
@@ -132,11 +144,11 @@ export async function listGardenLevels(locale = 'de', client: Queryable = pool) 
       from garden_levels gl
       left join garden_level_translations t on t.level_id = gl.id
       left join garden_level_translations requested on requested.level_id = gl.id and requested.locale = $1
-      left join garden_level_translations fallback on fallback.level_id = gl.id and fallback.locale = 'de'
+      left join garden_level_translations fallback on fallback.level_id = gl.id and fallback.locale = $2
       group by gl.id, requested.name, fallback.name
       order by gl.stage
     `,
-    [locale],
+    [locale, config.i18nDefaultLocale],
   );
 
   return withMinimumPoints(result.rows).map((row) => ({
@@ -296,8 +308,9 @@ async function recalculateGardens(client: Queryable) {
   await rebalanceGardenObjects(client, levels);
 }
 
-export async function saveGardenLevel(input: GardenLevelInput, id?: string, locale = 'de') {
-  const name = normalizeName(input.name);
+export async function saveGardenLevel(input: GardenLevelInput, id?: string, locale = config.i18nDefaultLocale) {
+  const translations = levelTranslations(input);
+  const name = normalizeName(translations[config.i18nDefaultLocale]?.name);
   if (!name) throw new GardenLevelValidationError('admin.gardenLevel.nameRequired');
   const backgroundImage = normalizePath(input.backgroundImage);
   const accent = normalizeColor(input.accent);
@@ -334,21 +347,20 @@ export async function saveGardenLevel(input: GardenLevelInput, id?: string, loca
 
     await client.query(
       `
-        insert into garden_levels (id, stage, name, area_key, background_image, accent, points_to_next, updated_at)
-        values ($1, $2, $3, $4, $5, $6, $7, now())
+        insert into garden_levels (id, stage, area_key, background_image, accent, points_to_next, updated_at)
+        values ($1, $2, $3, $4, $5, $6, now())
         on conflict (id) do update set
-          name = excluded.name,
           background_image = excluded.background_image,
           accent = excluded.accent,
           points_to_next = excluded.points_to_next,
           updated_at = now()
       `,
-      [levelId, stage, name, areaKey, backgroundImage || currentBackgroundImage, accent, id ? pointsToNext : null],
+      [levelId, stage, areaKey, backgroundImage || currentBackgroundImage, accent, id ? pointsToNext : null],
     );
     if (!id && stage > 1) {
       await client.query('update garden_levels set points_to_next = $2, updated_at = now() where stage = $1', [stage - 1, pointsToNext]);
     }
-    await upsertTranslations(client, levelId, input.translations);
+    await upsertTranslations(client, levelId, translations);
     await recalculateGardens(client);
     return { id: levelId, items: await listGardenLevels(locale, client) };
   });

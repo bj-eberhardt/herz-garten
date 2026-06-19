@@ -3,15 +3,19 @@ import {
   listMessageTemplates as listMessageTemplateRecords,
   replaceMessageTemplateTranslations,
 } from './messageTemplates.repository.js';
+import { config } from '../../config.js';
 import { normalizeLocale, supportedLocales } from '../support.repository.js';
 
 export interface MessageTemplateSaveBody {
-  translations?: Record<string, { text?: unknown }>;
+  translations?: Record<string, { text?: unknown; description?: unknown }>;
 }
 
 export interface MessageTemplateValidationError {
   locale: string;
-  errorCode: 'admin.messageTemplate.defaultTranslationRequired' | 'admin.messageTemplate.placeholderMismatch';
+  errorCode:
+    | 'admin.messageTemplate.defaultTranslationRequired'
+    | 'admin.messageTemplate.defaultDescriptionRequired'
+    | 'admin.messageTemplate.placeholderMismatch';
   params?: Record<string, unknown>;
 }
 
@@ -32,11 +36,11 @@ function samePlaceholders(found: string[], required: string[]) {
   return found.length === expected.length && found.every((placeholder, index) => placeholder === expected[index]);
 }
 
-export async function listMessageTemplates(namespace = 'notifications') {
-  return listMessageTemplateRecords(namespace);
+export async function listMessageTemplates(namespace = 'notifications', locale = config.i18nDefaultLocale) {
+  return listMessageTemplateRecords(namespace, locale);
 }
 
-export async function saveMessageTemplate(key: string, body: MessageTemplateSaveBody) {
+export async function saveMessageTemplate(key: string, body: MessageTemplateSaveBody, responseLocale = config.i18nDefaultLocale) {
   const template = await findMessageTemplate(key);
   if (!template || template.namespace !== 'notifications') {
     return { status: 'notFound' as const };
@@ -44,19 +48,32 @@ export async function saveMessageTemplate(key: string, body: MessageTemplateSave
 
   const activeLocales = (await supportedLocales()).filter((locale) => locale.active);
   const activeLocaleCodes = new Set(activeLocales.map((locale) => locale.locale));
+  const currentTemplate = (await listMessageTemplateRecords(template.namespace, responseLocale)).find((item) => item.key === key);
+  const currentTranslations = currentTemplate?.translations ?? {};
   const translations = body.translations ?? {};
   const errors: MessageTemplateValidationError[] = [];
-  const normalizedTranslations: Array<{ locale: string; text: string }> = [];
+  const defaultLocale = config.i18nDefaultLocale;
+  const normalizedTranslations: Array<{ locale: string; text: string; description: string }> = [];
 
-  for (const [rawLocale, translation] of Object.entries(translations)) {
-    const locale = normalizeLocale(rawLocale);
-    if (!locale || !activeLocaleCodes.has(locale)) continue;
+  for (const locale of activeLocaleCodes) {
+    const rawTranslation = translations[locale];
+    const currentTranslation = currentTranslations[locale];
+    const text =
+      rawTranslation && typeof rawTranslation.text === 'string'
+        ? rawTranslation.text.trim()
+        : (currentTranslation?.text ?? '').trim();
+    const description =
+      rawTranslation && typeof rawTranslation.description === 'string'
+        ? rawTranslation.description.trim()
+        : (currentTranslation?.description ?? '').trim();
+    if (!text && !description && locale !== defaultLocale) continue;
 
-    const text = typeof translation.text === 'string' ? translation.text.trim() : '';
-    if (!text && locale !== 'de') continue;
-
-    if (!text && locale === 'de') {
+    if (!text && locale === defaultLocale) {
       errors.push({ locale, errorCode: 'admin.messageTemplate.defaultTranslationRequired' });
+      continue;
+    }
+    if (!description && locale === defaultLocale) {
+      errors.push({ locale, errorCode: 'admin.messageTemplate.defaultDescriptionRequired' });
       continue;
     }
 
@@ -70,11 +87,11 @@ export async function saveMessageTemplate(key: string, body: MessageTemplateSave
       continue;
     }
 
-    normalizedTranslations.push({ locale, text });
+    normalizedTranslations.push({ locale, text, description });
   }
 
-  if (!normalizedTranslations.some((translation) => translation.locale === 'de')) {
-    errors.push({ locale: 'de', errorCode: 'admin.messageTemplate.defaultTranslationRequired' });
+  if (!normalizedTranslations.some((translation) => translation.locale === defaultLocale)) {
+    errors.push({ locale: defaultLocale, errorCode: 'admin.messageTemplate.defaultTranslationRequired' });
   }
 
   if (errors.length > 0) {
@@ -82,5 +99,5 @@ export async function saveMessageTemplate(key: string, body: MessageTemplateSave
   }
 
   await replaceMessageTemplateTranslations(key, normalizedTranslations);
-  return { status: 'saved' as const, items: await listMessageTemplates(template.namespace) };
+  return { status: 'saved' as const, items: await listMessageTemplates(template.namespace, responseLocale) };
 }

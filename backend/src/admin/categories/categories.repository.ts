@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { config } from '../../config.js';
 import { pool } from '../../db.js';
 import {
   isContentType,
@@ -23,6 +24,21 @@ function normalizeInteger(value: unknown, fallback: number) {
 function translationsFromBody(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return value as Record<string, Record<string, unknown>>;
+}
+
+function defaultLocale() {
+  return config.i18nDefaultLocale;
+}
+
+function categoryTranslations(body: Record<string, unknown>) {
+  const translations = translationsFromBody(body.translations);
+  const locale = defaultLocale();
+  translations[locale] ??= {};
+  const label = normalizeText(body.label);
+  if (label && !normalizeText(translations[locale].label)) {
+    translations[locale].label = label;
+  }
+  return translations;
 }
 
 function stringArrayFromBody(value: unknown) {
@@ -56,14 +72,15 @@ export async function listCategories(type?: ContentType, locale = 'de') {
   const where = type ? 'where c.content_type = $1' : '';
   if (type) params.push(type);
   params.push(locale);
+  params.push(defaultLocale());
   const result = await pool.query(
     `
       select
         c.id,
         c.content_type as "contentType",
         c.value,
-        coalesce(requested.label, fallback.label, c.label) as label,
-        c.label as "defaultLabel",
+        coalesce(requested.label, fallback.label) as label,
+        fallback.label as "defaultLabel",
         c.active,
         c.sort_order as "sortOrder",
         c.relationship_modes as "relationshipModes",
@@ -73,11 +90,11 @@ export async function listCategories(type?: ContentType, locale = 'de') {
         coalesce(json_object_agg(t.locale, json_build_object('label', t.label)) filter (where t.locale is not null), '{}'::json) as translations
       from content_categories c
       left join content_category_translations t on t.category_id = c.id
-      left join content_category_translations requested on requested.category_id = c.id and requested.locale = $${params.length}
-      left join content_category_translations fallback on fallback.category_id = c.id and fallback.locale = 'de'
+      left join content_category_translations requested on requested.category_id = c.id and requested.locale = $${params.length - 1}
+      left join content_category_translations fallback on fallback.category_id = c.id and fallback.locale = $${params.length}
       ${where}
       group by c.id, requested.label, fallback.label
-      order by c.content_type, c.active desc, c.sort_order, c.label
+      order by c.content_type, c.active desc, c.sort_order, label
     `,
     params,
   );
@@ -95,7 +112,8 @@ export async function listCategories(type?: ContentType, locale = 'de') {
 export async function saveCategory(body: Record<string, unknown>, id: string = randomUUID()) {
   const contentType = normalizeText(body.contentType);
   const value = normalizeText(body.value).toLowerCase().replaceAll(' ', '_');
-  const label = normalizeText(body.label);
+  const translations = categoryTranslations(body);
+  const label = normalizeText(translations[defaultLocale()]?.label);
   const relationshipModes = stringArrayFromBody(body.relationshipModes);
   const contentStyles = stringArrayFromBody(body.contentStyles);
   if (!isContentType(contentType) || !/^[a-z0-9_-]+$/.test(value) || !label) {
@@ -110,20 +128,18 @@ export async function saveCategory(body: Record<string, unknown>, id: string = r
 
   await pool.query(
     `
-      insert into content_categories (id, content_type, value, label, active, sort_order, relationship_modes, content_styles, updated_at)
-      values ($1, $2, $3, $4, $5, $6, $7, $8, now())
+      insert into content_categories (id, content_type, value, active, sort_order, relationship_modes, content_styles, updated_at)
+      values ($1, $2, $3, $4, $5, $6, $7, now())
       on conflict (id) do update set
-        label = excluded.label,
         active = excluded.active,
         sort_order = excluded.sort_order,
         relationship_modes = excluded.relationship_modes,
         content_styles = excluded.content_styles,
         updated_at = now()
     `,
-    [id, contentType, value, label, normalizeBoolean(body.active), normalizeInteger(body.sortOrder, 0), relationshipModes, contentStyles],
+    [id, contentType, value, normalizeBoolean(body.active), normalizeInteger(body.sortOrder, 0), relationshipModes, contentStyles],
   );
 
-  const translations = translationsFromBody(body.translations);
   for (const [locale, translation] of Object.entries(translations)) {
     const translatedLabel = normalizeText(translation.label);
     if (!translatedLabel) continue;

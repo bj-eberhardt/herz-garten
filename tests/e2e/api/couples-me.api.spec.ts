@@ -54,7 +54,7 @@ test.describe('me and couples api', () => {
         titleKey: 'notifications.titles.coupleJoined',
         bodyKey: 'notifications.bodies.coupleJoined',
         title: 'Dein Partner ist da',
-        body: `Toll, ${partnerB.user.displayName} hat deinen Paarraum betreten. Ihr koennt nun gemeinsam an eurem Garten arbeiten.`,
+        body: `Toll, ${partnerB.user.displayName} hat deinen Paarraum betreten. Ihr könnt nun gemeinsam an eurem Garten arbeiten.`,
         sourceType: 'couple',
         sourceId: created.couple.id,
         params: { name: partnerB.user.displayName },

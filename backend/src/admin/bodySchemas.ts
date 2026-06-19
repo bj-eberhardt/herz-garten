@@ -65,6 +65,7 @@ export const messageTemplateBodySchema = z
       z
         .object({
           text: trimmedString.optional(),
+          description: trimmedString.optional(),
         })
         .strict(),
     ),
