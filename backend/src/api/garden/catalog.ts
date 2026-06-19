@@ -18,7 +18,6 @@ export interface GardenArea {
 export interface GardenAsset {
   key: string;
   label: string;
-  objectType: string;
   sourceTypes: string[];
   stageUnlock: number;
   image: string;
@@ -33,7 +32,6 @@ export interface GardenAsset {
 export interface GardenAssetInput {
   key?: string;
   label: string;
-  objectType: string;
   sourceTypes: string[];
   stageUnlock: number;
   image?: string;
@@ -52,7 +50,6 @@ function mapGardenAsset(row: Record<string, unknown>): GardenAsset {
   return {
     key: String(row.key),
     label: String(row.label),
-    objectType: String(row.objectType),
     sourceTypes: Array.isArray(row.sourceTypes) ? row.sourceTypes.map(String) : [],
     stageUnlock: Number(row.stageUnlock),
     image: String(row.image),
@@ -99,7 +96,6 @@ export async function listGardenAssets(client: Queryable = pool, referencedKeys:
       select
         key,
         label,
-        object_type as "objectType",
         source_types as "sourceTypes",
         stage_unlock as "stageUnlock",
         image,
@@ -124,7 +120,6 @@ export async function listAdminGardenAssets(client: Queryable = pool) {
       select
         key,
         label,
-        object_type as "objectType",
         source_types as "sourceTypes",
         stage_unlock as "stageUnlock",
         image,
@@ -146,11 +141,6 @@ export async function gardenAssetExists(key: string, client: Queryable = pool) {
   return (result.rowCount ?? 0) > 0;
 }
 
-export async function gardenAssetObjectType(key: string, client: Queryable = pool) {
-  const result = await client.query<{ objectType: string }>('select object_type as "objectType" from garden_assets where key = $1', [key]);
-  return result.rows[0]?.objectType ?? 'decoration';
-}
-
 export async function saveGardenAsset(input: GardenAssetInput, existingKey?: string, client: Queryable = pool) {
   if (existingKey) {
     const result = await client.query(
@@ -158,22 +148,20 @@ export async function saveGardenAsset(input: GardenAssetInput, existingKey?: str
         update garden_assets
         set
           label = $2,
-          object_type = $3,
-          source_types = $4,
-          stage_unlock = $5,
-          image = coalesce($6, image),
-          width = coalesce($7, width),
-          height = coalesce($8, height),
-          anchor_x = $9,
-          anchor_y = $10,
-          active = $11,
-          sort_order = $12,
+          source_types = $3,
+          stage_unlock = $4,
+          image = coalesce($5, image),
+          width = coalesce($6, width),
+          height = coalesce($7, height),
+          anchor_x = $8,
+          anchor_y = $9,
+          active = $10,
+          sort_order = $11,
           updated_at = now()
         where key = $1
         returning
           key,
           label,
-          object_type as "objectType",
           source_types as "sourceTypes",
           stage_unlock as "stageUnlock",
           image,
@@ -187,7 +175,6 @@ export async function saveGardenAsset(input: GardenAssetInput, existingKey?: str
       [
         existingKey,
         input.label,
-        input.objectType,
         input.sourceTypes,
         input.stageUnlock,
         input.image ?? null,
@@ -205,13 +192,12 @@ export async function saveGardenAsset(input: GardenAssetInput, existingKey?: str
   const result = await client.query(
     `
       insert into garden_assets (
-        key, label, object_type, source_types, stage_unlock, image, width, height, anchor_x, anchor_y, active, sort_order, updated_at
+        key, label, source_types, stage_unlock, image, width, height, anchor_x, anchor_y, active, sort_order, updated_at
       )
-      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now())
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
       returning
         key,
         label,
-        object_type as "objectType",
         source_types as "sourceTypes",
         stage_unlock as "stageUnlock",
         image,
@@ -225,7 +211,6 @@ export async function saveGardenAsset(input: GardenAssetInput, existingKey?: str
     [
       input.key,
       input.label,
-      input.objectType,
       input.sourceTypes,
       input.stageUnlock,
       input.image,

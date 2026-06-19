@@ -1,11 +1,10 @@
-import type { Request, Response, Router } from 'express';
+import type { Router } from 'express';
 import { currentUser, requireAuth } from '../../auth.js';
 import { handleError, sendApiError } from '../../errors.js';
+import { sendJson } from '../../http.js';
 import { validateBody } from '../../validation.js';
 import { requireCurrentCoupleForUser } from '../shared/currentCouple.js';
-import {
-  gardenPlacementBodySchema,
-} from '../bodySchemas.js';
+import { gardenPlacementBodySchema, type GardenPlacementBody } from '../bodySchemas.js';
 import { resolveLocale } from '../support.repository.js';
 import {
   buildGardenPayload,
@@ -16,8 +15,12 @@ import {
   placeGardenObject,
 } from '../garden/garden.service.js';
 
+type GardenPayload = Awaited<ReturnType<typeof buildGardenPayload>>;
+type GardenPlacementPayload = NonNullable<Awaited<ReturnType<typeof placeGardenObject>>>;
+type GardenObjectDetailPayload = NonNullable<Awaited<ReturnType<typeof getGardenObjectDetail>>>;
+
 export function registerGardenRoutes(router: Router) {
-  router.get('/garden', requireAuth, async (request: Request, response: Response) => {
+  router.get('/garden', requireAuth, async (request, response) => {
     const user = currentUser(request);
     const couple = await requireCurrentCoupleForUser(response, user.id);
     if (!couple) {
@@ -26,7 +29,7 @@ export function registerGardenRoutes(router: Router) {
 
     try {
       const locale = await resolveLocale(request);
-      response.json(await buildGardenPayload(couple, locale));
+      sendJson<GardenPayload>(response, await buildGardenPayload(couple, locale));
     } catch (error) {
       handleError(response, error);
     }
@@ -45,7 +48,8 @@ export function registerGardenRoutes(router: Router) {
       return;
     }
 
-    const placement = normalizeGardenPlacement(request.body ?? {});
+    const body = request.body as GardenPlacementBody;
+    const placement = normalizeGardenPlacement(body);
     if (placement.areaKey !== undefined && !(await isUnlockedGardenArea(placement.areaKey, Number(couple.gardenStage)))) {
       sendApiError(response, 400, 'garden.invalidPlacement');
       return;
@@ -58,7 +62,7 @@ export function registerGardenRoutes(router: Router) {
         return;
       }
 
-      response.json(payload);
+      sendJson<GardenPlacementPayload>(response, payload);
     } catch (error) {
       handleError(response, error);
     }
@@ -83,7 +87,7 @@ export function registerGardenRoutes(router: Router) {
         sendApiError(response, 404, 'garden.objectNotFound');
         return;
       }
-      response.json(payload);
+      sendJson<GardenObjectDetailPayload>(response, payload);
     } catch (error) {
       handleError(response, error);
     }

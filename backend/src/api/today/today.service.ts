@@ -17,6 +17,7 @@ import {
   markDailyRewardApplied,
   upsertDailyAnswer,
 } from './today.repository.js';
+import { objectTypeForGardenReward, selectGardenAssetForReward } from '../garden/assetSelection.js';
 
 export async function answerTodayQuestion(user: { id: string; displayName: string }, answerText: string, locale: string) {
   const couple = await getCurrentCouple(user.id);
@@ -31,13 +32,19 @@ export async function answerTodayQuestion(user: { id: string; displayName: strin
     const answers = await listAnswersForDailyInstance(client, couple.id, instance.questionId, instance.date);
 
     if (answers.length >= 2 && !instance.rewardAppliedAt) {
-      const areaKey = await highestUnlockedAreaForReward(await gardenStageAfterReward(client, couple.id, 10), 'question', '', client);
+      const gardenStage = await gardenStageAfterReward(client, couple.id, 10);
+      const areaKey = await highestUnlockedAreaForReward(gardenStage, 'question', '', client);
+      const selectedAsset = await selectGardenAssetForReward(client, {
+        sourceType: 'question',
+        gardenStage,
+      });
       const placement = await nextGardenPlacement(client, couple.id, areaKey);
       await insertDailyGardenReward(client, {
         coupleId: couple.id,
         instanceId: instance.id,
         areaKey,
-        assetKey: 'conversation_flower',
+        assetKey: selectedAsset.key,
+        objectType: objectTypeForGardenReward('question'),
         ...placement,
       });
       await addDailyRewardPoints(client, couple.id);

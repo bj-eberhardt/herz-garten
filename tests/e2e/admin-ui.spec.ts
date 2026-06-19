@@ -104,6 +104,7 @@ test.describe('admin ui', () => {
     await expect(page.locator('.admin-table')).not.toContainText(`UI Garten ${runId}`);
     await page.getByTestId('admin-nav-garden-assets').click();
     await expect(page.getByTestId('admin-garden-assets')).toBeVisible();
+    await expect(page.getByTestId('admin-garden-assets-stage-one-warning')).toBeVisible();
     await page.getByRole('button', { name: 'Bearbeiten' }).first().click();
     await expect(page.getByTestId('admin-garden-asset-preview')).toBeVisible();
     await page.getByTestId('admin-nav-taxonomies').click();

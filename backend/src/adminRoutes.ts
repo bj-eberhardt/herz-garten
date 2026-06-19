@@ -103,7 +103,6 @@ function gardenAssetMultipartBody(request: Request, image?: { path: string; widt
   return {
     key: textField(request.body.key),
     label: textField(request.body.label),
-    objectType: textField(request.body.objectType),
     sourceTypes: jsonField<string[]>(request.body.sourceTypes, []),
     stageUnlock: Math.max(1, Math.round(numberField(request.body.stageUnlock, 1))),
     image: image?.path,

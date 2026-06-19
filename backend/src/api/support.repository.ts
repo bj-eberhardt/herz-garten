@@ -10,7 +10,8 @@ import {
   type PushNotificationMode,
 } from './notifications/notificationPolicy.js';
 import { sendPushNotifications, type PushNotificationPayload } from './push/push.service.js';
-import { fallbackAreaKey, gardenAssetObjectType, listGardenAreas, type GardenArea } from './garden/catalog.js';
+import { fallbackAreaKey, listGardenAreas, type GardenArea } from './garden/catalog.js';
+import { objectTypeForGardenReward, selectGardenAssetForReward } from './garden/assetSelection.js';
 import {
   addCoupleHeartPoints,
   gardenStageAfterReward,
@@ -942,8 +943,14 @@ export async function isActiveContentCategory(contentType: string, value: string
 export async function applyQuestReward(client: Queryable, coupleId: string, coupleQuestId: string, quest: QuestRewardSource) {
   const category = quest.category;
   const rewardPoints = quest.rewardPoints;
-  const areaKey = await highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, rewardPoints), 'quest', category, client);
-  const assetKey = assetKeyForQuest(category);
+  const gardenStage = await gardenStageAfterReward(client, coupleId, rewardPoints);
+  const areaKey = await highestUnlockedAreaForReward(gardenStage, 'quest', category, client);
+  const selectedAsset = await selectGardenAssetForReward(client, {
+    sourceType: 'quest',
+    gardenStage,
+    category,
+  });
+  const objectType = objectTypeForGardenReward('quest', category);
   const placement = await nextGardenPlacement(client, coupleId, areaKey);
 
   await client.query(
@@ -957,11 +964,11 @@ export async function applyQuestReward(client: Queryable, coupleId: string, coup
     [
       randomUUID(),
       coupleId,
-      await gardenAssetObjectType(assetKey, client),
+      objectType,
       coupleQuestId,
       quest.title,
       areaKey,
-      assetKey,
+      selectedAsset.key,
       placement.positionX,
       placement.positionY,
       placement.zIndex,
@@ -1291,8 +1298,13 @@ export async function buildKnowMePayload(userId: string, locale = config.i18nDef
 }
 
 export async function createMemoryStone(client: Queryable, coupleId: string, memoryId: string, title: string) {
-  const areaKey = await highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, 8), 'memory', '', client);
-  const assetKey = 'memory_stone';
+  const gardenStage = await gardenStageAfterReward(client, coupleId, 8);
+  const areaKey = await highestUnlockedAreaForReward(gardenStage, 'memory', '', client);
+  const selectedAsset = await selectGardenAssetForReward(client, {
+    sourceType: 'memory',
+    gardenStage,
+  });
+  const objectType = objectTypeForGardenReward('memory');
   const placement = await nextGardenPlacement(client, coupleId, areaKey);
 
   const result = await client.query(
@@ -1300,11 +1312,22 @@ export async function createMemoryStone(client: Queryable, coupleId: string, mem
       insert into garden_objects (
         id, couple_id, type, source_type, source_id, label, area_key, asset_key, position_x, position_y, z_index, reward_points, level
       )
-      values ($1, $2, 'stone', 'memory', $3, $4, $5, $6, $7, $8, $9, 8, 1)
+      values ($1, $2, $3, 'memory', $4, $5, $6, $7, $8, $9, $10, 8, 1)
       on conflict do nothing
       returning id
     `,
-    [randomUUID(), coupleId, memoryId, title, areaKey, assetKey, placement.positionX, placement.positionY, placement.zIndex],
+    [
+      randomUUID(),
+      coupleId,
+      objectType,
+      memoryId,
+      title,
+      areaKey,
+      selectedAsset.key,
+      placement.positionX,
+      placement.positionY,
+      placement.zIndex,
+    ],
   );
 
   await addCoupleHeartPoints(client, coupleId, 8);
@@ -1313,8 +1336,13 @@ export async function createMemoryStone(client: Queryable, coupleId: string, mem
 }
 
 export async function createKnowMeFlower(client: Queryable, coupleId: string, questionId: string) {
-  const areaKey = await highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, 12), 'know_me', '', client);
-  const assetKey = 'heart_flower';
+  const gardenStage = await gardenStageAfterReward(client, coupleId, 12);
+  const areaKey = await highestUnlockedAreaForReward(gardenStage, 'know_me', '', client);
+  const selectedAsset = await selectGardenAssetForReward(client, {
+    sourceType: 'know_me',
+    gardenStage,
+  });
+  const objectType = objectTypeForGardenReward('know_me');
   const placement = await nextGardenPlacement(client, coupleId, areaKey);
 
   await client.query(
@@ -1322,10 +1350,20 @@ export async function createKnowMeFlower(client: Queryable, coupleId: string, qu
       insert into garden_objects (
         id, couple_id, type, source_type, source_id, label, area_key, asset_key, position_x, position_y, z_index, reward_points, level
       )
-      values ($1, $2, 'flower', 'know_me', $3, 'Kennst-du-mich-Blume', $4, $5, $6, $7, $8, 12, 1)
+      values ($1, $2, $3, 'know_me', $4, 'Kennst-du-mich-Blume', $5, $6, $7, $8, $9, 12, 1)
       on conflict do nothing
     `,
-    [randomUUID(), coupleId, questionId, areaKey, assetKey, placement.positionX, placement.positionY, placement.zIndex],
+    [
+      randomUUID(),
+      coupleId,
+      objectType,
+      questionId,
+      areaKey,
+      selectedAsset.key,
+      placement.positionX,
+      placement.positionY,
+      placement.zIndex,
+    ],
   );
   await addCoupleHeartPoints(client, coupleId, 12);
   await client.query('update know_me_questions set reward_applied_at = now() where id = $1', [questionId]);
@@ -1615,8 +1653,13 @@ export async function buildLoveJarTemplatePayload(userId: string, locale = confi
 }
 
 export async function createLoveJarLight(client: Queryable, coupleId: string, noteId: string) {
-  const areaKey = await highestUnlockedAreaForReward(await gardenStageAfterReward(client, coupleId, 5), 'love_jar', '', client);
-  const assetKey = 'warm_lantern';
+  const gardenStage = await gardenStageAfterReward(client, coupleId, 5);
+  const areaKey = await highestUnlockedAreaForReward(gardenStage, 'love_jar', '', client);
+  const selectedAsset = await selectGardenAssetForReward(client, {
+    sourceType: 'love_jar',
+    gardenStage,
+  });
+  const objectType = objectTypeForGardenReward('love_jar');
   const placement = await nextGardenPlacement(client, coupleId, areaKey);
 
   const insertResult = await client.query(
@@ -1624,10 +1667,20 @@ export async function createLoveJarLight(client: Queryable, coupleId: string, no
       insert into garden_objects (
         id, couple_id, type, source_type, source_id, label, area_key, asset_key, position_x, position_y, z_index, reward_points, level
       )
-      values ($1, $2, 'light', 'love_jar', $3, 'Liebesglas-Licht', $4, $5, $6, $7, $8, 5, 1)
+      values ($1, $2, $3, 'love_jar', $4, 'Liebesglas-Licht', $5, $6, $7, $8, $9, 5, 1)
       on conflict do nothing
     `,
-    [randomUUID(), coupleId, noteId, areaKey, assetKey, placement.positionX, placement.positionY, placement.zIndex],
+    [
+      randomUUID(),
+      coupleId,
+      objectType,
+      noteId,
+      areaKey,
+      selectedAsset.key,
+      placement.positionX,
+      placement.positionY,
+      placement.zIndex,
+    ],
   );
   if ((insertResult.rowCount ?? 0) === 0) return;
 

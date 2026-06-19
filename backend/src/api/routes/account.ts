@@ -1,8 +1,16 @@
 import type { Router } from 'express';
 import { currentUser, requireAuth } from '../../auth.js';
 import { handleError, sendApiError } from '../../errors.js';
+import { sendJson } from '../../http.js';
 import { validateBody } from '../../validation.js';
-import { passwordBodySchema, preferencesBodySchema, profileBodySchema } from '../bodySchemas.js';
+import {
+  passwordBodySchema,
+  preferencesBodySchema,
+  profileBodySchema,
+  type PasswordBody,
+  type PreferencesBody,
+  type ProfileBody,
+} from '../bodySchemas.js';
 import {
   buildAccountExport,
   deleteAccount,
@@ -13,11 +21,18 @@ import {
 } from '../account/account.service.js';
 import { getCurrentCouple, isRecord, normalizeEmail, normalizeText, resolveLocale } from '../support.repository.js';
 
+type MePayload = Awaited<ReturnType<typeof getMePayload>>;
+type AccountUserPayload = {
+  user: Awaited<ReturnType<typeof updateUserProfile>> | Awaited<ReturnType<typeof updateUserPreferences>>;
+  couple: Awaited<ReturnType<typeof getCurrentCouple>>;
+};
+type AccountExportPayload = Awaited<ReturnType<typeof buildAccountExport>>;
+
 export function registerAccountRoutes(router: Router) {
   router.get('/me', requireAuth, async (request, response) => {
     const user = currentUser(request);
     try {
-      response.json(await getMePayload(user.id, user, await resolveLocale(request)));
+      sendJson<MePayload>(response, await getMePayload(user.id, user, await resolveLocale(request)));
     } catch (error) {
       handleError(response, error);
     }
@@ -25,14 +40,15 @@ export function registerAccountRoutes(router: Router) {
 
   router.patch('/me/preferences', requireAuth, validateBody(preferencesBodySchema), async (request, response) => {
     const user = currentUser(request);
+    const body = request.body as PreferencesBody;
 
     try {
-      const incomingPreferences = isRecord(request.body.preferences) ? request.body.preferences : request.body;
+      const incomingPreferences = isRecord(body.preferences) ? body.preferences : body;
       const [updatedUser, couple] = await Promise.all([
         updateUserPreferences(user.id, incomingPreferences),
         getCurrentCouple(user.id),
       ]);
-      response.json({ user: updatedUser, couple });
+      sendJson<AccountUserPayload>(response, { user: updatedUser, couple });
     } catch (error) {
       handleError(response, error);
     }
@@ -40,8 +56,9 @@ export function registerAccountRoutes(router: Router) {
 
   router.patch('/me/profile', requireAuth, validateBody(profileBodySchema), async (request, response) => {
     const user = currentUser(request);
-    const email = request.body.email === undefined ? undefined : normalizeEmail(request.body.email);
-    const displayName = request.body.displayName === undefined ? undefined : normalizeText(request.body.displayName);
+    const body = request.body as ProfileBody;
+    const email = body.email === undefined ? undefined : normalizeEmail(body.email);
+    const displayName = body.displayName === undefined ? undefined : normalizeText(body.displayName);
 
     if ((email === undefined && displayName === undefined) || email === '' || displayName === '') {
       sendApiError(response, 400, 'profile.updateInvalid');
@@ -53,7 +70,7 @@ export function registerAccountRoutes(router: Router) {
         updateUserProfile(user.id, { email, displayName }),
         getCurrentCouple(user.id),
       ]);
-      response.json({ user: updatedUser, couple });
+      sendJson<AccountUserPayload>(response, { user: updatedUser, couple });
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
         sendApiError(response, 409, 'auth.emailAlreadyRegistered');
@@ -65,9 +82,10 @@ export function registerAccountRoutes(router: Router) {
 
   router.patch('/me/password', requireAuth, validateBody(passwordBodySchema), async (request, response) => {
     const user = currentUser(request);
+    const body = request.body as PasswordBody;
 
     try {
-      const updated = await updateUserPassword(user.id, request.body.currentPassword, request.body.newPassword);
+      const updated = await updateUserPassword(user.id, body.currentPassword, body.newPassword);
       if (!updated) {
         sendApiError(response, 400, 'profile.passwordInvalid');
         return;
@@ -83,7 +101,7 @@ export function registerAccountRoutes(router: Router) {
     const user = currentUser(request);
 
     try {
-      response.json(await buildAccountExport(user, await resolveLocale(request)));
+      sendJson<AccountExportPayload>(response, await buildAccountExport(user, await resolveLocale(request)));
     } catch (error) {
       handleError(response, error);
     }

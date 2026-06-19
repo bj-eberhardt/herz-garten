@@ -2,9 +2,15 @@ import type { Router } from 'express';
 import { signToken } from '../../auth.js';
 import { config } from '../../config.js';
 import { handleError, sendApiError } from '../../errors.js';
+import { sendJson } from '../../http.js';
 import { createRateLimiter } from '../../security/rateLimit.js';
 import { validateBody } from '../../validation.js';
-import { authLoginBodySchema, authRegisterBodySchema } from '../bodySchemas.js';
+import {
+  authLoginBodySchema,
+  authRegisterBodySchema,
+  type AuthLoginBody,
+  type AuthRegisterBody,
+} from '../bodySchemas.js';
 import { loginUser, registerUser } from '../auth/auth.service.js';
 import { normalizeEmail, normalizeText } from '../support.repository.js';
 
@@ -14,11 +20,15 @@ const authRateLimit = createRateLimiter({
   max: config.authRateLimitMax,
 });
 
+type AuthUser = Awaited<ReturnType<typeof registerUser>>;
+type AuthPayload = { token: string; user: AuthUser };
+
 export function registerAuthRoutes(router: Router) {
   router.post('/auth/register', authRateLimit, validateBody(authRegisterBodySchema), async (request, response) => {
-    const email = normalizeEmail(request.body.email);
-    const displayName = normalizeText(request.body.displayName);
-    const password = normalizeText(request.body.password);
+    const body = request.body as AuthRegisterBody;
+    const email = normalizeEmail(body.email);
+    const displayName = normalizeText(body.displayName);
+    const password = normalizeText(body.password);
 
     if (!email || !displayName || password.length < 8) {
       sendApiError(response, 400, 'auth.registrationInvalid');
@@ -27,7 +37,7 @@ export function registerAuthRoutes(router: Router) {
 
     try {
       const user = await registerUser(email, displayName, password);
-      response.status(201).json({ token: await signToken(user.id), user });
+      sendJson<AuthPayload>(response.status(201), { token: await signToken(user.id), user });
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
         sendApiError(response, 409, 'auth.emailAlreadyRegistered');
@@ -38,8 +48,9 @@ export function registerAuthRoutes(router: Router) {
   });
 
   router.post('/auth/login', authRateLimit, validateBody(authLoginBodySchema), async (request, response) => {
-    const email = normalizeEmail(request.body.email);
-    const password = normalizeText(request.body.password);
+    const body = request.body as AuthLoginBody;
+    const email = normalizeEmail(body.email);
+    const password = normalizeText(body.password);
 
     if (!email || !password) {
       sendApiError(response, 400, 'auth.registrationInvalid');
@@ -53,7 +64,7 @@ export function registerAuthRoutes(router: Router) {
         return;
       }
 
-      response.json({ token: await signToken(user.id), user });
+      sendJson<AuthPayload>(response, { token: await signToken(user.id), user });
     } catch (error) {
       handleError(response, error);
     }

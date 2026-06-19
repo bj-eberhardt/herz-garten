@@ -1,12 +1,20 @@
 import type { Router } from 'express';
 import { currentUser, requireAuth } from '../../auth.js';
 import { handleError, sendApiError } from '../../errors.js';
+import { sendJson } from '../../http.js';
 import { validateBody } from '../../validation.js';
-import { knowMeCreateBodySchema, knowMeGuessBodySchema } from '../bodySchemas.js';
+import {
+  knowMeCreateBodySchema,
+  knowMeGuessBodySchema,
+  type KnowMeCreateBody,
+  type KnowMeGuessBody,
+} from '../bodySchemas.js';
 import { createKnowMeQuestionForUser, guessKnowMeQuestionForUser } from '../know-me/know-me.service.js';
 import { buildKnowMePayload, normalizeText, resolveLocale } from '../support.repository.js';
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type KnowMePayload = NonNullable<Awaited<ReturnType<typeof buildKnowMePayload>>>;
 
 export function registerKnowMeRoutes(router: Router) {
   router.get('/know-me', requireAuth, async (request, response) => {
@@ -18,7 +26,7 @@ export function registerKnowMeRoutes(router: Router) {
         sendApiError(response, 409, 'couple.notConnected');
         return;
       }
-      response.json(payload);
+      sendJson<KnowMePayload>(response, payload);
     } catch (error) {
       handleError(response, error);
     }
@@ -26,12 +34,13 @@ export function registerKnowMeRoutes(router: Router) {
 
   router.post('/know-me', requireAuth, validateBody(knowMeCreateBodySchema), async (request, response) => {
     const user = currentUser(request);
-    const freeQuestionText = normalizeText(request.body.questionText);
-    const catalogQuestionId = normalizeText(request.body.catalogQuestionId) || null;
-    const options = Array.isArray(request.body.options)
-      ? request.body.options.map((option: unknown) => normalizeText(option)).filter(Boolean)
+    const body = request.body as KnowMeCreateBody;
+    const freeQuestionText = normalizeText(body.questionText);
+    const catalogQuestionId = normalizeText(body.catalogQuestionId) || null;
+    const options = Array.isArray(body.options)
+      ? body.options.map((option) => normalizeText(option)).filter(Boolean)
       : [];
-    const correctOptionIndex = Number(request.body.correctOptionIndex);
+    const correctOptionIndex = Number(body.correctOptionIndex);
 
     if (catalogQuestionId && !uuidPattern.test(catalogQuestionId)) {
       sendApiError(response, 400, 'knowMe.invalidCatalogQuestionId');
@@ -67,7 +76,7 @@ export function registerKnowMeRoutes(router: Router) {
         return;
       }
 
-      response.status(201).json(result.payload);
+      sendJson<KnowMePayload>(response.status(201), result.payload);
     } catch (error) {
       handleError(response, error);
     }
@@ -75,7 +84,8 @@ export function registerKnowMeRoutes(router: Router) {
 
   router.post('/know-me/:questionId/guess', requireAuth, validateBody(knowMeGuessBodySchema), async (request, response) => {
     const user = currentUser(request);
-    const selectedOptionIndex = Number(request.body.selectedOptionIndex);
+    const body = request.body as KnowMeGuessBody;
+    const selectedOptionIndex = Number(body.selectedOptionIndex);
 
     if (!Number.isInteger(selectedOptionIndex) || selectedOptionIndex < 0 || selectedOptionIndex > 3) {
       sendApiError(response, 400, 'knowMe.selectedOptionInvalid');
@@ -110,7 +120,7 @@ export function registerKnowMeRoutes(router: Router) {
         return;
       }
 
-      response.json(result.payload);
+      sendJson<KnowMePayload>(response, result.payload);
     } catch (error) {
       handleError(response, error);
     }

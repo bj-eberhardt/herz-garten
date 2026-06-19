@@ -1,10 +1,13 @@
 import type { Router } from 'express';
 import { currentUser, requireAuth } from '../../auth.js';
 import { handleError, sendApiError } from '../../errors.js';
+import { sendJson } from '../../http.js';
 import { validateBody } from '../../validation.js';
-import { todayAnswerBodySchema } from '../bodySchemas.js';
+import { todayAnswerBodySchema, type TodayAnswerBody } from '../bodySchemas.js';
 import { answerTodayQuestion } from '../today/today.service.js';
 import { buildTodayPayload, normalizeText, resolveLocale } from '../support.repository.js';
+
+type TodayPayload = NonNullable<Awaited<ReturnType<typeof buildTodayPayload>>>;
 
 export function registerTodayRoutes(router: Router) {
   router.get('/today', requireAuth, async (request, response) => {
@@ -16,7 +19,7 @@ export function registerTodayRoutes(router: Router) {
         sendApiError(response, 409, 'couple.notConnected');
         return;
       }
-      response.json(payload);
+      sendJson<TodayPayload>(response, payload);
     } catch (error) {
       handleError(response, error);
     }
@@ -24,7 +27,8 @@ export function registerTodayRoutes(router: Router) {
 
   router.post('/today/answer', requireAuth, validateBody(todayAnswerBodySchema), async (request, response) => {
     const user = currentUser(request);
-    const answerText = normalizeText(request.body.answerText);
+    const body = request.body as TodayAnswerBody;
+    const answerText = normalizeText(body.answerText);
 
     if (!answerText) {
       sendApiError(response, 400, 'today.answerRequired');
@@ -42,7 +46,7 @@ export function registerTodayRoutes(router: Router) {
         return;
       }
 
-      response.json(result.payload);
+      sendJson<TodayPayload>(response, result.payload);
     } catch (error) {
       handleError(response, error);
     }

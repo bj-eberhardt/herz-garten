@@ -1,10 +1,13 @@
 import type { Router } from 'express';
 import { currentUser, requireAuth } from '../../auth.js';
 import { handleError, sendApiError } from '../../errors.js';
+import { sendJson } from '../../http.js';
 import { validateBody } from '../../validation.js';
-import { memoryBodySchema } from '../bodySchemas.js';
+import { memoryBodySchema, type MemoryBody } from '../bodySchemas.js';
 import { createMemoryForUser } from '../memories/memories.service.js';
 import { buildMemoryPayload, normalizeText, resolveLocale, todayIsoDate } from '../support.repository.js';
+
+type MemoriesPayload = NonNullable<Awaited<ReturnType<typeof buildMemoryPayload>>>;
 
 export function registerMemoryRoutes(router: Router) {
   router.get('/memories', requireAuth, async (request, response) => {
@@ -16,7 +19,7 @@ export function registerMemoryRoutes(router: Router) {
         sendApiError(response, 409, 'couple.notConnected');
         return;
       }
-      response.json(payload);
+      sendJson<MemoriesPayload>(response, payload);
     } catch (error) {
       handleError(response, error);
     }
@@ -24,10 +27,11 @@ export function registerMemoryRoutes(router: Router) {
 
   router.post('/memories', requireAuth, validateBody(memoryBodySchema), async (request, response) => {
     const user = currentUser(request);
-    const title = normalizeText(request.body.title);
-    const description = normalizeText(request.body.description) || null;
-    const date = normalizeText(request.body.date) || todayIsoDate();
-    const category = normalizeText(request.body.category) || 'everyday';
+    const body = request.body as MemoryBody;
+    const title = normalizeText(body.title);
+    const description = normalizeText(body.description) || null;
+    const date = normalizeText(body.date) || todayIsoDate();
+    const category = normalizeText(body.category) || 'everyday';
 
     if (!title) {
       sendApiError(response, 400, 'memory.titleRequired');
@@ -50,7 +54,7 @@ export function registerMemoryRoutes(router: Router) {
         return;
       }
 
-      response.status(201).json(result.payload);
+      sendJson<MemoriesPayload>(response.status(201), result.payload);
     } catch (error) {
       handleError(response, error);
     }

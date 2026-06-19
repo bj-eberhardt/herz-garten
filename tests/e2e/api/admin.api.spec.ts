@@ -779,7 +779,6 @@ test.describe('admin api', () => {
       multipart: {
         key,
         label: 'Missing image',
-        objectType: 'decoration',
         sourceTypes: JSON.stringify(['quest']),
         stageUnlock: '1',
         anchorX: '0.5',
@@ -796,7 +795,6 @@ test.describe('admin api', () => {
         multipart: {
           key,
           label: 'Uploaded asset',
-          objectType: 'decoration',
           sourceTypes: JSON.stringify(['quest']),
           stageUnlock: '1',
           anchorX: '0.5',
@@ -819,7 +817,6 @@ test.describe('admin api', () => {
       await request.patch(`${apiBaseURL}/api/admin/garden/assets/${key}`, {
         multipart: {
           label: 'Inactive uploaded asset',
-          objectType: 'decoration',
           sourceTypes: JSON.stringify(['quest']),
           stageUnlock: '1',
           anchorX: '0.5',

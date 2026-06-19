@@ -42,19 +42,29 @@ export async function listAnswersForDailyInstance(client: Queryable, coupleId: s
 
 export async function insertDailyGardenReward(
   client: Queryable,
-  input: { coupleId: string; instanceId: string; areaKey: string; assetKey: string; positionX: number; positionY: number; zIndex: number },
+  input: {
+    coupleId: string;
+    instanceId: string;
+    areaKey: string;
+    assetKey: string;
+    objectType: string;
+    positionX: number;
+    positionY: number;
+    zIndex: number;
+  },
 ) {
   await client.query(
     `
       insert into garden_objects (
         id, couple_id, type, source_type, source_id, label, area_key, asset_key, position_x, position_y, z_index, reward_points, level
       )
-      values ($1, $2, 'flower', 'question', $3, 'Tagesfrage beantwortet', $4, $5, $6, $7, $8, 10, 1)
+      values ($1, $2, $3, 'question', $4, 'Tagesfrage beantwortet', $5, $6, $7, $8, $9, 10, 1)
       on conflict do nothing
     `,
     [
       randomUUID(),
       input.coupleId,
+      input.objectType,
       input.instanceId,
       input.areaKey,
       input.assetKey,

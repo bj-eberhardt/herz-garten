@@ -5,7 +5,7 @@ import { Plus, Save } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
 import { ApiError } from '@/services/api';
 import { resolveAssetUrl } from '@/services/assetUrls';
-import type { GardenAsset, GardenObjectType, GardenSourceType } from '@/types/domain';
+import type { GardenAsset, GardenSourceType } from '@/types/domain';
 
 interface GardenLevelOption {
   id: string;
@@ -16,7 +16,6 @@ interface GardenLevelOption {
 interface GardenAssetForm {
   key: string;
   label: string;
-  objectType: GardenObjectType;
   sourceTypes: GardenSourceType[];
   stageUnlock: number;
   image: string;
@@ -31,6 +30,7 @@ interface GardenAssetForm {
 const { t } = useI18n();
 const items = ref<GardenAsset[]>([]);
 const levels = ref<GardenLevelOption[]>([]);
+const assetsLoaded = ref(false);
 const showForm = ref(false);
 const saving = ref(false);
 const error = ref('');
@@ -42,10 +42,15 @@ const anchorPreview = ref<HTMLElement | null>(null);
 const draggingAnchor = ref(false);
 const form = reactive<GardenAssetForm>(emptyForm());
 
-const objectTypes: GardenObjectType[] = ['flower', 'tree', 'bench', 'light', 'stone', 'pond', 'decoration'];
 const sourceTypes: GardenSourceType[] = ['question', 'quest', 'memory', 'love_jar', 'milestone', 'know_me'];
 const isEditing = computed(() => Boolean(editingKey.value));
 const assetSizeLabel = computed(() => (form.width && form.height ? `${form.width} x ${form.height} px` : t('admin.gardenAssets.sizeUnknown')));
+const missingStageOneSources = computed(() => {
+  if (!assetsLoaded.value) return [];
+  return sourceTypes.filter(
+    (sourceType) => !items.value.some((asset) => asset.active && asset.stageUnlock <= 1 && asset.sourceTypes.includes(sourceType)),
+  );
+});
 const stageOptions = computed(() => {
   if (!form.stageUnlock || levels.value.some((level) => level.stage === form.stageUnlock)) return levels.value;
   return [...levels.value, { id: `stage-${form.stageUnlock}`, stage: form.stageUnlock, localizedName: t('admin.gardenAssets.unknownStage') }].sort(
@@ -64,7 +69,6 @@ function emptyForm(): GardenAssetForm {
   return {
     key: '',
     label: '',
-    objectType: 'decoration',
     sourceTypes: [],
     stageUnlock: 1,
     image: '',
@@ -86,7 +90,6 @@ function assetPayload() {
   const payload = new FormData();
   payload.set('key', form.key);
   payload.set('label', form.label);
-  payload.set('objectType', form.objectType);
   payload.set('sourceTypes', JSON.stringify(form.sourceTypes));
   payload.set('stageUnlock', String(form.stageUnlock));
   payload.set('anchorX', String(form.anchorX));
@@ -117,7 +120,19 @@ async function openNew() {
 }
 
 async function editAsset(asset: GardenAsset) {
-  replaceForm({ ...asset });
+  replaceForm({
+    key: asset.key,
+    label: asset.label,
+    sourceTypes: asset.sourceTypes,
+    stageUnlock: asset.stageUnlock,
+    image: asset.image,
+    width: asset.width,
+    height: asset.height,
+    anchorX: asset.anchorX,
+    anchorY: asset.anchorY,
+    active: asset.active,
+    sortOrder: asset.sortOrder,
+  });
   editingKey.value = asset.key;
   imageFile.value = null;
   imagePreview.value = '';
@@ -129,6 +144,7 @@ async function editAsset(asset: GardenAsset) {
 async function loadItems() {
   const payload = await adminApiRequest<{ items: GardenAsset[] }>('/api/admin/garden/assets');
   items.value = payload.items.map(normalizeAsset);
+  assetsLoaded.value = true;
 }
 
 async function loadLevels() {
@@ -247,6 +263,13 @@ onMounted(async () => {
       <span>{{ t('admin.gardenAssets.subtitle') }}</span>
     </div>
 
+    <p v-if="missingStageOneSources.length" class="admin-warning" data-testid="admin-garden-assets-stage-one-warning">
+      <span>{{ t('admin.gardenAssets.stageOneWarning') }}</span>
+      <span class="admin-warning-chips">
+        <span v-for="sourceType in missingStageOneSources" :key="sourceType" class="admin-chip">{{ sourceType }}</span>
+      </span>
+    </p>
+
     <section v-if="showForm" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-garden-asset-form">
       <div class="admin-form-head">
         <h2>{{ isEditing ? t('admin.gardenAssets.editTitle') : t('admin.gardenAssets.newTitle') }}</h2>
@@ -256,12 +279,6 @@ onMounted(async () => {
 
       <label>{{ t('admin.common.code') }}<input v-model="form.key" :disabled="isEditing" data-testid="admin-garden-asset-key" /></label>
       <label>{{ t('admin.common.label') }}<input v-model="form.label" data-testid="admin-garden-asset-label" /></label>
-      <label>
-        {{ t('admin.gardenAssets.objectType') }}
-        <select v-model="form.objectType">
-          <option v-for="type in objectTypes" :key="type" :value="type">{{ type }}</option>
-        </select>
-      </label>
       <label>
         {{ t('admin.gardenAssets.stageUnlock') }}
         <select v-model.number="form.stageUnlock">
@@ -339,7 +356,6 @@ onMounted(async () => {
             <th>{{ t('admin.gardenAssets.preview') }}</th>
             <th>{{ t('admin.common.code') }}</th>
             <th>{{ t('admin.common.label') }}</th>
-            <th>{{ t('admin.gardenAssets.objectType') }}</th>
             <th>{{ t('admin.gardenAssets.sourceTypes') }}</th>
             <th>{{ t('admin.gardenAssets.stageUnlock') }}</th>
             <th>{{ t('admin.common.status') }}</th>
@@ -351,7 +367,6 @@ onMounted(async () => {
             <td><img class="admin-asset-thumb" :src="asset.image" alt="" /></td>
             <td><code>{{ asset.key }}</code></td>
             <td>{{ asset.label }}</td>
-            <td>{{ asset.objectType }}</td>
             <td>
               <span v-for="sourceType in asset.sourceTypes" :key="sourceType" class="admin-chip">{{ sourceType }}</span>
             </td>

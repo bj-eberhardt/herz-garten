@@ -141,7 +141,6 @@ export interface GardenArea {
 export interface GardenAsset {
   key: string;
   label: string;
-  objectType: GardenObjectType;
   sourceTypes: GardenSourceType[];
   stageUnlock: number;
   image: string;

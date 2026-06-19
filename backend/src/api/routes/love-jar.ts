@@ -1,16 +1,20 @@
 import type { Router } from 'express';
 import { currentUser, requireAuth } from '../../auth.js';
 import { handleError, sendApiError } from '../../errors.js';
+import { sendJson } from '../../http.js';
 import { validateBody } from '../../validation.js';
-import { emptyBodySchema, loveJarNoteBodySchema } from '../bodySchemas.js';
+import { emptyBodySchema, loveJarNoteBodySchema, type LoveJarNoteBody } from '../bodySchemas.js';
 import { createLoveJarNoteForUser, drawLoveJarNoteForUser } from '../love-jar/love-jar.service.js';
 import { buildLoveJarPayload, buildLoveJarTemplatePayload, normalizeText, resolveLocale } from '../support.repository.js';
+
+type LoveJarTemplatesPayload = Awaited<ReturnType<typeof buildLoveJarTemplatePayload>>;
+type LoveJarPayload = NonNullable<Awaited<ReturnType<typeof buildLoveJarPayload>>>;
 
 export function registerLoveJarRoutes(router: Router) {
   router.get('/love-jar/templates', requireAuth, async (request, response) => {
     const user = currentUser(request);
     try {
-      response.json(await buildLoveJarTemplatePayload(user.id, await resolveLocale(request)));
+      sendJson<LoveJarTemplatesPayload>(response, await buildLoveJarTemplatePayload(user.id, await resolveLocale(request)));
     } catch (error) {
       handleError(response, error);
     }
@@ -25,7 +29,7 @@ export function registerLoveJarRoutes(router: Router) {
         sendApiError(response, 409, 'couple.notConnected');
         return;
       }
-      response.json(payload);
+      sendJson<LoveJarPayload>(response, payload);
     } catch (error) {
       handleError(response, error);
     }
@@ -33,8 +37,9 @@ export function registerLoveJarRoutes(router: Router) {
 
   router.post('/love-jar', requireAuth, validateBody(loveJarNoteBodySchema), async (request, response) => {
     const user = currentUser(request);
-    const text = normalizeText(request.body.text);
-    const category = normalizeText(request.body.category) || 'compliment';
+    const body = request.body as LoveJarNoteBody;
+    const text = normalizeText(body.text);
+    const category = normalizeText(body.category) || 'compliment';
 
     if (!text) {
       sendApiError(response, 400, 'loveJar.noteRequired');
@@ -52,7 +57,7 @@ export function registerLoveJarRoutes(router: Router) {
         return;
       }
 
-      response.status(201).json(result.payload);
+      sendJson<LoveJarPayload>(response.status(201), result.payload);
     } catch (error) {
       handleError(response, error);
     }
@@ -76,7 +81,7 @@ export function registerLoveJarRoutes(router: Router) {
         return;
       }
 
-      response.json(result.payload);
+      sendJson<LoveJarPayload>(response, result.payload);
     } catch (error) {
       handleError(response, error);
     }

@@ -1,17 +1,21 @@
 import type { Router } from 'express';
 import { currentUser, requireAuth } from '../../auth.js';
 import { handleError, sendApiError } from '../../errors.js';
+import { sendJson } from '../../http.js';
 import { validateBody } from '../../validation.js';
 import { emptyBodySchema } from '../bodySchemas.js';
 import { readAllNotifications, readNotification } from '../notifications/notifications.service.js';
 import { buildNotificationDetailPayload, buildNotificationPayload, resolveLocale } from '../support.repository.js';
+
+type NotificationsPayload = Awaited<ReturnType<typeof buildNotificationPayload>>;
+type NotificationDetailPayload = NonNullable<Awaited<ReturnType<typeof buildNotificationDetailPayload>>>;
 
 export function registerNotificationRoutes(router: Router) {
   router.get('/notifications', requireAuth, async (request, response) => {
     const user = currentUser(request);
 
     try {
-      response.json(await buildNotificationPayload(user.id));
+      sendJson<NotificationsPayload>(response, await buildNotificationPayload(user.id));
     } catch (error) {
       handleError(response, error);
     }
@@ -21,7 +25,7 @@ export function registerNotificationRoutes(router: Router) {
     const user = currentUser(request);
 
     try {
-      response.json(await readAllNotifications(user.id));
+      sendJson<NotificationsPayload>(response, await readAllNotifications(user.id));
     } catch (error) {
       handleError(response, error);
     }
@@ -38,7 +42,7 @@ export function registerNotificationRoutes(router: Router) {
         return;
       }
 
-      response.json(payload);
+      sendJson<NotificationDetailPayload>(response, payload);
     } catch (error) {
       handleError(response, error);
     }
@@ -54,7 +58,7 @@ export function registerNotificationRoutes(router: Router) {
         return;
       }
 
-      response.json(payload);
+      sendJson<NotificationsPayload>(response, payload);
     } catch (error) {
       handleError(response, error);
     }

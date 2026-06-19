@@ -12,6 +12,7 @@ export const configResponseSchema = z.object({
     }),
   ),
 });
+export type ConfigResponse = z.infer<typeof configResponseSchema>;
 const trimmedString = z.string().transform((value) => value.trim());
 const trimmedNullableString = z
   .string()
@@ -26,6 +27,7 @@ export const authRegisterBodySchema = z
     password: trimmedString.optional(),
   })
   .strict();
+export type AuthRegisterBody = z.infer<typeof authRegisterBodySchema>;
 
 export const authLoginBodySchema = z
   .object({
@@ -33,6 +35,7 @@ export const authLoginBodySchema = z
     password: trimmedString.optional(),
   })
   .strict();
+export type AuthLoginBody = z.infer<typeof authLoginBodySchema>;
 
 const featureExplainersSchema = z.record(z.string(), z.boolean());
 const pushNotificationModeSchema = z.enum(['all', 'actions_only']);
@@ -52,6 +55,7 @@ export const preferencesBodySchema = z
     futureOption: z.object({ enabled: z.boolean() }).strict().optional(),
   })
   .strict();
+export type PreferencesBody = z.infer<typeof preferencesBodySchema>;
 
 export const profileBodySchema = z
   .object({
@@ -59,6 +63,7 @@ export const profileBodySchema = z
     displayName: trimmedString.optional(),
   })
   .strict();
+export type ProfileBody = z.infer<typeof profileBodySchema>;
 
 export const passwordBodySchema = z
   .object({
@@ -66,6 +71,7 @@ export const passwordBodySchema = z
     newPassword: trimmedString.pipe(z.string().min(8)),
   })
   .strict();
+export type PasswordBody = z.infer<typeof passwordBodySchema>;
 
 export const createCoupleBodySchema = z
   .object({
@@ -73,18 +79,21 @@ export const createCoupleBodySchema = z
     contentPreference: trimmedString.optional(),
   })
   .strict();
+export type CreateCoupleBody = z.infer<typeof createCoupleBodySchema>;
 
 export const joinCoupleBodySchema = z
   .object({
     inviteCode: trimmedString.optional(),
   })
   .strict();
+export type JoinCoupleBody = z.infer<typeof joinCoupleBodySchema>;
 
 export const todayAnswerBodySchema = z
   .object({
     answerText: trimmedString.optional(),
   })
   .strict();
+export type TodayAnswerBody = z.infer<typeof todayAnswerBodySchema>;
 
 export const knowMeCreateBodySchema = z
   .object({
@@ -94,12 +103,14 @@ export const knowMeCreateBodySchema = z
     correctOptionIndex: z.number().int().optional(),
   })
   .strict();
+export type KnowMeCreateBody = z.infer<typeof knowMeCreateBodySchema>;
 
 export const knowMeGuessBodySchema = z
   .object({
     selectedOptionIndex: z.number().int().optional(),
   })
   .strict();
+export type KnowMeGuessBody = z.infer<typeof knowMeGuessBodySchema>;
 
 export const loveJarNoteBodySchema = z
   .object({
@@ -107,6 +118,7 @@ export const loveJarNoteBodySchema = z
     category: trimmedString.optional(),
   })
   .strict();
+export type LoveJarNoteBody = z.infer<typeof loveJarNoteBodySchema>;
 
 export const memoryBodySchema = z
   .object({
@@ -116,6 +128,7 @@ export const memoryBodySchema = z
     category: trimmedString.optional(),
   })
   .strict();
+export type MemoryBody = z.infer<typeof memoryBodySchema>;
 
 export const gardenPlacementBodySchema = z
   .object({
@@ -130,6 +143,7 @@ export const gardenPlacementBodySchema = z
   .refine((body) => Object.keys(body).length > 0, {
     message: 'At least one placement field is required',
   });
+export type GardenPlacementBody = z.infer<typeof gardenPlacementBodySchema>;
 
 export const pushSubscriptionBodySchema = z
   .object({
@@ -143,12 +157,14 @@ export const pushSubscriptionBodySchema = z
       .strict(),
   })
   .strict();
+export type PushSubscriptionBody = z.infer<typeof pushSubscriptionBodySchema>;
 
 export const pushUnsubscribeBodySchema = z
   .object({
     endpoint: trimmedString.pipe(z.string().url()).optional(),
   })
   .strict();
+export type PushUnsubscribeBody = z.infer<typeof pushUnsubscribeBodySchema>;
 
 export const questQuerySchema = z
   .object({
@@ -163,3 +179,4 @@ export const questQuerySchema = z
     lang: optionalQueryString,
   })
   .strict();
+export type QuestQuery = z.infer<typeof questQuerySchema>;

@@ -73,6 +73,17 @@
   padding: 12px 14px;
 }
 
+.admin-warning-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.admin-warning-chips .admin-chip {
+  margin: 0;
+}
+
 .admin-view {
   display: grid;
   gap: 16px;
