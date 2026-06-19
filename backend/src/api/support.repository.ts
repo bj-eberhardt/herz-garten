@@ -2,7 +2,7 @@ import { randomInt, randomUUID } from 'node:crypto';
 import type { Request } from 'express';
 import { config } from '../config.js';
 import { pool } from '../db.js';
-import { type NotificationMessageKey, translateNotificationBackend } from '../i18n/messages.js';
+import { type NotificationMessageKey, translateNotificationBackend } from './notifications/messages.js';
 import {
   normalizePushNotificationMode,
   shouldSendPushForMode,

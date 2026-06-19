@@ -1,5 +1,4 @@
 import type { Response } from 'express';
-import { type BackendMessageKey, translateBackend } from './i18n/messages.js';
 
 const apiErrorKeys = [
   'common.unexpected',
@@ -45,14 +44,6 @@ const apiErrorKeys = [
 
 export type ApiErrorKey = (typeof apiErrorKeys)[number];
 
-function backendErrorKey(key: ApiErrorKey): BackendMessageKey {
-  return `errors.${key}` as BackendMessageKey;
-}
-
-export const apiErrorMessages = Object.fromEntries(
-  apiErrorKeys.map((key) => [key, translateBackend(backendErrorKey(key))]),
-) as Record<ApiErrorKey, string>;
-
 export function sendApiError(
   response: Response,
   status: number,
@@ -62,7 +53,7 @@ export function sendApiError(
   response.status(status).json({
     errorKey,
     errorCode: errorKey,
-    error: translateBackend(backendErrorKey(errorKey), params),
+    error: errorKey,
     ...(params ? { params } : {}),
   });
 }
