@@ -2625,6 +2625,8 @@ textarea {
 
 .nav-item {
   align-items: center;
+  background: transparent;
+  border: 0;
   border-radius: 8px;
   color: #806456;
   display: grid;
@@ -2634,6 +2636,12 @@ textarea {
   justify-items: center;
   min-height: 58px;
   padding: 6px;
+}
+
+.nav-item--disabled {
+  color: #b8aaa4;
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .nav-item.router-link-active {

@@ -212,6 +212,25 @@ test('login with a one-member couple stays on onboarding and shows invite code',
   await expect(page.getByTestId('couple-code-panel')).toBeVisible();
   await expect(page.getByTestId('couple-code-panel')).toContainText(created.couple.inviteCode);
   await expect(page.getByTestId('copy-couple-code')).toBeVisible();
+
+  for (const testId of ['nav-garden', 'nav-today', 'nav-quests', 'nav-know-me', 'nav-love-jar', 'nav-memories', 'nav-settings']) {
+    await expect(page.getByTestId(testId)).toBeVisible();
+  }
+  await expect(page.getByTestId('nav-garden')).toHaveAttribute('href', '/garden');
+  await expect(page.getByTestId('nav-settings')).toHaveAttribute('href', '/settings');
+  await expect(page.getByTestId('nav-today')).toBeDisabled();
+  await expect(page.getByTestId('nav-quests')).toBeDisabled();
+  await expect(page.getByTestId('nav-know-me')).toBeDisabled();
+  await expect(page.getByTestId('nav-love-jar')).toBeDisabled();
+  await expect(page.getByTestId('nav-memories')).toBeDisabled();
+
+  await page.getByTestId('nav-settings').click();
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByTestId('settings-profile-panel')).toBeVisible();
+  await page.getByTestId('nav-garden').click();
+  await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page.getByTestId('waiting-partner-panel')).toBeVisible();
+
   await page.goto('/today');
   await expect(page).toHaveURL(/\/onboarding$/);
 });

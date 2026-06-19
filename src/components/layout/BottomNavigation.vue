@@ -20,7 +20,13 @@ const items = [
   { to: '/settings', labelKey: 'nav.settings', icon: Settings, testId: 'nav-settings' },
 ];
 
-const visibleItems = computed(() => (authStore.hasCompleteCouple ? items : items.filter((item) => item.to === '/garden')));
+const partnerIndependentRoutes = new Set(['/garden', '/settings']);
+const navItems = computed(() =>
+  items.map((item) => ({
+    ...item,
+    disabled: !authStore.hasCompleteCouple && !partnerIndependentRoutes.has(item.to),
+  })),
+);
 
 function updateScrollIndicators() {
   const element = navScroll.value;
@@ -63,10 +69,23 @@ onBeforeUnmount(() => {
       <ChevronLeft :size="18" aria-hidden="true" />
     </button>
     <nav ref="navScroll" class="bottom-nav" :aria-label="t('nav.main')" @scroll="updateScrollIndicators">
-      <RouterLink v-for="item in visibleItems" :key="item.to" :to="item.to" class="nav-item" :data-testid="item.testId">
-        <component :is="item.icon" :size="20" aria-hidden="true" />
-        <span>{{ t(item.labelKey) }}</span>
-      </RouterLink>
+      <template v-for="item in navItems" :key="item.to">
+        <RouterLink v-if="!item.disabled" :to="item.to" class="nav-item" :data-testid="item.testId">
+          <component :is="item.icon" :size="20" aria-hidden="true" />
+          <span>{{ t(item.labelKey) }}</span>
+        </RouterLink>
+        <button
+          v-else
+          class="nav-item nav-item--disabled"
+          type="button"
+          disabled
+          :aria-label="t(item.labelKey)"
+          :data-testid="item.testId"
+        >
+          <component :is="item.icon" :size="20" aria-hidden="true" />
+          <span>{{ t(item.labelKey) }}</span>
+        </button>
+      </template>
     </nav>
     <button
       v-if="canScrollRight"

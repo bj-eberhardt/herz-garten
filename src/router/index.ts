@@ -66,6 +66,7 @@ const router = createRouter({
 });
 
 const allowedWithoutCouple = new Set(['/onboarding', '/notifications']);
+const allowedWithIncompleteCouple = new Set(['/settings']);
 
 router.beforeEach(async (to) => {
   if (to.path.startsWith('/admin')) {
@@ -92,6 +93,9 @@ router.beforeEach(async (to) => {
   }
 
   if (!allowedWithoutCouple.has(to.path) && !authStore.hasCompleteCouple) {
+    if (authStore.hasCouple && allowedWithIncompleteCouple.has(to.path)) {
+      return true;
+    }
     return '/onboarding';
   }
 
