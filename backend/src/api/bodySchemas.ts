@@ -12,9 +12,6 @@ export const configResponseSchema = z.object({
     }),
   ),
 });
-
-export type ConfigResponse = z.infer<typeof configResponseSchema>;
-
 const trimmedString = z.string().transform((value) => value.trim());
 const trimmedNullableString = z
   .string()

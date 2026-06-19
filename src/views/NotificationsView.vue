@@ -48,8 +48,7 @@ async function toggleNotification(notification: NotificationItem) {
 }
 
 async function navigateToNotification(notification: NotificationItem) {
-  const targetRoute = notificationStore.details[notification.id]?.targetRoute ?? notificationStore.targetRoute(notification);
-  await router.push(targetRoute);
+  await router.push(notificationStore.targetLocation(notification, notificationStore.details[notification.id]));
 }
 </script>
 

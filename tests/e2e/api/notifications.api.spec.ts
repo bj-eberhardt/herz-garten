@@ -67,7 +67,7 @@ test.describe('notifications api', () => {
       await apiGetRaw(request, `/api/notifications/${memoryNotification!.id}/detail`, partnerB.token),
     );
     expect(detail.notification.id).toBe(memoryNotification!.id);
-    expect(detail.targetRoute).toBe('/memories');
+    expect(detail.targetPageId).toBe('memories');
     expect(detail.gardenDetail).toEqual(
       expect.objectContaining({
         object: expect.objectContaining({ sourceType: 'memory', sourceId: memoryNotification!.sourceId }),
@@ -89,7 +89,7 @@ test.describe('notifications api', () => {
     const accountDetail = await expectJson<NotificationDetailPayload>(
       await apiGetRaw(request, `/api/notifications/${accountNotification!.id}/detail`, partnerB.token),
     );
-    expect(accountDetail.targetRoute).toBe('/onboarding');
+    expect(accountDetail.targetPageId).toBe('onboarding');
     expect(accountDetail.gardenDetail).toBeNull();
   });
 

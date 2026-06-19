@@ -2,6 +2,7 @@ import type { Router } from 'express';
 import { listPreferenceOptions } from '../../admin/preferences.repository.js';
 import { config } from '../../config.js';
 import { handleError } from '../../errors.js';
+import { configResponseSchema } from '../bodySchemas.js';
 import { listSupportedLocales } from '../config.repository.js';
 import { resolveLocale } from '../support.repository.js';
 
@@ -10,13 +11,14 @@ export function registerConfigRoutes(router: Router) {
     try {
       const supportedLocales = await listSupportedLocales();
 
-      response.json({
+      const payload = configResponseSchema.parse({
         defaultLocale: config.i18nDefaultLocale,
         supportedLocales: supportedLocales.map((locale) => ({
           ...locale,
           isDefault: locale.locale === config.i18nDefaultLocale || locale.isDefault,
         })),
       });
+      response.json(payload);
     } catch (error) {
       handleError(response, error);
     }

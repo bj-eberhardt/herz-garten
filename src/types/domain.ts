@@ -210,13 +210,22 @@ export interface NotificationItem {
 
 export interface NotificationDetailPayload {
   notification: NotificationItem;
-  targetRoute: string;
+  targetPageId: NotificationTargetPageId;
   gardenDetail: {
     couple: Couple;
     object: GardenObject | null;
     source: Record<string, unknown> | null;
   } | null;
 }
+
+export type NotificationTargetPageId =
+  | 'onboarding'
+  | 'garden'
+  | 'today'
+  | 'quests'
+  | 'know_me'
+  | 'love_jar'
+  | 'memories';
 
 export interface KnowMeGuess {
   id: string;

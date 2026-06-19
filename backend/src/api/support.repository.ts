@@ -2,6 +2,7 @@ import { randomInt, randomUUID } from 'node:crypto';
 import type { Request } from 'express';
 import { config } from '../config.js';
 import { pool } from '../db.js';
+import { normalizeLocale, parseAcceptLanguage } from '../i18n/locales.js';
 import { type NotificationMessageKey, translateNotificationBackend } from './notifications/messages.js';
 import {
   normalizePushNotificationMode,
@@ -16,8 +17,14 @@ import {
   gardenStageForPoints,
   nextGardenUnlock,
 } from './garden/levels.repository.js';
+import {
+  assetKeyForGardenObject,
+  assetKeyForQuest,
+  mapGardenObject,
+} from './garden/garden.mapper.js';
 
 export { fallbackAreaKey, gardenStageAfterReward, gardenStageForPoints, nextGardenUnlock };
+export { assetKeyForGardenObject, assetKeyForQuest, mapGardenObject };
 
 export interface Queryable {
   query: typeof pool.query;
@@ -255,6 +262,82 @@ export interface CategoryOptionRow {
   label: string;
 }
 
+const notificationSelectColumns = `
+  id,
+  couple_id as "coupleId",
+  user_id as "userId",
+  type,
+  title,
+  body,
+  title_key as "titleKey",
+  body_key as "bodyKey",
+  params,
+  source_type as "sourceType",
+  source_id as "sourceId",
+  read_at as "readAt",
+  created_at as "createdAt"
+`;
+
+const knowMeDetailSelectSql = `
+  select
+    q.id,
+    q.question_text as "questionText",
+    q.options,
+    q.correct_option_index as "correctOptionIndex",
+    q.answered_at as "answeredAt",
+    q.created_at as "createdAt",
+    author.display_name as "authorName",
+    guesser.display_name as "guessUserName",
+    g.selected_option_index as "selectedOptionIndex",
+    g.is_correct as "isCorrect",
+    g.created_at as "guessCreatedAt"
+  from know_me_questions q
+  join profiles author on author.id = q.author_id
+  left join know_me_guesses g on g.question_id = q.id
+  left join profiles guesser on guesser.id = g.user_id
+  where q.id = $1 and q.couple_id = $2
+`;
+
+function memoryCategoryLabelSql(localePlaceholder: string) {
+  return `
+    coalesce(
+      requested_category.label,
+      fallback_category.label,
+      case
+        when ${localePlaceholder} = 'en' then
+          case m.category
+            when 'everyday' then 'Everyday'
+            when 'date' then 'Date'
+            when 'travel' then 'Travel'
+            when 'milestone' then 'Milestone'
+            when 'funny' then 'Funny'
+            when 'special' then 'Special'
+          end
+        else
+          case m.category
+            when 'everyday' then 'Alltag'
+            when 'date' then 'Date'
+            when 'travel' then 'Reise'
+            when 'milestone' then 'Meilenstein'
+            when 'funny' then 'Lustig'
+            when 'special' then 'Besonders'
+          end
+      end,
+      m.category
+    )
+  `;
+}
+
+function loveJarNoteCategoryJoins(localePlaceholder: string, fallbackLocalePlaceholder: string) {
+  return `
+    left join content_categories category on category.content_type = 'love-jar-templates' and category.value = n.category
+    left join content_category_translations requested_category
+      on requested_category.category_id = category.id and requested_category.locale = ${localePlaceholder}
+    left join content_category_translations fallback_category
+      on fallback_category.category_id = category.id and fallback_category.locale = ${fallbackLocalePlaceholder}
+  `;
+}
+
 export const defaultFeatureExplainerPreferences: Record<string, boolean> = {
   onboarding: true,
   today: true,
@@ -298,28 +381,6 @@ export function shuffleKnowMeOptions(options: string[], correctOptionIndex: numb
 
 export function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
-}
-
-export function normalizeLocale(value: unknown) {
-  if (typeof value !== 'string') return '';
-  const locale = value.trim().toLowerCase().split(';')[0]?.split(',')[0]?.replace('_', '-') ?? '';
-  return locale.split('-')[0] ?? '';
-}
-
-export function parseAcceptLanguage(headerValue: string | undefined) {
-  if (!headerValue) return '';
-  const candidates = headerValue
-    .split(',')
-    .map((part) => {
-      const [tag, ...params] = part.trim().split(';');
-      const qParam = params.find((param) => param.trim().startsWith('q='));
-      const q = qParam ? Number(qParam.trim().slice(2)) : 1;
-      return { locale: normalizeLocale(tag), q: Number.isFinite(q) ? q : 0 };
-    })
-    .filter((candidate) => candidate.locale)
-    .sort((left, right) => right.q - left.q);
-
-  return candidates[0]?.locale ?? '';
 }
 
 export async function resolveLocale(request: Request) {
@@ -604,29 +665,6 @@ export async function ensureCoupleMembership(userId: string, coupleId: string) {
   return (result.rowCount ?? 0) > 0;
 }
 
-export function mapGardenObject(row: GardenObjectRow) {
-  return {
-    id: row.id,
-    coupleId: row.coupleId,
-    type: row.type,
-    sourceType: row.sourceType,
-    sourceId: row.sourceId,
-    label: row.label,
-    areaKey: row.areaKey ?? fallbackAreaKey,
-    assetKey: row.assetKey ?? assetKeyForGardenObject(String(row.type), String(row.sourceType)),
-    historyTitle: row.historyTitle ?? row.label,
-    positionX: row.positionX,
-    positionY: row.positionY,
-    zIndex: row.zIndex ?? 1,
-    scale: Number(row.scale ?? 1),
-    rotation: row.rotation ?? 0,
-    placedByUser: Boolean(row.placedByUser),
-    rewardPoints: Number(row.rewardPoints ?? 0),
-    level: row.level,
-    createdAt: row.createdAt,
-  };
-}
-
 export function areaForStage(stage: number, areas: GardenArea[]) {
   return areas.filter((area) => area.stageUnlock <= Math.max(1, stage));
 }
@@ -646,30 +684,6 @@ export function areaKeyForSource(sourceType: string, questCategory = '') {
   return 'heart_bed';
 }
 
-export function assetKeyForQuest(category: string) {
-  if (category === 'date') return 'picnic_blanket';
-  if (category === 'romance') return 'date_pavilion';
-  if (category === 'memory') return 'polaroid_frame';
-  if (category === 'teamwork') return 'memory_tree';
-  if (category === 'long_distance') return 'distance_bridge';
-  if (category === 'humor') return 'garden_decor';
-  return 'warm_lantern';
-}
-
-export function assetKeyForGardenObject(type: string, sourceType: string, category = '') {
-  if (sourceType === 'question') return 'conversation_flower';
-  if (sourceType === 'love_jar') return 'warm_lantern';
-  if (sourceType === 'memory') return 'memory_stone';
-  if (sourceType === 'know_me') return 'heart_flower';
-  if (sourceType === 'quest') return assetKeyForQuest(category);
-  if (type === 'tree') return 'memory_tree';
-  if (type === 'bench') return 'couple_bench';
-  if (type === 'pond') return 'quiet_pond';
-  if (type === 'stone') return 'memory_stone';
-  if (type === 'light') return 'warm_lantern';
-  return 'garden_decor';
-}
-
 export async function highestUnlockedAreaForReward(coupleStage: number, sourceType: string, questCategory = '', client: Queryable = pool) {
   const areas = await listGardenAreas('de', client);
   const targetAreaKey = areaKeyForSource(sourceType, questCategory);
@@ -677,13 +691,6 @@ export async function highestUnlockedAreaForReward(coupleStage: number, sourceTy
   const targetArea = unlockedAreas.find((area) => area.key === targetAreaKey);
   return targetArea?.key ?? unlockedAreas[unlockedAreas.length - 1]?.key ?? fallbackAreaKey;
 }
-
-export function clampNumber(value: unknown, min: number, max: number, fallback: number) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(max, Math.max(min, parsed));
-}
-
 export async function nextGardenPlacement(client: Queryable, coupleId: string, areaKey: string) {
   const result = await client.query<{ count: number }>(
     'select count(*)::int as count from garden_objects where couple_id = $1 and area_key = $2',
@@ -1051,23 +1058,10 @@ export function mapNotification(row: NotificationRow) {
   };
 }
 
-export async function buildNotificationPayload(userId: string) {
+async function listNotificationsForUser(userId: string) {
   const result = await pool.query<NotificationRow>(
     `
-      select
-        id,
-        couple_id as "coupleId",
-        user_id as "userId",
-        type,
-        title,
-        body,
-        title_key as "titleKey",
-        body_key as "bodyKey",
-        params,
-        source_type as "sourceType",
-        source_id as "sourceId",
-        read_at as "readAt",
-        created_at as "createdAt"
+      select ${notificationSelectColumns}
       from notifications
       where user_id = $1
       order by created_at desc
@@ -1075,7 +1069,23 @@ export async function buildNotificationPayload(userId: string) {
     `,
     [userId],
   );
-  const notifications = result.rows.map(mapNotification);
+  return result.rows;
+}
+
+async function findNotificationForUser(notificationId: string, userId: string) {
+  const result = await pool.query<NotificationRow>(
+    `
+      select ${notificationSelectColumns}
+      from notifications
+      where id = $1 and user_id = $2
+    `,
+    [notificationId, userId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function buildNotificationPayload(userId: string) {
+  const notifications = (await listNotificationsForUser(userId)).map(mapNotification);
 
   return {
     notifications,
@@ -1083,15 +1093,15 @@ export async function buildNotificationPayload(userId: string) {
   };
 }
 
-function routeForNotification(notification: NotificationRow) {
-  if (notification.sourceType === 'account_deletion') return '/onboarding';
-  if (notification.type === 'daily_revealed' || notification.type === 'quest_completed') return '/garden';
-  if (notification.sourceType === 'today') return '/today';
-  if (notification.sourceType === 'quest') return '/quests';
-  if (notification.sourceType === 'love_jar') return '/love-jar';
-  if (notification.sourceType === 'know_me') return '/know-me';
-  if (notification.sourceType === 'memory') return '/memories';
-  return '/garden';
+function targetPageForNotification(notification: NotificationRow) {
+  if (notification.sourceType === 'account_deletion') return 'onboarding';
+  if (notification.type === 'daily_revealed' || notification.type === 'quest_completed') return 'garden';
+  if (notification.sourceType === 'today') return 'today';
+  if (notification.sourceType === 'quest') return 'quests';
+  if (notification.sourceType === 'love_jar') return 'love_jar';
+  if (notification.sourceType === 'know_me') return 'know_me';
+  if (notification.sourceType === 'memory') return 'memories';
+  return 'garden';
 }
 
 function gardenSourceTypeForNotification(notification: NotificationRow) {
@@ -1103,55 +1113,21 @@ function gardenSourceTypeForNotification(notification: NotificationRow) {
   return '';
 }
 
-async function buildKnowMeNotificationSource(coupleId: string, questionId: string) {
+async function findKnowMeDetail(coupleId: string, questionId: string) {
   const result = await pool.query<KnowMeDetailRow>(
-    `
-      select
-        q.id,
-        q.question_text as "questionText",
-        q.options,
-        q.correct_option_index as "correctOptionIndex",
-        q.answered_at as "answeredAt",
-        q.created_at as "createdAt",
-        author.display_name as "authorName",
-        guesser.display_name as "guessUserName",
-        g.selected_option_index as "selectedOptionIndex",
-        g.is_correct as "isCorrect",
-        g.created_at as "guessCreatedAt"
-      from know_me_questions q
-      join profiles author on author.id = q.author_id
-      left join know_me_guesses g on g.question_id = q.id
-      left join profiles guesser on guesser.id = g.user_id
-      where q.id = $1 and q.couple_id = $2
-    `,
+    knowMeDetailSelectSql,
     [questionId, coupleId],
   );
-  return result.rows[0] ? { type: 'know_me' as const, ...result.rows[0] } : null;
+  return result.rows[0] ?? null;
+}
+
+async function buildKnowMeNotificationSource(coupleId: string, questionId: string) {
+  const source = await findKnowMeDetail(coupleId, questionId);
+  return source ? { type: 'know_me' as const, ...source } : null;
 }
 
 export async function buildNotificationDetailPayload(userId: string, notificationId: string, locale = 'de') {
-  const notificationResult = await pool.query<NotificationRow>(
-    `
-      select
-        id,
-        couple_id as "coupleId",
-        user_id as "userId",
-        type,
-        title,
-        body,
-        title_key as "titleKey",
-        body_key as "bodyKey",
-        params,
-        source_type as "sourceType",
-        source_id as "sourceId",
-        read_at as "readAt",
-        created_at as "createdAt"
-      from notifications
-      where id = $1 and user_id = $2
-    `,
-    [notificationId, userId],
-  );
-  const notification = notificationResult.rows[0];
+  const notification = await findNotificationForUser(notificationId, userId);
   if (!notification) return null;
 
   let gardenDetail: GardenObjectDetailPayload | null = null;
@@ -1184,7 +1160,7 @@ export async function buildNotificationDetailPayload(userId: string, notificatio
 
   return {
     notification: mapNotification(notification),
-    targetRoute: routeForNotification(notification),
+    targetPageId: targetPageForNotification(notification),
     gardenDetail,
   };
 }
@@ -1207,31 +1183,7 @@ export async function buildMemoryPayload(userId: string, locale = 'de') {
         m.date,
         m.image_url as "imageUrl",
         m.category,
-        coalesce(
-          requested_category.label,
-          fallback_category.label,
-          case
-            when $2 = 'en' then
-              case m.category
-                when 'everyday' then 'Everyday'
-                when 'date' then 'Date'
-                when 'travel' then 'Travel'
-                when 'milestone' then 'Milestone'
-                when 'funny' then 'Funny'
-                when 'special' then 'Special'
-              end
-            else
-              case m.category
-                when 'everyday' then 'Alltag'
-                when 'date' then 'Date'
-                when 'travel' then 'Reise'
-                when 'milestone' then 'Meilenstein'
-                when 'funny' then 'Lustig'
-                when 'special' then 'Besonders'
-              end
-          end,
-          m.category
-        ) as "categoryLabel",
+        ${memoryCategoryLabelSql('$2')} as "categoryLabel",
         m.linked_garden_object_id as "linkedGardenObjectId",
         m.created_at as "createdAt"
       from memory_entries m
@@ -1482,11 +1434,7 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
           n.created_at as "createdAt"
         from love_jar_notes n
         join profiles p on p.id = n.author_id
-        left join content_categories category on category.content_type = 'love-jar-templates' and category.value = n.category
-        left join content_category_translations requested_category
-          on requested_category.category_id = category.id and requested_category.locale = $3
-        left join content_category_translations fallback_category
-          on fallback_category.category_id = category.id and fallback_category.locale = $4
+        ${loveJarNoteCategoryJoins('$3', '$4')}
         where n.id = $1 and n.couple_id = $2
       `,
       [object.sourceId, couple.id, locale, config.i18nDefaultLocale],
@@ -1504,31 +1452,7 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
           m.description,
           m.date,
           m.category,
-          coalesce(
-            requested_category.label,
-            fallback_category.label,
-            case
-              when $3 = 'en' then
-                case m.category
-                  when 'everyday' then 'Everyday'
-                  when 'date' then 'Date'
-                  when 'travel' then 'Travel'
-                  when 'milestone' then 'Milestone'
-                  when 'funny' then 'Funny'
-                  when 'special' then 'Special'
-                end
-              else
-                case m.category
-                  when 'everyday' then 'Alltag'
-                  when 'date' then 'Date'
-                  when 'travel' then 'Reise'
-                  when 'milestone' then 'Meilenstein'
-                  when 'funny' then 'Lustig'
-                  when 'special' then 'Besonders'
-                end
-            end,
-            m.category
-          ) as "categoryLabel",
+          ${memoryCategoryLabelSql('$3')} as "categoryLabel",
           m.created_at as "createdAt"
         from memory_entries m
         join profiles p on p.id = m.author_id
@@ -1544,30 +1468,9 @@ export async function buildGardenObjectDetail(userId: string, objectId: string, 
     source = result.rows[0] ? { type: 'memory', ...result.rows[0] } : null;
   }
 
-  if (object.sourceType === 'know_me') {
-    const result = await pool.query<KnowMeDetailRow>(
-      `
-        select
-          q.id,
-          q.question_text as "questionText",
-          q.options,
-          q.correct_option_index as "correctOptionIndex",
-          q.answered_at as "answeredAt",
-          q.created_at as "createdAt",
-          author.display_name as "authorName",
-          guesser.display_name as "guessUserName",
-          g.selected_option_index as "selectedOptionIndex",
-          g.is_correct as "isCorrect",
-          g.created_at as "guessCreatedAt"
-        from know_me_questions q
-        join profiles author on author.id = q.author_id
-        left join know_me_guesses g on g.question_id = q.id
-        left join profiles guesser on guesser.id = g.user_id
-        where q.id = $1 and q.couple_id = $2
-      `,
-      [object.sourceId, couple.id],
-    );
-    source = result.rows[0] ? { type: 'know_me', ...result.rows[0] } : null;
+  if (object.sourceType === 'know_me' && object.sourceId) {
+    const detail = await findKnowMeDetail(couple.id, object.sourceId);
+    source = detail ? { type: 'know_me', ...detail } : null;
   }
 
   return {
@@ -1639,11 +1542,7 @@ export async function buildLoveJarPayload(userId: string, locale = 'de') {
         n.created_at as "createdAt"
       from love_jar_notes n
       join profiles p on p.id = n.author_id
-      left join content_categories category on category.content_type = 'love-jar-templates' and category.value = n.category
-      left join content_category_translations requested_category
-        on requested_category.category_id = category.id and requested_category.locale = $2
-      left join content_category_translations fallback_category
-        on fallback_category.category_id = category.id and fallback_category.locale = $3
+      ${loveJarNoteCategoryJoins('$2', '$3')}
       where n.couple_id = $1
       order by n.created_at desc
     `,
@@ -1872,5 +1771,3 @@ export async function createUniqueInviteCode(locale = 'de') {
 
   throw new Error('Could not create unique invite code');
 }
-
-

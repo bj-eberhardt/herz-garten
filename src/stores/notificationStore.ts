@@ -1,22 +1,36 @@
 import { defineStore } from 'pinia';
+import type { RouteLocationRaw } from 'vue-router';
 import { apiRequest } from '@/services/api';
 import { localizeApiError } from '@/services/errorMessages';
-import type { NotificationDetailPayload, NotificationItem } from '@/types/domain';
+import type { NotificationDetailPayload, NotificationItem, NotificationTargetPageId } from '@/types/domain';
 
 interface NotificationPayload {
   notifications: NotificationItem[];
   unreadCount: number;
 }
 
-function routeForNotification(notification: NotificationItem) {
-  if (notification.sourceType === 'account_deletion') return '/onboarding';
-  if (notification.type === 'daily_revealed' || notification.type === 'quest_completed') return '/garden';
-  if (notification.sourceType === 'today') return '/today';
-  if (notification.sourceType === 'quest') return '/quests';
-  if (notification.sourceType === 'love_jar') return '/love-jar';
-  if (notification.sourceType === 'know_me') return '/know-me';
-  if (notification.sourceType === 'memory') return '/memories';
-  return '/garden';
+function targetPageForNotification(notification: NotificationItem): NotificationTargetPageId {
+  if (notification.sourceType === 'account_deletion') return 'onboarding';
+  if (notification.type === 'daily_revealed' || notification.type === 'quest_completed') return 'garden';
+  if (notification.sourceType === 'today') return 'today';
+  if (notification.sourceType === 'quest') return 'quests';
+  if (notification.sourceType === 'love_jar') return 'love_jar';
+  if (notification.sourceType === 'know_me') return 'know_me';
+  if (notification.sourceType === 'memory') return 'memories';
+  return 'garden';
+}
+
+function routeForTargetPage(targetPageId: NotificationTargetPageId): RouteLocationRaw {
+  const routeNames: Record<NotificationTargetPageId, string> = {
+    onboarding: 'onboarding',
+    garden: 'garden',
+    today: 'today',
+    quests: 'quests',
+    know_me: 'knowMe',
+    love_jar: 'loveJar',
+    memories: 'memories',
+  };
+  return { name: routeNames[targetPageId] };
 }
 
 export const useNotificationStore = defineStore('notifications', {
@@ -80,8 +94,8 @@ export const useNotificationStore = defineStore('notifications', {
         }
       }
     },
-    targetRoute(notification: NotificationItem) {
-      return routeForNotification(notification);
+    targetLocation(notification: NotificationItem, detail?: NotificationDetailPayload) {
+      return routeForTargetPage(detail?.targetPageId ?? targetPageForNotification(notification));
     },
   },
 });

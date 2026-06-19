@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { config } from '../config.js';
 import { pool } from '../db.js';
 import { SqlWhereBuilder } from '../db/queryBuilder.js';
+import { normalizeLocale, parseAcceptLanguage } from '../i18n/locales.js';
 import { validateBody } from '../validation.js';
 import { contentBodySchema } from './bodySchemas.js';
 import {
@@ -21,27 +22,7 @@ export function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-export function normalizeLocale(value: unknown) {
-  if (typeof value !== 'string') return '';
-  const locale = value.trim().toLowerCase().split(';')[0]?.split(',')[0]?.replace('_', '-') ?? '';
-  return locale.split('-')[0] ?? '';
-}
-
-export function parseAcceptLanguage(headerValue: string | undefined) {
-  if (!headerValue) return '';
-  const candidates = headerValue
-    .split(',')
-    .map((part) => {
-      const [tag, ...params] = part.trim().split(';');
-      const qParam = params.find((param) => param.trim().startsWith('q='));
-      const q = qParam ? Number(qParam.trim().slice(2)) : 1;
-      return { locale: normalizeLocale(tag), q: Number.isFinite(q) ? q : 0 };
-    })
-    .filter((candidate) => candidate.locale)
-    .sort((left, right) => right.q - left.q);
-
-  return candidates[0]?.locale ?? '';
-}
+export { normalizeLocale, parseAcceptLanguage };
 
 export function normalizeBoolean(value: unknown, fallback = true) {
   return typeof value === 'boolean' ? value : fallback;
