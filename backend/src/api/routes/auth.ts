@@ -8,10 +8,15 @@ import { validateBody } from '../../validation.js';
 import {
   authLoginBodySchema,
   authRegisterBodySchema,
+  forgotPasswordBodySchema,
+  resetPasswordBodySchema,
   type AuthLoginBody,
   type AuthRegisterBody,
+  type ForgotPasswordBody,
+  type ResetPasswordBody,
 } from '../bodySchemas.js';
 import { loginUser, registerUser } from '../auth/auth.service.js';
+import { neutralPasswordResetResponse, requestPasswordReset, resetPassword } from '../auth/passwordReset.service.js';
 import { normalizeEmail, normalizeText } from '../support.repository.js';
 
 const authRateLimit = createRateLimiter({
@@ -65,6 +70,39 @@ export function registerAuthRoutes(router: Router) {
       }
 
       sendJson<AuthPayload>(response, { token: await signToken(user.id), user });
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.post('/auth/forgot-password', authRateLimit, validateBody(forgotPasswordBodySchema), async (request, response) => {
+    const body = request.body as ForgotPasswordBody;
+    const email = normalizeEmail(body.email);
+
+    try {
+      const result = await requestPasswordReset(email, String(request.header('accept-language') ?? config.i18nDefaultLocale).slice(0, 2));
+      if (result.status === 'limited') {
+        sendApiError(response, 429, 'auth.resetRequestLimited');
+        return;
+      }
+
+      sendJson(response, neutralPasswordResetResponse);
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.post('/auth/reset-password', authRateLimit, validateBody(resetPasswordBodySchema), async (request, response) => {
+    const body = request.body as ResetPasswordBody;
+
+    try {
+      const result = await resetPassword(body.token, normalizeText(body.password));
+      if (result.status === 'invalid') {
+        sendApiError(response, 400, 'auth.resetTokenInvalid');
+        return;
+      }
+
+      sendJson(response, { ok: true });
     } catch (error) {
       handleError(response, error);
     }

@@ -120,6 +120,17 @@
   flex-wrap: wrap;
 }
 
+.admin-checkbox-row {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.admin-checkbox-row input {
+  width: auto;
+}
+
 .admin-table-header {
   justify-content: space-between;
 }

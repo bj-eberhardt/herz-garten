@@ -1607,6 +1607,40 @@ textarea {
   width: 18px;
 }
 
+.input-with-icon {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d9c9b8;
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  padding: 0 12px;
+}
+
+.input-with-icon svg {
+  color: #806456;
+  flex: 0 0 auto;
+}
+
+.input-with-icon input {
+  background: transparent;
+  border: 0;
+  min-width: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.input-with-icon:focus-within {
+  border-color: #ef7d70;
+  box-shadow: 0 0 0 3px rgba(239, 125, 112, 0.14);
+}
+
+.input-hint {
+  color: #806456;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .privacy-details {
   display: grid;
   gap: 18px;
@@ -2279,6 +2313,21 @@ textarea {
   font-weight: 700;
   margin-bottom: 0;
   padding: 12px 14px;
+}
+
+.text-button {
+  background: transparent;
+  border: 0;
+  color: #4f6e3d;
+  cursor: pointer;
+  font-weight: 900;
+  padding: 6px 0;
+  text-align: left;
+}
+
+.text-button:hover {
+  color: #24302b;
+  text-decoration: underline;
 }
 
 .muted {

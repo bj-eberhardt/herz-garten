@@ -80,6 +80,39 @@ export const adminSettingsBodySchema = z
         userJwtTtlMinutes: z.number().int().positive().max(43200),
       })
       .strict(),
+    server: z
+      .object({
+        publicBaseUrl: z.string().trim().url(),
+      })
+      .strict(),
+    passwordReset: z
+      .object({
+        ttlMinutes: z.number().int().min(15).max(1440),
+        limitPer24h: z.number().int().min(1).max(100),
+      })
+      .strict(),
+    email: z
+      .object({
+        enabled: z.boolean(),
+        smtpHost: trimmedString,
+        smtpPort: z.number().int().min(1).max(65535),
+        smtpSecure: z.boolean(),
+        smtpUser: trimmedString,
+        smtpPassword: trimmedString.optional(),
+        fromAddress: z.string().trim().email().or(z.literal('')),
+        fromName: trimmedString,
+        replyTo: z.string().trim().email().or(z.literal('')),
+      })
+      .strict()
+      .superRefine((email, context) => {
+        if (!email.enabled) return;
+        if (!email.smtpHost) {
+          context.addIssue({ code: 'custom', path: ['smtpHost'], message: 'SMTP host is required when email is enabled' });
+        }
+        if (!email.fromAddress) {
+          context.addIssue({ code: 'custom', path: ['fromAddress'], message: 'From address is required when email is enabled' });
+        }
+      }),
   })
   .strict();
 

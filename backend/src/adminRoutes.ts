@@ -269,7 +269,18 @@ export function adminRouter(): Router {
   router.patch('/settings', requireAdminAuth, validateBody(adminSettingsBodySchema), async (request, response) => {
     try {
       const settings = await saveAdminSettings(request.body);
-      await audit('update', 'app-settings', null, { keys: ['auth.adminJwtTtlMinutes', 'auth.userJwtTtlMinutes'] });
+      await audit('update', 'app-settings', null, {
+        keys: [
+          'auth.adminJwtTtlMinutes',
+          'auth.userJwtTtlMinutes',
+          'server.publicBaseUrl',
+          'passwordReset.ttlMinutes',
+          'passwordReset.limitPer24h',
+          'email.enabled',
+          'email.smtpHost',
+          'email.fromAddress',
+        ],
+      });
       response.json(settings);
     } catch (error) {
       handleError(response, error);

@@ -1,5 +1,6 @@
 import webpush, { type PushSubscription } from 'web-push';
 import { config } from '../../config.js';
+import { translatePushBackend } from '../notifications/messages.js';
 import {
   disablePushSubscriptions,
   listActivePushSubscriptions,
@@ -136,12 +137,14 @@ export async function sendPushNotifications(payloads: PushNotificationPayload[])
 }
 
 export async function sendTestPushNotification(userId: string) {
+  const title = await translatePushBackend('push.titles.test');
+  const body = await translatePushBackend('push.bodies.test');
   await sendPushNotifications([
     {
       notificationId: 'test',
       userId,
-      title: 'Herzgarten Test',
-      body: 'Push-Benachrichtigungen sind aktiv.',
+      title,
+      body,
       url: '/notifications',
     },
   ]);

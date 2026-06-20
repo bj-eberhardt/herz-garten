@@ -8,9 +8,24 @@ services:
   backend:
     environment:
       CORS_ORIGIN: http://localhost:5174
+      EMAIL_ENABLED: "true"
+      EMAIL_SMTP_HOST: mailpit
+      EMAIL_SMTP_PORT: "1025"
+      EMAIL_SMTP_SECURE: "false"
+      EMAIL_FROM_ADDRESS: noreply@herzgarten.test
+      EMAIL_FROM_NAME: Herzgarten
+      PUBLIC_BASE_URL: http://localhost:5174
     ports: !override
       - "3001:3000"
+    depends_on:
+      mailpit:
+        condition: service_started
 
   db:
     ports: !override
       - "5433:5432"
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "8025:8025"

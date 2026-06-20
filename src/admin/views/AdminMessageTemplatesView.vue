@@ -34,6 +34,7 @@ const { t } = useI18n();
 const items = ref<MessageTemplateItem[]>([]);
 const search = ref('');
 const selectedKey = ref('');
+const activeNamespace = ref<'notifications' | 'push' | 'email'>('notifications');
 const savingKey = ref('');
 const loading = ref(false);
 const error = ref('');
@@ -51,6 +52,11 @@ const filteredItems = computed(() => {
 const selectedItem = computed(() => items.value.find((item) => item.key === selectedKey.value) ?? null);
 const defaultLocale = computed(() => locales.value.find((locale) => locale.isDefault)?.locale ?? 'de');
 const activeLocales = computed(() => locales.value.filter((entry) => entry.active));
+const namespaceOptions = computed(() => [
+  { value: 'notifications' as const, label: t('admin.messages.channels.notifications') },
+  { value: 'push' as const, label: t('admin.messages.channels.push') },
+  { value: 'email' as const, label: t('admin.messages.channels.email') },
+]);
 
 function placeholdersIn(text: string) {
   return [...new Set([...text.matchAll(placeholderPattern)].map((match) => match[1]))].sort();
@@ -171,8 +177,11 @@ async function loadLocales() {
 
 async function loadItems() {
   loading.value = true;
+  selectedKey.value = '';
+  validationErrors.value = {};
+  error.value = '';
   try {
-    const payload = await adminApiRequest<{ items: MessageTemplateItem[] }>('/api/admin/message-templates?namespace=notifications');
+    const payload = await adminApiRequest<{ items: MessageTemplateItem[] }>(`/api/admin/message-templates?namespace=${activeNamespace.value}`);
     items.value = payload.items;
     for (const item of items.value) ensureTranslations(item);
   } finally {
@@ -225,6 +234,19 @@ onBeforeUnmount(() => {
     </div>
     <p class="muted">{{ t('admin.messages.intro') }}</p>
     <p v-if="successMessage" class="success-note" data-testid="admin-message-success">{{ successMessage }}</p>
+
+    <div class="admin-tabs" role="tablist" :aria-label="t('admin.messages.channelLabel')">
+      <button
+        v-for="option in namespaceOptions"
+        :key="option.value"
+        type="button"
+        :class="{ active: activeNamespace === option.value }"
+        :data-testid="`admin-message-channel-${option.value}`"
+        @click="activeNamespace = option.value; loadItems()"
+      >
+        {{ option.label }}
+      </button>
+    </div>
 
     <div class="admin-table-header admin-message-table-header">
       <div class="admin-toolbar admin-message-toolbar">
@@ -285,6 +307,7 @@ onBeforeUnmount(() => {
         </tbody>
       </table>
       <p v-if="loading" class="muted">{{ t('admin.common.loading') }}</p>
+      <p v-else-if="filteredItems.length === 0" class="muted" data-testid="admin-message-empty">{{ t('admin.messages.empty') }}</p>
     </div>
   </section>
 </template>

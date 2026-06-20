@@ -8,6 +8,7 @@ import MemoriesView from '@/views/MemoriesView.vue';
 import SettingsView from '@/views/SettingsView.vue';
 import NotificationsView from '@/views/NotificationsView.vue';
 import OnboardingView from '@/views/OnboardingView.vue';
+import ResetPasswordView from '@/views/ResetPasswordView.vue';
 import { useAuthStore } from '@/stores/authStore';
 
 const AdminShell = () => import('@/admin/components/AdminShell.vue');
@@ -35,6 +36,7 @@ const router = createRouter({
   routes: [
     { path: '/', redirect: '/today' },
     { path: '/onboarding', name: 'onboarding', component: OnboardingView },
+    { path: '/reset-password', name: 'resetPassword', component: ResetPasswordView },
     { path: '/garden', name: 'garden', component: GardenView },
     { path: '/today', name: 'today', component: TodayView },
     { path: '/quests', name: 'quests', component: QuestsView },
@@ -65,7 +67,7 @@ const router = createRouter({
   ],
 });
 
-const allowedWithoutCouple = new Set(['/onboarding', '/notifications']);
+const allowedWithoutCouple = new Set(['/onboarding', '/reset-password', '/notifications']);
 const allowedWithIncompleteCouple = new Set(['/settings']);
 
 router.beforeEach(async (to) => {
@@ -88,7 +90,7 @@ router.beforeEach(async (to) => {
   const authStore = useAuthStore();
   await authStore.bootstrap();
 
-  if (to.path !== '/onboarding' && !authStore.isAuthenticated) {
+  if (!allowedWithoutCouple.has(to.path) && to.path !== '/onboarding' && !authStore.isAuthenticated) {
     return '/onboarding';
   }
 

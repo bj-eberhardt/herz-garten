@@ -11,6 +11,11 @@ export const configResponseSchema = z.object({
       isDefault: z.boolean(),
     }),
   ),
+  features: z
+    .object({
+      passwordResetEmailEnabled: z.boolean(),
+    })
+    .strict(),
 });
 export type ConfigResponse = z.infer<typeof configResponseSchema>;
 const trimmedString = z.string().transform((value) => value.trim());
@@ -36,6 +41,21 @@ export const authLoginBodySchema = z
   })
   .strict();
 export type AuthLoginBody = z.infer<typeof authLoginBodySchema>;
+
+export const forgotPasswordBodySchema = z
+  .object({
+    email: z.string().trim().email(),
+  })
+  .strict();
+export type ForgotPasswordBody = z.infer<typeof forgotPasswordBodySchema>;
+
+export const resetPasswordBodySchema = z
+  .object({
+    token: trimmedString.pipe(z.string().min(32)),
+    password: trimmedString.pipe(z.string().min(8)),
+  })
+  .strict();
+export type ResetPasswordBody = z.infer<typeof resetPasswordBodySchema>;
 
 const featureExplainersSchema = z.record(z.string(), z.boolean());
 const pushNotificationModeSchema = z.enum(['all', 'actions_only']);

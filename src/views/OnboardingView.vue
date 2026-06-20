@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Clipboard, HeartHandshake, Link2, LogIn, Sprout, UserPlus } from '@lucide/vue';
+import { Clipboard, HeartHandshake, KeyRound, Link2, LogIn, Mail, Sprout, UserPlus } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import FeatureExplainer from '@/components/common/FeatureExplainer.vue';
 import type { ContentPreference, RelationshipType } from '@/types/domain';
@@ -13,7 +13,7 @@ const router = useRouter();
 const authStore = useAuthStore();
 const { t } = useI18n();
 
-const mode = ref<'login' | 'register'>('register');
+const mode = ref<'login' | 'register' | 'forgot'>('register');
 const displayName = ref('');
 const email = ref('');
 const password = ref('');
@@ -22,6 +22,7 @@ const inviteCode = ref('');
 const relationshipType = ref<RelationshipType>('mixed');
 const contentPreference = ref<ContentPreference>('balanced');
 const formError = ref('');
+const forgotSuccess = ref(false);
 const joinError = ref('');
 const createError = ref('');
 const copied = ref(false);
@@ -31,6 +32,7 @@ const joinSubmitAttempted = ref(false);
 const createSubmitAttempted = ref(false);
 const showGuestAd = computed(() => !authStore.isAuthenticated && mode.value === 'register');
 const showReturningUserPanel = computed(() => !authStore.isAuthenticated && mode.value === 'login');
+const showForgotPasswordPanel = computed(() => !authStore.isAuthenticated && mode.value === 'forgot');
 const authErrorMessage = computed(() => formError.value || authStore.error || (authStore.sessionExpiredMessageKey ? t(authStore.sessionExpiredMessageKey) : ''));
 const relationshipOptions = computed(() =>
   authStore.relationshipModes.length
@@ -79,6 +81,17 @@ async function submitAuth() {
   }
 }
 
+async function submitForgotPassword() {
+  formError.value = '';
+  forgotSuccess.value = false;
+  try {
+    await authStore.forgotPassword(email.value);
+    forgotSuccess.value = true;
+  } catch (error) {
+    formError.value = localizeApiError(error, 'errors.fallback.auth');
+  }
+}
+
 async function createCouple() {
   createError.value = '';
   joinError.value = '';
@@ -108,9 +121,12 @@ async function joinCouple() {
 
 watch(mode, () => {
   authSubmitAttempted.value = false;
+  formError.value = '';
+  forgotSuccess.value = false;
 });
 
 onMounted(() => {
+  authStore.loadPublicConfig().catch(() => undefined);
   authStore.loadPreferenceOptions().catch(() => undefined);
   if (authStore.isAuthenticated) return;
   const rememberedEmail = window.localStorage.getItem(rememberedEmailKey);
@@ -167,6 +183,15 @@ async function continueToToday() {
       </div>
     </section>
 
+    <section v-if="showForgotPasswordPanel" class="panel feature-explainer onboarding-returning" data-testid="onboarding-forgot-password-info">
+      <KeyRound class="feature-explainer-icon" aria-hidden="true" />
+      <div>
+        <p class="eyebrow">{{ t('auth.forgotPasswordEyebrow') }}</p>
+        <h2>{{ t('auth.forgotPasswordTitle') }}</h2>
+        <p>{{ t('auth.forgotPasswordText') }}</p>
+      </div>
+    </section>
+
     <section v-if="!authStore.isAuthenticated" class="panel auth-panel">
       <div class="segmented-control" :aria-label="t('auth.modeLabel')">
         <button data-testid="auth-mode-register" :class="{ active: mode === 'register' }" type="button" @click="mode = 'register'">
@@ -179,7 +204,7 @@ async function continueToToday() {
         </button>
       </div>
 
-      <form class="composer" :class="{ 'form-submitted': authSubmitAttempted }" data-testid="auth-form" @submit.prevent="submitAuth">
+      <form v-if="mode !== 'forgot'" class="composer" :class="{ 'form-submitted': authSubmitAttempted }" data-testid="auth-form" @submit.prevent="submitAuth">
         <label v-if="mode === 'register'" for="display-name">{{ t('common.name') }}</label>
         <input v-if="mode === 'register'" id="display-name" v-model="displayName" autocomplete="name" data-testid="auth-display-name" required />
 
@@ -198,6 +223,35 @@ async function continueToToday() {
 
         <button class="primary-button" type="submit" :disabled="authStore.loading" data-testid="auth-submit" @click="authSubmitAttempted = true">
           {{ mode === 'register' ? t('auth.createAccount') : t('auth.loginAction') }}
+        </button>
+
+        <button
+          v-if="mode === 'login' && authStore.passwordResetEmailEnabled"
+          class="text-button"
+          type="button"
+          data-testid="forgot-password-link"
+          @click="mode = 'forgot'"
+        >
+          {{ t('auth.forgotPassword') }}
+        </button>
+      </form>
+
+      <form v-else class="composer" :class="{ 'form-submitted': authSubmitAttempted }" data-testid="forgot-password-form" @submit.prevent="submitForgotPassword">
+        <label for="forgot-email">{{ t('common.email') }}</label>
+        <div class="input-with-icon">
+          <Mail :size="18" aria-hidden="true" />
+          <input id="forgot-email" v-model="email" autocomplete="email" type="email" data-testid="forgot-password-email" required />
+        </div>
+        <small class="input-hint">{{ t('auth.forgotPasswordEmailHint') }}</small>
+
+        <p v-if="forgotSuccess" class="success-note" data-testid="forgot-password-success">{{ t('auth.forgotPasswordSuccess') }}</p>
+        <p v-if="authErrorMessage" class="form-error" data-testid="auth-error">{{ authErrorMessage }}</p>
+
+        <button class="primary-button" type="submit" :disabled="authStore.loading" data-testid="forgot-password-submit" @click="authSubmitAttempted = true">
+          {{ t('auth.forgotPasswordSubmit') }}
+        </button>
+        <button class="text-button" type="button" data-testid="forgot-password-back" @click="mode = 'login'">
+          {{ t('auth.backToLogin') }}
         </button>
       </form>
     </section>

@@ -58,6 +58,7 @@ export const useAuthStore = defineStore('auth', {
     couple: null as (Couple & { memberCount?: number }) | null,
     relationshipModes: [] as PreferenceOption[],
     contentStyles: [] as PreferenceOption[],
+    passwordResetEmailEnabled: false,
     loading: false,
     error: '',
     sessionExpiredMessageKey: consumeSessionExpiredMessage(),
@@ -95,11 +96,27 @@ export const useAuthStore = defineStore('auth', {
       this.relationshipModes = result.relationshipModes;
       this.contentStyles = result.contentStyles;
     },
+    async loadPublicConfig() {
+      const result = await apiRequest<{ features?: { passwordResetEmailEnabled?: boolean } }>('/api/config');
+      this.passwordResetEmailEnabled = Boolean(result.features?.passwordResetEmailEnabled);
+    },
     async register(displayName: string, email: string, password: string) {
       await this.authenticate('/api/auth/register', { displayName, email, password });
     },
     async login(email: string, password: string) {
       await this.authenticate('/api/auth/login', { email, password });
+    },
+    async forgotPassword(email: string) {
+      await apiRequest<{ ok: boolean }>('/api/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+    },
+    async resetPassword(token: string, password: string) {
+      await apiRequest<{ ok: boolean }>('/api/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ token, password }),
+      });
     },
     async authenticate(path: string, body: unknown) {
       this.loading = true;

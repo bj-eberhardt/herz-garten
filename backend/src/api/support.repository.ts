@@ -3,7 +3,12 @@ import type { Request } from 'express';
 import { config } from '../config.js';
 import { pool } from '../db.js';
 import { normalizeLocale, parseAcceptLanguage } from '../i18n/locales.js';
-import { type NotificationMessageKey, translateNotificationBackend } from './notifications/messages.js';
+import {
+  pushMessageKeyForNotification,
+  type NotificationMessageKey,
+  translateNotificationBackend,
+  translatePushBackend,
+} from './notifications/messages.js';
 import {
   normalizePushNotificationMode,
   shouldSendPushForMode,
@@ -574,11 +579,13 @@ export async function createNotifications(
     const inserted = result.rows[0];
     const pushMode = pushModes.get(userId) ?? 'all';
     if (inserted && shouldSendPushForMode(pushMode, options.type)) {
+      const pushTitle = await translatePushBackend(pushMessageKeyForNotification(options.titleKey), params);
+      const pushBody = await translatePushBackend(pushMessageKeyForNotification(options.bodyKey), params);
       pushPayloads.push({
         notificationId: inserted.id,
         userId: inserted.userId,
-        title,
-        body,
+        title: pushTitle,
+        body: pushBody,
         url: `/notifications?notification=${inserted.id}`,
       });
     }

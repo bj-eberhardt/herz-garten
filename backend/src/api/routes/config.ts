@@ -6,6 +6,7 @@ import { sendJson } from '../../http.js';
 import { configResponseSchema, type ConfigResponse } from '../bodySchemas.js';
 import { listSupportedLocales } from '../config.repository.js';
 import { resolveLocale } from '../support.repository.js';
+import { isEmailAvailable } from '../../email/email.service.js';
 
 type PreferenceOptionsPayload = Awaited<ReturnType<typeof listPreferenceOptions>>;
 
@@ -20,6 +21,9 @@ export function registerConfigRoutes(router: Router) {
           ...locale,
           isDefault: locale.locale === config.i18nDefaultLocale || locale.isDefault,
         })),
+        features: {
+          passwordResetEmailEnabled: await isEmailAvailable(),
+        },
       });
       sendJson<ConfigResponse>(response, payload);
     } catch (error) {

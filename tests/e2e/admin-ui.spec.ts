@@ -43,6 +43,12 @@ test.describe('admin ui', () => {
     await expect(page.getByTestId('admin-settings')).toContainText('Hier kannst du Server-Einstellungen vornehmen.');
     await expect(page.getByTestId('admin-settings-jwt-block')).toContainText('JWT-Tokens');
     await expect(page.getByTestId('admin-settings-jwt-block')).toContainText('Hier steuerst du, wie lange neu ausgestellte JWT-Tokens gültig bleiben.');
+    await expect(page.getByTestId('admin-settings-server-block')).toBeVisible();
+    await expect(page.getByTestId('admin-settings-public-base-url')).toHaveValue(/^http/);
+    await expect(page.getByTestId('admin-settings-password-reset-block')).toBeVisible();
+    await expect(page.getByTestId('admin-settings-reset-ttl')).toHaveValue(/[1-9]\d*/);
+    await expect(page.getByTestId('admin-settings-reset-limit')).toHaveValue(/[1-9]\d*/);
+    await expect(page.getByTestId('admin-settings-email-block')).toBeVisible();
     await expect(page.getByTestId('admin-settings-admin-jwt-ttl')).toHaveValue(/[1-9]\d*/);
     await expect(page.getByTestId('admin-settings-user-jwt-ttl')).toHaveValue(/[1-9]\d*/);
     await expect(page.getByTestId('admin-settings-save')).toBeEnabled();

@@ -6,9 +6,13 @@ const defaultAdminPassword = 'admin';
 const defaultUploadDir = fileURLToPath(new URL('../../public/uploads', import.meta.url));
 const nodeEnv = process.env.NODE_ENV ?? 'development';
 const pushEnabledEnv = process.env.PUSH_ENABLED?.trim().toLowerCase();
+const emailEnabledEnv = process.env.EMAIL_ENABLED?.trim().toLowerCase();
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY ?? '';
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY ?? '';
 const pushKeysConfigured = Boolean(vapidPublicKey && vapidPrivateKey);
+const emailSmtpHost = process.env.EMAIL_SMTP_HOST ?? '';
+const emailFromAddress = process.env.EMAIL_FROM_ADDRESS ?? '';
+const emailConfigured = Boolean(emailSmtpHost && emailFromAddress);
 
 export const config = {
   nodeEnv,
@@ -27,6 +31,23 @@ export const config = {
   adminJwtAudience: process.env.ADMIN_JWT_AUDIENCE ?? 'herzgarten-admin',
   authRateLimitWindowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS ?? 15 * 60 * 1000),
   authRateLimitMax: Number(process.env.AUTH_RATE_LIMIT_MAX ?? 1000),
+  emailEnabled:
+    emailEnabledEnv === 'true' || emailEnabledEnv === '1'
+      ? true
+      : emailEnabledEnv === 'false' || emailEnabledEnv === '0'
+        ? false
+        : emailConfigured,
+  emailSmtpHost,
+  emailSmtpPort: Number(process.env.EMAIL_SMTP_PORT ?? 587),
+  emailSmtpSecure: ['true', '1', 'yes'].includes((process.env.EMAIL_SMTP_SECURE ?? '').trim().toLowerCase()),
+  emailSmtpUser: process.env.EMAIL_SMTP_USER ?? '',
+  emailSmtpPassword: process.env.EMAIL_SMTP_PASSWORD ?? '',
+  emailFromAddress,
+  emailFromName: process.env.EMAIL_FROM_NAME ?? 'Herzgarten',
+  emailReplyTo: process.env.EMAIL_REPLY_TO ?? '',
+  publicBaseUrl: process.env.PUBLIC_BASE_URL ?? process.env.PASSWORD_RESET_BASE_URL ?? process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+  passwordResetTtlMinutes: Number(process.env.PASSWORD_RESET_TTL_MINUTES ?? 30),
+  passwordResetLimitPer24h: Number(process.env.PASSWORD_RESET_LIMIT_PER_24H ?? 3),
   vapidPublicKey,
   vapidPrivateKey,
   vapidSubject: process.env.VAPID_SUBJECT ?? 'mailto:admin@herzgarten.local',
@@ -44,6 +65,7 @@ if (config.nodeEnv === 'production') {
     !process.env.ADMIN_JWT_SECRET || config.adminJwtSecret === defaultJwtSecret ? 'ADMIN_JWT_SECRET' : '',
     !process.env.ADMIN_PASSWORD || config.adminPassword === defaultAdminPassword ? 'ADMIN_PASSWORD' : '',
     config.pushEnabled && !pushKeysConfigured ? 'VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY' : '',
+    config.emailEnabled && !emailConfigured ? 'EMAIL_SMTP_HOST/EMAIL_FROM_ADDRESS' : '',
   ].filter(Boolean);
 
   if (unsafeSettings.length > 0) {

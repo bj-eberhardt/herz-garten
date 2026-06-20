@@ -27,6 +27,7 @@ export const notificationMessageKeys = [
 ] as const;
 
 export type NotificationMessageKey = (typeof notificationMessageKeys)[number];
+export type PushMessageKey = `push.${string}`;
 
 export function renderTemplate(template: string, params: Record<string, unknown> = {}) {
   return template.replace(/\{(\w+)\}/g, (match, paramName: string) => {
@@ -45,4 +46,24 @@ export async function translateNotificationBackend(
 
   console.warn(`Notification message template missing: ${key}`);
   return renderTemplate(key, params);
+}
+
+export async function translatePushBackend(
+  key: PushMessageKey,
+  params: Record<string, unknown> = {},
+  locale = config.i18nDefaultLocale,
+) {
+  const template = await findNotificationMessageTemplateText(key, locale, config.i18nDefaultLocale);
+  if (template) return renderTemplate(template, params);
+
+  const notificationFallbackKey = key.replace(/^push\./, 'notifications.') as NotificationMessageKey;
+  const fallback = await findNotificationMessageTemplateText(notificationFallbackKey, locale, config.i18nDefaultLocale);
+  if (fallback) return renderTemplate(fallback, params);
+
+  console.warn(`Push message template missing: ${key}`);
+  return renderTemplate(key, params);
+}
+
+export function pushMessageKeyForNotification(key: NotificationMessageKey): PushMessageKey {
+  return key.replace(/^notifications\./, 'push.') as PushMessageKey;
 }

@@ -26,6 +26,7 @@ export class MessageTemplateValidationException extends Error {
 }
 
 const placeholderPattern = /\{(\w+)\}/g;
+const editableNamespaces = new Set(['notifications', 'push', 'email']);
 
 export function extractPlaceholders(text: string) {
   return [...new Set([...text.matchAll(placeholderPattern)].map((match) => match[1]))].sort();
@@ -42,7 +43,7 @@ export async function listMessageTemplates(namespace = 'notifications', locale =
 
 export async function saveMessageTemplate(key: string, body: MessageTemplateSaveBody, responseLocale = config.i18nDefaultLocale) {
   const template = await findMessageTemplate(key);
-  if (!template || template.namespace !== 'notifications') {
+  if (!template || !editableNamespaces.has(template.namespace)) {
     return { status: 'notFound' as const };
   }
 

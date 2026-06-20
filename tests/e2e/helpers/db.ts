@@ -6,7 +6,7 @@ function sqlLiteral(value: string) {
 
 export function runDbSql(sql: string) {
   const composeProject = process.env.E2E_COMPOSE_PROJECT ?? 'herzgarten-e2e';
-  execFileSync(
+  return execFileSync(
     'docker',
     [
       'compose',

@@ -18,6 +18,11 @@ function jwtPayload(token: string) {
   return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { iat: number; exp: number };
 }
 
+function emailSettingsInput<T extends { smtpPasswordConfigured?: boolean }>(settings: T) {
+  const { smtpPasswordConfigured: _smtpPasswordConfigured, ...input } = settings;
+  return input;
+}
+
 function pngHeader(width: number, height: number) {
   return Buffer.from([
     0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
@@ -76,26 +81,47 @@ test.describe('admin api', () => {
     const token = await adminLogin(request);
     const original = await apiGet<{
       auth: { adminJwtTtlMinutes: number; userJwtTtlMinutes: number };
+      server: { publicBaseUrl: string };
+      passwordReset: { ttlMinutes: number; limitPer24h: number };
+      email: {
+        enabled: boolean;
+        smtpHost: string;
+        smtpPort: number;
+        smtpSecure: boolean;
+        smtpUser: string;
+        smtpPasswordConfigured: boolean;
+        fromAddress: string;
+        fromName: string;
+        replyTo: string;
+      };
     }>(request, '/api/admin/settings', token);
 
     expect(original.auth.adminJwtTtlMinutes).toBeGreaterThanOrEqual(1);
     expect(original.auth.adminJwtTtlMinutes).toBeLessThanOrEqual(1440);
     expect(original.auth.userJwtTtlMinutes).toBeGreaterThanOrEqual(1);
     expect(original.auth.userJwtTtlMinutes).toBeLessThanOrEqual(43200);
+    const originalEmailInput = emailSettingsInput(original.email);
 
     const invalidSettingsPayloads = [
       {},
       { auth: {} },
       { auth: { userJwtTtlMinutes: original.auth.userJwtTtlMinutes } },
       { auth: { adminJwtTtlMinutes: original.auth.adminJwtTtlMinutes } },
-      { auth: { adminJwtTtlMinutes: 0, userJwtTtlMinutes: original.auth.userJwtTtlMinutes } },
-      { auth: { adminJwtTtlMinutes: -1, userJwtTtlMinutes: original.auth.userJwtTtlMinutes } },
-      { auth: { adminJwtTtlMinutes: 60.5, userJwtTtlMinutes: original.auth.userJwtTtlMinutes } },
-      { auth: { adminJwtTtlMinutes: 1441, userJwtTtlMinutes: original.auth.userJwtTtlMinutes } },
-      { auth: { adminJwtTtlMinutes: original.auth.adminJwtTtlMinutes, userJwtTtlMinutes: 0 } },
-      { auth: { adminJwtTtlMinutes: original.auth.adminJwtTtlMinutes, userJwtTtlMinutes: -1 } },
-      { auth: { adminJwtTtlMinutes: original.auth.adminJwtTtlMinutes, userJwtTtlMinutes: 60.5 } },
-      { auth: { adminJwtTtlMinutes: original.auth.adminJwtTtlMinutes, userJwtTtlMinutes: 43201 } },
+      { auth: { adminJwtTtlMinutes: 0, userJwtTtlMinutes: original.auth.userJwtTtlMinutes }, server: original.server, passwordReset: original.passwordReset, email: originalEmailInput },
+      { auth: { adminJwtTtlMinutes: -1, userJwtTtlMinutes: original.auth.userJwtTtlMinutes }, server: original.server, passwordReset: original.passwordReset, email: originalEmailInput },
+      { auth: { adminJwtTtlMinutes: 60.5, userJwtTtlMinutes: original.auth.userJwtTtlMinutes }, server: original.server, passwordReset: original.passwordReset, email: originalEmailInput },
+      { auth: { adminJwtTtlMinutes: 1441, userJwtTtlMinutes: original.auth.userJwtTtlMinutes }, server: original.server, passwordReset: original.passwordReset, email: originalEmailInput },
+      { auth: { adminJwtTtlMinutes: original.auth.adminJwtTtlMinutes, userJwtTtlMinutes: 0 }, server: original.server, passwordReset: original.passwordReset, email: originalEmailInput },
+      { auth: { adminJwtTtlMinutes: original.auth.adminJwtTtlMinutes, userJwtTtlMinutes: -1 }, server: original.server, passwordReset: original.passwordReset, email: originalEmailInput },
+      { auth: { adminJwtTtlMinutes: original.auth.adminJwtTtlMinutes, userJwtTtlMinutes: 60.5 }, server: original.server, passwordReset: original.passwordReset, email: originalEmailInput },
+      { auth: { adminJwtTtlMinutes: original.auth.adminJwtTtlMinutes, userJwtTtlMinutes: 43201 }, server: original.server, passwordReset: original.passwordReset, email: originalEmailInput },
+      { auth: original.auth, server: { publicBaseUrl: 'not-a-url' }, passwordReset: original.passwordReset, email: originalEmailInput },
+      { auth: original.auth, server: original.server, passwordReset: { ...original.passwordReset, ttlMinutes: 1441 }, email: originalEmailInput },
+      { auth: original.auth, server: original.server, passwordReset: { ...original.passwordReset, limitPer24h: 0 }, email: originalEmailInput },
+      { auth: original.auth, server: original.server, passwordReset: original.passwordReset, email: { ...originalEmailInput, enabled: true, smtpHost: '' } },
+      { auth: original.auth, server: original.server, passwordReset: original.passwordReset, email: { ...originalEmailInput, smtpPort: 0 } },
+      { auth: original.auth, server: original.server, passwordReset: original.passwordReset, email: { ...originalEmailInput, enabled: true, fromAddress: '' } },
+      { auth: original.auth, server: original.server, passwordReset: original.passwordReset, email: { ...originalEmailInput, replyTo: 'not-an-email' } },
     ];
 
     for (const payload of invalidSettingsPayloads) {
@@ -107,11 +133,29 @@ test.describe('admin api', () => {
         adminJwtTtlMinutes: 61,
         userJwtTtlMinutes: 10081,
       },
+      server: {
+        publicBaseUrl: 'http://localhost:5174',
+      },
+      passwordReset: {
+        ttlMinutes: 1440,
+        limitPer24h: 5,
+      },
+      email: {
+        ...originalEmailInput,
+        enabled: true,
+        smtpHost: 'mailpit',
+        smtpPort: 1025,
+        smtpSecure: false,
+        fromAddress: 'noreply@herzgarten.test',
+        fromName: 'Herzgarten',
+        replyTo: '',
+      },
     };
 
     try {
       const saved = await expectJson<typeof next>(await apiPatchRaw(request, '/api/admin/settings', next, token));
-      expect(saved).toEqual(next);
+      expect(saved).toEqual({ ...next, email: { ...next.email, smtpPasswordConfigured: expect.any(Boolean) } });
+      expect('smtpPassword' in saved.email).toBe(false);
 
       const adminToken = await adminLogin(request);
       const adminPayload = jwtPayload(adminToken);
@@ -128,7 +172,7 @@ test.describe('admin api', () => {
       );
       expect(audit.items.some((entry) => entry.action === 'update' && entry.resourceType === 'app-settings')).toBe(true);
     } finally {
-      await apiPatchRaw(request, '/api/admin/settings', original, token);
+      await apiPatchRaw(request, '/api/admin/settings', { auth: original.auth, server: original.server, passwordReset: original.passwordReset, email: originalEmailInput }, token);
     }
   });
 
@@ -624,6 +668,64 @@ test.describe('admin api', () => {
         token,
       );
     }
+  });
+
+  test('manages email message templates and validates placeholders', async ({ request }) => {
+    const token = await adminLogin(request);
+    const key = 'emails.passwordReset.body';
+    const listed = await apiGet<{
+      items: Array<{ key: string; namespace: string; requiredParams: string[]; translations: Record<string, { text: string }> }>;
+    }>(request, '/api/admin/message-templates?namespace=email', token);
+    const template = listed.items.find((item) => item.key === key);
+    expect(template).toBeTruthy();
+    expect(template!.namespace).toBe('email');
+    expect(template!.requiredParams.sort()).toEqual(['displayName', 'expiresInMinutes', 'resetUrl']);
+    const originalText = template!.translations.de.text;
+
+    await expectApiError(
+      await apiPatchRaw(
+        request,
+        `/api/admin/message-templates/${key}`,
+        { translations: { de: { text: 'Hallo {displayName}, dein Link ist {resetUrl}.' } } },
+        token,
+      ),
+      400,
+      'admin.messageTemplateInvalid',
+    );
+
+    const customText = 'Hallo {displayName}, dein Link ist {resetUrl} und gilt {expiresInMinutes} Minuten.';
+    try {
+      const saved = await expectJson<{ items: Array<{ key: string; translations: Record<string, { text: string }> }> }>(
+        await apiPatchRaw(
+          request,
+          `/api/admin/message-templates/${key}`,
+          { translations: { de: { text: customText } } },
+          token,
+        ),
+      );
+      expect(saved.items.find((item) => item.key === key)?.translations.de.text).toBe(customText);
+    } finally {
+      await apiPatchRaw(
+        request,
+        `/api/admin/message-templates/${key}`,
+        { translations: { de: { text: originalText } } },
+        token,
+      );
+    }
+  });
+
+  test('lists push message templates', async ({ request }) => {
+    const token = await adminLogin(request);
+    const listed = await apiGet<{
+      items: Array<{ key: string; namespace: string; requiredParams: string[]; translations: Record<string, { text: string }> }>;
+    }>(request, '/api/admin/message-templates?namespace=push', token);
+    const questPush = listed.items.find((item) => item.key === 'push.bodies.questWaitingConfirmation');
+    const testPush = listed.items.find((item) => item.key === 'push.bodies.test');
+    expect(questPush).toBeTruthy();
+    expect(questPush!.namespace).toBe('push');
+    expect(questPush!.requiredParams.sort()).toEqual(['name', 'title']);
+    expect(questPush!.translations.de.text).toContain('{name}');
+    expect(testPush?.translations.de.text).toBe('Push-Benachrichtigungen sind aktiv.');
   });
 
   test('manages garden levels and recalculates existing gardens', async ({ request }) => {

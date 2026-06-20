@@ -53,6 +53,22 @@
     "createAccount": "Konto erstellen",
     "loginAction": "Einloggen",
     "rememberEmail": "E-Mail-Adresse in diesem Browser merken",
+    "forgotPassword": "Passwort vergessen?",
+    "forgotPasswordEyebrow": "Passwort zurücksetzen",
+    "forgotPasswordTitle": "Wir schicken dir einen sicheren Link.",
+    "forgotPasswordText": "Trage deine registrierte E-Mail-Adresse ein. Wenn ein Konto dazu existiert, erhältst du einen kurz gültigen Link und kannst danach ein neues Passwort setzen.",
+    "forgotPasswordSubmit": "Reset-Link senden",
+    "forgotPasswordEmailHint": "Gib die E-Mail-Adresse ein, mit der du dich bei Herzgarten registriert hast.",
+    "forgotPasswordSuccess": "Falls diese E-Mail registriert ist, senden wir dir einen Link zum Zurücksetzen des Passworts.",
+    "backToLogin": "Zurück zum Login",
+    "resetPasswordEyebrow": "Passwort",
+    "resetPasswordTitle": "Neues Passwort setzen",
+    "resetPasswordInfoEyebrow": "Sicherer Reset",
+    "resetPasswordInfoTitle": "Wähle jetzt dein neues Passwort.",
+    "resetPasswordInfoText": "Der Link funktioniert nur kurzzeitig und kann danach nicht erneut verwendet werden. Speichere ein neues Passwort und melde dich anschließend wieder normal an.",
+    "newPassword": "Neues Passwort",
+    "resetPasswordSubmit": "Passwort speichern",
+    "resetPasswordSuccess": "Dein Passwort wurde geändert. Du kannst dich jetzt mit dem neuen Passwort einloggen.",
     "hello": "Schön, dass du da bist, {name}.",
     "coupleCodeText": "Euer Paar-Code ist {code}. Dein Partner kann ihn auch später nach dem Login eingeben.",
     "coupleCodePrefix": "Euer Paar-Code ist",
@@ -530,7 +546,9 @@
       "invalidToken": "Deine Sitzung ist abgelaufen. Bitte logge dich erneut ein.",
       "invalidCredentials": "E-Mail oder Passwort stimmt nicht.",
       "registrationInvalid": "Bitte gib E-Mail, Namen und ein Passwort mit mindestens 8 Zeichen ein.",
-      "emailAlreadyRegistered": "Diese E-Mail ist schon registriert."
+      "emailAlreadyRegistered": "Diese E-Mail ist schon registriert.",
+      "resetTokenInvalid": "Dieser Passwort-Link ist ungültig oder abgelaufen.",
+      "resetRequestLimited": "Du hast zu viele Passwort-Reset-Links angefragt. Bitte versuche es später erneut."
     },
     "profile": {
       "updateInvalid": "Bitte gib einen Namen und eine gültige E-Mail-Adresse ein.",
@@ -930,7 +948,14 @@
       "title": "Nachrichten",
       "subtitle": "Benachrichtigungen",
       "intro": "Hier kannst du die Nachrichtenvorlagen anpassen, die für Benachrichtigungen verwendet werden.",
+      "channelLabel": "Nachrichtenkanal",
+      "channels": {
+        "notifications": "Interne Notifications",
+        "push": "Push",
+        "email": "E-Mail"
+      },
       "searchPlaceholder": "Nachrichtenschlüssel filtern",
+      "empty": "Für diesen Kanal sind noch keine Vorlagen angelegt.",
       "noPlaceholders": "Keine Platzhalter erlaubt.",
       "expectedPlaceholders": "Erwartete Platzhalter: {placeholders}.",
       "standardSuffix": " · Standard",
@@ -952,6 +977,35 @@
         "title": "JWT-Tokens",
         "intro": "Hier steuerst du, wie lange neu ausgestellte JWT-Tokens gültig bleiben."
       },
+      "server": {
+        "title": "Server-Adressen",
+        "intro": "Öffentliche Adressen, die der Server in Links und E-Mails verwendet.",
+        "publicBaseUrl": "Hauptdomain",
+        "publicBaseUrlHelp": "Zum Beispiel https://herzgarten.example. Diese Adresse wird für Passwort-Reset-Links genutzt."
+      },
+      "passwordReset": {
+        "title": "Passwort vergessen",
+        "intro": "Einstellungen für Passwort-Reset-Links und Anfrage-Limits.",
+        "ttlMinutes": "Reset-Link-Gültigkeit (Minuten)",
+        "ttlHelp": "Erlaubt sind 15 bis 1440 Minuten.",
+        "limitPer24h": "Anfragen pro E-Mail in 24 Stunden",
+        "limitHelp": "Erlaubt sind 1 bis 100 Anfragen pro rollierendem 24h-Fenster."
+      },
+      "email": {
+        "title": "E-Mail",
+        "intro": "SMTP-Konfiguration für Passwort-Reset-E-Mails.",
+        "enabled": "E-Mail-Versand aktivieren",
+        "smtpHost": "SMTP Host",
+        "smtpPort": "SMTP Port",
+        "smtpSecure": "TLS/SSL direkt verwenden",
+        "smtpUser": "SMTP Benutzer",
+        "smtpPassword": "SMTP Passwort",
+        "smtpPasswordConfigured": "Ein Passwort ist gespeichert. Leer lassen, um es beizubehalten.",
+        "smtpPasswordEmpty": "Noch kein Passwort gespeichert.",
+        "fromAddress": "Absenderadresse",
+        "fromName": "Absendername",
+        "replyTo": "Reply-To"
+      },
       "adminJwtTtlMinutes": "Admin-Token-Laufzeit (Minuten)",
       "userJwtTtlMinutes": "User-Token-Laufzeit (Minuten)",
       "adminJwtTtlHelp": "Erlaubt sind 1 bis 1440 Minuten.",
@@ -960,6 +1014,13 @@
       "errors": {
         "adminJwtTtl": "Bitte gib für Admin-Tokens 1 bis 1440 Minuten ein.",
         "userJwtTtl": "Bitte gib für User-Tokens 1 bis 43200 Minuten ein.",
+        "smtpHost": "Bitte gib einen SMTP Host ein.",
+        "smtpPort": "Bitte gib einen SMTP Port zwischen 1 und 65535 ein.",
+        "fromAddress": "Bitte gib eine gültige Absenderadresse ein.",
+        "replyTo": "Bitte gib eine gültige Reply-To-Adresse ein.",
+        "publicBaseUrl": "Bitte gib eine gültige Hauptdomain ein.",
+        "passwordResetTtlMinutes": "Bitte gib 15 bis 1440 Minuten ein.",
+        "passwordResetLimitPer24h": "Bitte gib ein Limit zwischen 1 und 100 ein.",
         "save": "Einstellungen konnten nicht gespeichert werden."
       }
     }
