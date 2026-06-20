@@ -47,6 +47,7 @@ CREATE TABLE public.content_categories (
     id uuid NOT NULL,
     content_type text NOT NULL,
     value text NOT NULL,
+    label text NOT NULL,
     active boolean DEFAULT true NOT NULL,
     sort_order integer DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -77,6 +78,7 @@ CREATE TABLE public.content_style_translations (
 CREATE TABLE public.content_styles (
     id uuid NOT NULL,
     value text NOT NULL,
+    label text NOT NULL,
     active boolean DEFAULT true NOT NULL,
     sort_order integer DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -152,6 +154,7 @@ CREATE TABLE public.daily_question_translations (
 
 CREATE TABLE public.daily_questions (
     id uuid NOT NULL,
+    text text NOT NULL,
     category text NOT NULL,
     category_content_type text GENERATED ALWAYS AS ('daily-questions'::text) STORED,
     depth_level integer NOT NULL,
@@ -165,6 +168,7 @@ CREATE TABLE public.daily_questions (
 CREATE TABLE public.garden_assets (
     key text NOT NULL,
     label text NOT NULL,
+    object_type text NOT NULL,
     source_types text[] DEFAULT '{}'::text[] NOT NULL,
     stage_unlock integer NOT NULL,
     image text NOT NULL,
@@ -179,6 +183,7 @@ CREATE TABLE public.garden_assets (
     CONSTRAINT garden_assets_anchor_x_check CHECK (((anchor_x >= (0)::numeric) AND (anchor_x <= (1)::numeric))),
     CONSTRAINT garden_assets_anchor_y_check CHECK (((anchor_y >= (0)::numeric) AND (anchor_y <= (1)::numeric))),
     CONSTRAINT garden_assets_height_check CHECK ((height > 0)),
+    CONSTRAINT garden_assets_object_type_check CHECK ((object_type = ANY (ARRAY['flower'::text, 'tree'::text, 'bench'::text, 'light'::text, 'stone'::text, 'pond'::text, 'decoration'::text]))),
     CONSTRAINT garden_assets_stage_unlock_check CHECK ((stage_unlock >= 1)),
     CONSTRAINT garden_assets_width_check CHECK ((width > 0))
 );
@@ -196,6 +201,7 @@ CREATE TABLE public.garden_level_translations (
 CREATE TABLE public.garden_levels (
     id uuid NOT NULL,
     stage integer NOT NULL,
+    name text NOT NULL,
     points_to_next integer,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -243,6 +249,7 @@ CREATE TABLE public.know_me_catalog_question_translations (
 
 CREATE TABLE public.know_me_catalog_questions (
     id uuid NOT NULL,
+    question_text text NOT NULL,
     category text NOT NULL,
     category_content_type text GENERATED ALWAYS AS ('know-me-catalog'::text) STORED,
     active boolean DEFAULT true NOT NULL,
@@ -320,6 +327,7 @@ CREATE TABLE public.love_jar_template_translations (
 
 CREATE TABLE public.love_jar_templates (
     id uuid NOT NULL,
+    text text NOT NULL,
     category text DEFAULT 'compliment'::text NOT NULL,
     category_content_type text GENERATED ALWAYS AS ('love-jar-templates'::text) STORED,
     active boolean DEFAULT true NOT NULL,
@@ -350,7 +358,6 @@ CREATE TABLE public.message_template_translations (
     template_key text NOT NULL,
     locale text NOT NULL,
     text text NOT NULL,
-    description text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -360,6 +367,7 @@ CREATE TABLE public.message_template_translations (
 CREATE TABLE public.message_templates (
     key text NOT NULL,
     namespace text NOT NULL,
+    description text DEFAULT ''::text NOT NULL,
     required_params text[] DEFAULT '{}'::text[] NOT NULL,
     active boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -428,6 +436,8 @@ CREATE TABLE public.quest_translations (
 
 CREATE TABLE public.quests (
     id uuid NOT NULL,
+    title text NOT NULL,
+    description text NOT NULL,
     category text NOT NULL,
     category_content_type text GENERATED ALWAYS AS ('quests'::text) STORED,
     estimated_minutes integer NOT NULL,
@@ -452,6 +462,7 @@ CREATE TABLE public.relationship_mode_translations (
 CREATE TABLE public.relationship_modes (
     id uuid NOT NULL,
     value text NOT NULL,
+    label text NOT NULL,
     active boolean DEFAULT true NOT NULL,
     sort_order integer DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -594,6 +605,8 @@ ALTER TABLE ONLY public.know_me_catalog_questions
 
 
 
+ALTER TABLE ONLY public.know_me_catalog_questions
+    ADD CONSTRAINT know_me_catalog_questions_question_text_key UNIQUE (question_text);
 
 
 
@@ -714,6 +727,7 @@ CREATE INDEX content_categories_relationship_modes_gin_idx ON public.content_cat
 
 
 
+CREATE INDEX content_categories_type_active_sort_idx ON public.content_categories USING btree (content_type, active, sort_order, label);
 
 
 
@@ -725,6 +739,7 @@ CREATE INDEX garden_objects_area_created_idx ON public.garden_objects USING btre
 
 
 
+CREATE INDEX know_me_catalog_questions_active_sort_idx ON public.know_me_catalog_questions USING btree (active, sort_order, question_text);
 
 
 
@@ -740,6 +755,7 @@ CREATE INDEX love_jar_draws_couple_user_date_idx ON public.love_jar_draws USING 
 
 
 
+CREATE INDEX love_jar_templates_active_sort_idx ON public.love_jar_templates USING btree (active, sort_order, text);
 
 
 
@@ -791,6 +807,7 @@ CREATE INDEX push_subscriptions_user_active_idx ON public.push_subscriptions USI
 
 
 
+CREATE INDEX quests_active_category_idx ON public.quests USING btree (active, category, title);
 
 
 
@@ -1047,76 +1064,5 @@ ALTER TABLE ONLY public.relationship_mode_translations
     ADD CONSTRAINT relationship_mode_translations_mode_id_fkey FOREIGN KEY (mode_id) REFERENCES public.relationship_modes(id) ON DELETE CASCADE;
 
 
--- Repository query indexes for the consolidated schema.
--- Indexes matched to the repository query patterns after the schema became
--- translation-only. Some indexes from 0001 referenced text/title/label columns
--- that are dropped by later migrations, so replacement indexes live here.
 
-create unique index if not exists couples_invite_code_lower_idx
-  on public.couples (lower(invite_code));
 
-create index if not exists couples_created_idx
-  on public.couples (created_at desc);
-
-create index if not exists profiles_created_idx
-  on public.profiles (created_at desc);
-
-create index if not exists couple_members_user_couple_idx
-  on public.couple_members (user_id, couple_id);
-
-create index if not exists couple_quests_couple_completed_idx
-  on public.couple_quests (couple_id, completed_at);
-
-create index if not exists content_categories_type_active_sort_value_idx
-  on public.content_categories (content_type, active, sort_order, value);
-
-create index if not exists daily_questions_active_category_idx
-  on public.daily_questions (active, category);
-
-create index if not exists daily_question_answers_couple_question_created_idx
-  on public.daily_question_answers (couple_id, question_id, created_at);
-
-create index if not exists daily_question_answers_user_couple_question_idx
-  on public.daily_question_answers (user_id, couple_id, question_id);
-
-create index if not exists daily_question_instances_couple_question_date_idx
-  on public.daily_question_instances (couple_id, question_id, date);
-
-create index if not exists garden_objects_couple_created_idx
-  on public.garden_objects (couple_id, created_at);
-
-create index if not exists garden_objects_couple_source_created_idx
-  on public.garden_objects (couple_id, source_type, source_id, created_at desc)
-  where source_id is not null;
-
-create index if not exists know_me_catalog_questions_active_category_sort_idx
-  on public.know_me_catalog_questions (active, category, sort_order);
-
-create index if not exists know_me_questions_author_idx
-  on public.know_me_questions (author_id);
-
-create index if not exists love_jar_notes_couple_created_idx
-  on public.love_jar_notes (couple_id, created_at desc);
-
-create index if not exists love_jar_notes_couple_unread_author_idx
-  on public.love_jar_notes (couple_id, author_id)
-  where is_drawn = false;
-
-create index if not exists love_jar_notes_author_idx
-  on public.love_jar_notes (author_id);
-
-create index if not exists love_jar_templates_active_category_sort_idx
-  on public.love_jar_templates (active, category, sort_order);
-
-create index if not exists memory_entries_couple_date_created_idx
-  on public.memory_entries (couple_id, date desc, created_at desc);
-
-create index if not exists memory_entries_author_idx
-  on public.memory_entries (author_id);
-
-create index if not exists notifications_couple_created_idx
-  on public.notifications (couple_id, created_at desc)
-  where couple_id is not null;
-
-create index if not exists quests_active_category_idx
-  on public.quests (active, category);
