@@ -1,5 +1,10 @@
+--
+-- PostgreSQL database dump
+--
 
 
+-- Dumped from database version 16.14
+-- Dumped by pg_dump version 16.14
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -11,14 +16,23 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+--
+-- Data for Name: admin_audit_log; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
 
+--
+-- Data for Name: app_settings; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.app_settings (key, value, updated_at) VALUES ('auth.adminJwtTtlMinutes', '60', '2026-06-18 04:26:15.180793+00');
 INSERT INTO public.app_settings (key, value, updated_at) VALUES ('auth.userJwtTtlMinutes', '10080', '2026-06-18 04:26:15.180793+00');
 
 
+--
+-- Data for Name: content_categories; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.content_categories (id, content_type, value, active, sort_order, created_at, updated_at, relationship_modes, content_styles) VALUES ('8f793a49-6df2-4eb7-bf19-4f3af9c63314', 'daily-questions', 'everyday', true, 40, '2026-06-18 04:26:14.413007+00', '2026-06-18 04:26:14.433234+00', '{}', '{}');
 INSERT INTO public.content_categories (id, content_type, value, active, sort_order, created_at, updated_at, relationship_modes, content_styles) VALUES ('f74f7a74-9eaf-4b21-9726-bd9c3e9cc0cd', 'know-me-catalog', 'date', true, 30, '2026-06-18 04:26:14.413007+00', '2026-06-18 04:26:14.433234+00', '{local,mixed}', '{balanced,romantic,playful}');
@@ -102,11 +116,17 @@ INSERT INTO public.content_categories (id, content_type, value, active, sort_ord
 INSERT INTO public.content_categories (id, content_type, value, active, sort_order, created_at, updated_at, relationship_modes, content_styles) VALUES ('8701bb0d-363b-443c-8ebe-3464f20d9859', 'memories', 'favorite_places', true, 120, '2026-06-18 04:26:14.525198+00', '2026-06-18 04:26:14.542477+00', '{}', '{romantic,balanced}');
 
 
+--
+-- Data for Name: supported_locales; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.supported_locales (locale, label, active, is_default) VALUES ('de', 'Deutsch', true, true);
 INSERT INTO public.supported_locales (locale, label, active, is_default) VALUES ('en', 'English', true, false);
 
 
+--
+-- Data for Name: content_category_translations; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.content_category_translations (category_id, locale, label) VALUES ('98d138d8-cc52-4f03-aa94-b13d22e4c228', 'en', 'Connection');
 INSERT INTO public.content_category_translations (category_id, locale, label) VALUES ('98d138d8-cc52-4f03-aa94-b13d22e4c228', 'de', 'Verbindung');
@@ -270,6 +290,9 @@ INSERT INTO public.content_category_translations (category_id, locale, label) VA
 INSERT INTO public.content_category_translations (category_id, locale, label) VALUES ('8701bb0d-363b-443c-8ebe-3464f20d9859', 'en', 'Favorite places');
 
 
+--
+-- Data for Name: content_styles; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.content_styles (id, value, active, sort_order, created_at, updated_at) VALUES ('83fa45a2-465a-4e32-b409-3e97a33b0a86', 'balanced', true, 10, '2026-06-18 04:26:14.840706+00', '2026-06-18 04:26:14.840706+00');
 INSERT INTO public.content_styles (id, value, active, sort_order, created_at, updated_at) VALUES ('d4cdaa8c-136a-44df-9873-372567763cc4', 'romantic', true, 20, '2026-06-18 04:26:14.840706+00', '2026-06-18 04:26:14.840706+00');
@@ -277,6 +300,9 @@ INSERT INTO public.content_styles (id, value, active, sort_order, created_at, up
 INSERT INTO public.content_styles (id, value, active, sort_order, created_at, updated_at) VALUES ('56cf071a-cd8f-4e89-ae56-824054a5842a', 'deep', true, 40, '2026-06-18 04:26:14.840706+00', '2026-06-18 04:26:14.840706+00');
 
 
+--
+-- Data for Name: content_style_translations; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.content_style_translations (style_id, locale, label) VALUES ('83fa45a2-465a-4e32-b409-3e97a33b0a86', 'en', 'Balanced');
 INSERT INTO public.content_style_translations (style_id, locale, label) VALUES ('83fa45a2-465a-4e32-b409-3e97a33b0a86', 'de', 'Ausgewogen');
@@ -288,15 +314,27 @@ INSERT INTO public.content_style_translations (style_id, locale, label) VALUES (
 INSERT INTO public.content_style_translations (style_id, locale, label) VALUES ('56cf071a-cd8f-4e89-ae56-824054a5842a', 'de', 'Tiefgründig');
 
 
+--
+-- Data for Name: couples; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
 
+--
+-- Data for Name: profiles; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
 
+--
+-- Data for Name: couple_members; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
 
+--
+-- Data for Name: quests; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.quests (id, category, estimated_minutes, effort_level, reward_points, reward_seed_type, requires_both_partners, active) VALUES ('00000000-0000-0000-0000-000000000201', 'romance', 10, 'low', 15, 'compliment_seed', true, true);
 INSERT INTO public.quests (id, category, estimated_minutes, effort_level, reward_points, reward_seed_type, requires_both_partners, active) VALUES ('00000000-0000-0000-0000-000000000202', 'date', 30, 'medium', 20, 'date_seed', true, true);
@@ -385,9 +423,15 @@ INSERT INTO public.quests (id, category, estimated_minutes, effort_level, reward
 INSERT INTO public.quests (id, category, estimated_minutes, effort_level, reward_points, reward_seed_type, requires_both_partners, active) VALUES ('00000000-0000-0000-0000-000000000285', 'creativity', 15, 'low', 15, 'future_seed', true, true);
 
 
+--
+-- Data for Name: couple_quests; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
 
+--
+-- Data for Name: daily_questions; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.daily_questions (id, category, depth_level, long_distance_suitable, active) VALUES ('00000000-0000-0000-0000-000000000101', 'gratitude', 2, true, true);
 INSERT INTO public.daily_questions (id, category, depth_level, long_distance_suitable, active) VALUES ('00000000-0000-0000-0000-000000000102', 'romance', 1, true, true);
@@ -463,12 +507,21 @@ INSERT INTO public.daily_questions (id, category, depth_level, long_distance_sui
 INSERT INTO public.daily_questions (id, category, depth_level, long_distance_suitable, active) VALUES ('00000000-0000-0000-0000-000000000172', 'intimacy', 4, true, true);
 
 
+--
+-- Data for Name: daily_question_answers; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
 
+--
+-- Data for Name: daily_question_instances; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
 
+--
+-- Data for Name: daily_question_translations; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.daily_question_translations (question_id, locale, text) VALUES ('00000000-0000-0000-0000-000000000101', 'de', 'Was war ein Moment, in dem du dich durch mich geliebt gefühlt hast?');
 INSERT INTO public.daily_question_translations (question_id, locale, text) VALUES ('00000000-0000-0000-0000-000000000102', 'de', 'Welche kleine Geste von mir bedeutet dir viel?');
@@ -616,6 +669,9 @@ INSERT INTO public.daily_question_translations (question_id, locale, text) VALUE
 INSERT INTO public.daily_question_translations (question_id, locale, text) VALUES ('00000000-0000-0000-0000-000000000172', 'en', 'What small intimate surprise could I make for you someday?');
 
 
+--
+-- Data for Name: garden_assets; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.garden_assets (key, label, source_types, stage_unlock, image, width, height, anchor_x, anchor_y, active, sort_order, created_at, updated_at) VALUES ('conversation_flower', 'Gespraechsblume', '{question}', 1, '/garden-assets/conversation-flower.png', 86, 108, 0.500, 0.900, true, 10, '2026-06-18 04:26:15.080357+00', '2026-06-18 04:26:15.080357+00');
 INSERT INTO public.garden_assets (key, label, source_types, stage_unlock, image, width, height, anchor_x, anchor_y, active, sort_order, created_at, updated_at) VALUES ('heart_flower', 'Herzblume', '{know_me,quest}', 1, '/garden-assets/heart-flower.png', 92, 112, 0.500, 0.900, true, 20, '2026-06-18 04:26:15.080357+00', '2026-06-18 04:26:15.080357+00');
@@ -632,19 +688,25 @@ INSERT INTO public.garden_assets (key, label, source_types, stage_unlock, image,
 INSERT INTO public.garden_assets (key, label, source_types, stage_unlock, image, width, height, anchor_x, anchor_y, active, sort_order, created_at, updated_at) VALUES ('garden_decor', 'Gartendeko', '{quest,milestone}', 1, '/garden-assets/garden-decor.png', 92, 94, 0.500, 0.860, true, 130, '2026-06-18 04:26:15.080357+00', '2026-06-18 04:26:15.080357+00');
 
 
+--
+-- Data for Name: garden_levels; Type: TABLE DATA; Schema: public; Owner: -
+--
 
-INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('ba70490f-c235-424f-a4b4-4b9e55c570f3', 1, 200, '2026-06-18 04:26:14.954072+00', '2026-06-18 04:26:14.954072+00', 'heart_bed', '/garden-backgrounds/heart-bed.png', '#f08a82');
-INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('264f952b-5d47-4fb1-914b-d70cfd282c3b', 2, 200, '2026-06-18 04:26:14.954072+00', '2026-06-18 04:26:14.954072+00', 'flower_meadow', '/garden-backgrounds/flower-meadow.png', '#e7a86f');
-INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('bebe213c-9508-45f0-95bf-82e1e60aa0b0', 3, 200, '2026-06-18 04:26:14.954072+00', '2026-06-18 04:26:14.954072+00', 'bench_grove', '/garden-backgrounds/bench-grove.png', '#8fb66b');
-INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('158e9203-d57a-4737-b10c-e981a1d45679', 4, 200, '2026-06-18 04:26:14.954072+00', '2026-06-18 04:26:14.954072+00', 'memory_tree', '/garden-backgrounds/memory-tree-area.png', '#7ca37b');
-INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('989fc3d5-6be8-4f5a-8f6f-e8c4627014d8', 5, 200, '2026-06-18 04:26:14.954072+00', '2026-06-18 04:26:14.954072+00', 'light_meadow', '/garden-backgrounds/light-meadow.png', '#e9bd62');
-INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('8eb6c65b-53e6-4322-bcf8-54385ffec9d5', 6, 200, '2026-06-18 04:26:14.954072+00', '2026-06-18 04:26:14.954072+00', 'pond', '/garden-backgrounds/pond-area.png', '#6fb5c7');
-INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('3a5e0a09-3c59-4f8f-945f-2905faa58b85', 7, 200, '2026-06-18 04:26:14.954072+00', '2026-06-18 04:26:14.954072+00', 'picnic', '/garden-backgrounds/picnic-area.png', '#d87964');
-INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('a03dd00c-43ea-42e4-abf2-c110ccc41fcd', 8, 200, '2026-06-18 04:26:14.954072+00', '2026-06-18 04:26:14.954072+00', 'star_meadow', '/garden-backgrounds/star-meadow.png', '#727bb9');
-INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('371d7aed-99ed-450d-b2ea-5dd2a6a809bb', 9, 200, '2026-06-18 04:26:14.954072+00', '2026-06-18 04:26:14.954072+00', 'wishing_well', '/garden-backgrounds/wishing-well-area.png', '#8b90a8');
 INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('4dcd4d74-b92f-418d-9e9d-08674adc2e38', 10, NULL, '2026-06-18 04:26:14.954072+00', '2026-06-18 04:26:14.954072+00', 'garden_fest', '/garden-backgrounds/garden-fest.png', '#d89d52');
+INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('ba70490f-c235-424f-a4b4-4b9e55c570f3', 1, 100, '2026-06-18 04:26:14.954072+00', '2026-06-21 04:47:24.545318+00', 'heart_bed', '/garden-backgrounds/heart-bed.png', '#f08a82');
+INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('264f952b-5d47-4fb1-914b-d70cfd282c3b', 2, 100, '2026-06-18 04:26:14.954072+00', '2026-06-21 04:47:24.545318+00', 'flower_meadow', '/garden-backgrounds/flower-meadow.png', '#e7a86f');
+INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('bebe213c-9508-45f0-95bf-82e1e60aa0b0', 3, 100, '2026-06-18 04:26:14.954072+00', '2026-06-21 04:47:24.545318+00', 'bench_grove', '/garden-backgrounds/bench-grove.png', '#8fb66b');
+INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('158e9203-d57a-4737-b10c-e981a1d45679', 4, 150, '2026-06-18 04:26:14.954072+00', '2026-06-21 04:47:24.545318+00', 'memory_tree', '/garden-backgrounds/memory-tree-area.png', '#7ca37b');
+INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('989fc3d5-6be8-4f5a-8f6f-e8c4627014d8', 5, 150, '2026-06-18 04:26:14.954072+00', '2026-06-21 04:47:24.545318+00', 'light_meadow', '/garden-backgrounds/light-meadow.png', '#e9bd62');
+INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('8eb6c65b-53e6-4322-bcf8-54385ffec9d5', 6, 200, '2026-06-18 04:26:14.954072+00', '2026-06-21 04:47:24.545318+00', 'pond', '/garden-backgrounds/pond-area.png', '#6fb5c7');
+INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('3a5e0a09-3c59-4f8f-945f-2905faa58b85', 7, 200, '2026-06-18 04:26:14.954072+00', '2026-06-21 04:47:24.545318+00', 'picnic', '/garden-backgrounds/picnic-area.png', '#d87964');
+INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('a03dd00c-43ea-42e4-abf2-c110ccc41fcd', 8, 200, '2026-06-18 04:26:14.954072+00', '2026-06-21 04:47:24.545318+00', 'star_meadow', '/garden-backgrounds/star-meadow.png', '#727bb9');
+INSERT INTO public.garden_levels (id, stage, points_to_next, created_at, updated_at, area_key, background_image, accent) VALUES ('371d7aed-99ed-450d-b2ea-5dd2a6a809bb', 9, 200, '2026-06-18 04:26:14.954072+00', '2026-06-21 04:47:24.545318+00', 'wishing_well', '/garden-backgrounds/wishing-well-area.png', '#8b90a8');
 
 
+--
+-- Data for Name: garden_level_translations; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.garden_level_translations (level_id, locale, name) VALUES ('ba70490f-c235-424f-a4b4-4b9e55c570f3', 'en', 'Heart Bed');
 INSERT INTO public.garden_level_translations (level_id, locale, name) VALUES ('ba70490f-c235-424f-a4b4-4b9e55c570f3', 'de', 'Herzbeet');
@@ -668,9 +730,15 @@ INSERT INTO public.garden_level_translations (level_id, locale, name) VALUES ('4
 INSERT INTO public.garden_level_translations (level_id, locale, name) VALUES ('4dcd4d74-b92f-418d-9e9d-08674adc2e38', 'de', 'Gartenfest');
 
 
+--
+-- Data for Name: garden_objects; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
 
+--
+-- Data for Name: know_me_catalog_questions; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.know_me_catalog_questions (id, category, active, sort_order, created_at) VALUES ('00000000-0000-0000-0000-000000001201', 'everyday', true, 10, '2026-06-18 04:26:14.034137+00');
 INSERT INTO public.know_me_catalog_questions (id, category, active, sort_order, created_at) VALUES ('00000000-0000-0000-0000-000000001202', 'preferences', true, 20, '2026-06-18 04:26:14.034137+00');
@@ -731,6 +799,9 @@ INSERT INTO public.know_me_catalog_questions (id, category, active, sort_order, 
 INSERT INTO public.know_me_catalog_questions (id, category, active, sort_order, created_at) VALUES ('00000000-0000-0000-0000-000000001257', 'work_goals', true, 570, '2026-06-18 04:26:14.034137+00');
 
 
+--
+-- Data for Name: know_me_catalog_question_translations; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.know_me_catalog_question_translations (catalog_question_id, locale, question_text, category_label) VALUES ('00000000-0000-0000-0000-000000001201', 'de', 'Was wäre mein perfekter Sonntag?', 'Alltag');
 INSERT INTO public.know_me_catalog_question_translations (catalog_question_id, locale, question_text, category_label) VALUES ('00000000-0000-0000-0000-000000001202', 'de', 'Was ist mein heimlicher Lieblingssnack?', 'Vorlieben');
@@ -816,18 +887,33 @@ INSERT INTO public.know_me_catalog_question_translations (catalog_question_id, l
 INSERT INTO public.know_me_catalog_question_translations (catalog_question_id, locale, question_text, category_label) VALUES ('00000000-0000-0000-0000-000000001257', 'en', 'How can you tell that work is still on my mind?', 'Work & Goals');
 
 
+--
+-- Data for Name: know_me_questions; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
 
+--
+-- Data for Name: know_me_guesses; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
 
+--
+-- Data for Name: love_jar_notes; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
 
+--
+-- Data for Name: love_jar_draws; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
 
+--
+-- Data for Name: love_jar_templates; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.love_jar_templates (id, category, active, sort_order, created_at, updated_at) VALUES ('00000000-0000-0000-0000-000000001601', 'compliment', true, 10, '2026-06-18 04:26:14.321574+00', '2026-06-18 04:26:14.321574+00');
 INSERT INTO public.love_jar_templates (id, category, active, sort_order, created_at, updated_at) VALUES ('00000000-0000-0000-0000-000000001602', 'compliment', true, 20, '2026-06-18 04:26:14.321574+00', '2026-06-18 04:26:14.321574+00');
@@ -882,6 +968,9 @@ INSERT INTO public.love_jar_templates (id, category, active, sort_order, created
 INSERT INTO public.love_jar_templates (id, category, active, sort_order, created_at, updated_at) VALUES ('00000000-0000-0000-0000-000000001651', 'apology', true, 510, '2026-06-18 04:26:14.321574+00', '2026-06-18 04:26:14.321574+00');
 
 
+--
+-- Data for Name: love_jar_template_translations; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.love_jar_template_translations (template_id, locale, text) VALUES ('00000000-0000-0000-0000-000000001601', 'de', 'Ich liebe an dir ...');
 INSERT INTO public.love_jar_template_translations (template_id, locale, text) VALUES ('00000000-0000-0000-0000-000000001602', 'de', 'Danke, dass du ...');
@@ -987,9 +1076,15 @@ INSERT INTO public.love_jar_template_translations (template_id, locale, text) VA
 INSERT INTO public.love_jar_template_translations (template_id, locale, text) VALUES ('00000000-0000-0000-0000-000000001651', 'en', 'I am sorry for my part in ... and I want to show you that I am learning from it.');
 
 
+--
+-- Data for Name: memory_entries; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
 
+--
+-- Data for Name: message_templates; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('notifications.titles.dailyAnswerWaiting', 'notifications', '{}', true, '2026-06-18 04:26:14.691406+00', '2026-06-18 04:26:14.983178+00');
 INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('notifications.titles.dailyRevealed', 'notifications', '{}', true, '2026-06-18 04:26:14.691406+00', '2026-06-18 04:26:14.983178+00');
@@ -1013,8 +1108,43 @@ INSERT INTO public.message_templates (key, namespace, required_params, active, c
 INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('notifications.bodies.coupleDisconnected', 'notifications', '{name}', true, '2026-06-18 04:26:14.691406+00', '2026-06-18 04:26:14.983178+00');
 INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('notifications.titles.coupleJoined', 'notifications', '{name}', true, '2026-06-18 04:26:15.196925+00', '2026-06-18 04:26:15.196925+00');
 INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('notifications.bodies.coupleJoined', 'notifications', '{name}', true, '2026-06-18 04:26:15.196925+00', '2026-06-18 04:26:15.196925+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('emails.passwordReset.subject', 'email', '{}', true, '2026-06-21 04:47:24.42765+00', '2026-06-21 04:47:24.42765+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('emails.passwordReset.body', 'email', '{displayName,resetUrl,expiresInMinutes}', true, '2026-06-21 04:47:24.42765+00', '2026-06-21 04:47:24.42765+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.titles.dailyAnswerWaiting', 'push', '{}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.titles.dailyRevealed', 'push', '{}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.titles.questWaitingConfirmation', 'push', '{}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.titles.questCompleted', 'push', '{}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.titles.loveJarNote', 'push', '{}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.titles.memoryCreated', 'push', '{}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.titles.knowMeQuestion', 'push', '{}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.titles.knowMeAnsweredHit', 'push', '{}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.titles.knowMeAnsweredMiss', 'push', '{}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.titles.coupleDisconnected', 'push', '{}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.titles.coupleJoined', 'push', '{name}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.bodies.dailyAnswerWaiting', 'push', '{name}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.bodies.dailyRevealed', 'push', '{}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.bodies.questWaitingConfirmation', 'push', '{name,title}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.bodies.questCompleted', 'push', '{title}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.bodies.loveJarNote', 'push', '{name}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.bodies.memoryCreated', 'push', '{name,title}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.bodies.knowMeQuestion', 'push', '{name}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.bodies.knowMeAnsweredHit', 'push', '{name}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.bodies.knowMeAnsweredMiss', 'push', '{name}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.bodies.coupleDisconnected', 'push', '{name}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.bodies.coupleJoined', 'push', '{name}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.titles.test', 'push', '{}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.bodies.test', 'push', '{}', true, '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('notifications.titles.adminPasswordReset', 'notifications', '{}', true, '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('notifications.bodies.adminPasswordReset', 'notifications', '{}', true, '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.titles.adminPasswordReset', 'push', '{}', true, '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('push.bodies.adminPasswordReset', 'push', '{}', true, '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('emails.adminPasswordReset.subject', 'email', '{}', true, '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_templates (key, namespace, required_params, active, created_at, updated_at) VALUES ('emails.adminPasswordReset.body', 'email', '{displayName}', true, '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
 
 
+--
+-- Data for Name: message_template_translations; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.dailyAnswerWaiting', 'de', 'Antwort wartet', 'Benachrichtigungstitel: Antwort wartet', '2026-06-18 04:26:14.696561+00', '2026-06-18 04:26:14.696561+00');
 INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.dailyRevealed', 'de', 'Eure Antworten sind sichtbar', 'Benachrichtigungstitel: Tagesfrage freigeschaltet', '2026-06-18 04:26:14.696561+00', '2026-06-18 04:26:14.696561+00');
@@ -1038,14 +1168,151 @@ INSERT INTO public.message_template_translations (template_key, locale, text, de
 INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.bodies.loveJarNote', 'de', '{name} hat etwas in euer Liebesglas gelegt.', 'Benachrichtigungstext: Liebesglas-Zettel', '2026-06-18 04:26:14.696561+00', '2026-06-18 04:26:14.994909+00');
 INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.coupleJoined', 'de', 'Dein Partner ist da', 'Benachrichtigungstitel: Partner beigetreten', '2026-06-18 04:26:15.20095+00', '2026-06-18 04:26:15.20095+00');
 INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.bodies.coupleJoined', 'de', 'Toll, {name} hat deinen Paarraum betreten. Ihr könnt nun gemeinsam an eurem Garten arbeiten.', 'Benachrichtigungstext: Partner beigetreten', '2026-06-18 04:26:15.20095+00', '2026-06-18 04:26:15.20095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.dailyAnswerWaiting', 'en', 'Answer waiting', 'Notification title: answer waiting', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.dailyRevealed', 'en', 'Your answers are visible', 'Notification title: daily question revealed', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.questWaitingConfirmation', 'en', 'Quest waiting for you', 'Notification title: quest awaiting confirmation', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.questCompleted', 'en', 'Quest completed', 'Notification title: quest completed', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.loveJarNote', 'en', 'A new note is waiting', 'Notification title: love jar note', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.memoryCreated', 'en', 'New memory', 'Notification title: memory created', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.knowMeQuestion', 'en', 'A Know Me question is waiting', 'Notification title: Know Me question', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.knowMeAnsweredHit', 'en', 'Hit in the Know Me game', 'Notification title: Know Me guessed correctly', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.knowMeAnsweredMiss', 'en', 'An answer is in', 'Notification title: Know Me guessed incorrectly', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.coupleDisconnected', 'en', 'Pairing was disconnected', 'Notification title: pairing disconnected', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.coupleJoined', 'en', 'Your partner is here', 'Notification title: partner joined', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.bodies.dailyAnswerWaiting', 'en', '{name} answered the daily question. Now it is your turn.', 'Notification body: answer waiting', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.bodies.dailyRevealed', 'en', 'You both answered. A new flower has grown.', 'Notification body: daily question revealed', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.bodies.questWaitingConfirmation', 'en', '{name} confirmed "{title}". If it works for you too, you can complete it.', 'Notification body: quest awaiting confirmation', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.bodies.questCompleted', 'en', 'Your quest "{title}" helped your garden grow.', 'Notification body: quest completed', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.bodies.loveJarNote', 'en', '{name} put something in your love jar.', 'Notification body: love jar note', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.bodies.memoryCreated', 'en', '{name} added "{title}" to your timeline.', 'Notification body: memory created', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.bodies.knowMeQuestion', 'en', '{name} asked a question about themselves. What is your guess?', 'Notification body: Know Me question', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.bodies.knowMeAnsweredHit', 'en', '{name} guessed you correctly. A special flower has grown.', 'Notification body: Know Me guessed correctly', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.bodies.knowMeAnsweredMiss', 'en', '{name} guessed. Not a hit, but a new conversation starter.', 'Notification body: Know Me guessed incorrectly', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.bodies.coupleDisconnected', 'en', '{name} deleted the account. Your pairing was disconnected because of that. You can pair again now.', 'Notification body: pairing disconnected', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.bodies.coupleJoined', 'en', 'Great, {name} joined your couple space. You can now work on your garden together.', 'Notification body: partner joined', '2026-06-21 04:47:24.31095+00', '2026-06-21 04:47:24.31095+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('emails.passwordReset.subject', 'de', 'Passwort für deinen Herzgarten zurücksetzen', 'E-Mail-Betreff: Passwort zurücksetzen', '2026-06-21 04:47:24.42765+00', '2026-06-21 04:47:24.503625+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('emails.passwordReset.body', 'de', '
+Hallo {displayName},
+
+du hast angefragt, dein Herzgarten-Passwort zurückzusetzen.
+
+Öffne diesen Link, um ein neues Passwort zu vergeben:
+{resetUrl}
+
+Der Link ist {expiresInMinutes} Minuten gültig.
+
+Wenn du kein neues Passwort angefordert hast, kannst du diese E-Mail ignorieren.
+', 'E-Mail-Text: Passwort zurücksetzen', '2026-06-21 04:47:24.42765+00', '2026-06-21 04:47:24.503625+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('emails.passwordReset.subject', 'en', 'Reset your Herzgarten password', 'Email subject: password reset', '2026-06-21 04:47:24.42765+00', '2026-06-21 04:47:24.503625+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('emails.passwordReset.body', 'en', '
+Hello {displayName},
+
+you asked to reset your Herzgarten password.
+
+Open this link to choose a new password:
+{resetUrl}
+
+The link is valid for {expiresInMinutes} minutes.
+
+If you did not request a new password, you can ignore this email.
+', 'Email body: password reset', '2026-06-21 04:47:24.42765+00', '2026-06-21 04:47:24.503625+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.dailyAnswerWaiting', 'de', 'Antwort wartet', 'Push-Titel: Antwort wartet', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.dailyRevealed', 'de', 'Eure Antworten sind sichtbar', 'Push-Titel: Tagesfrage freigeschaltet', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.questWaitingConfirmation', 'de', 'Aufgabe wartet auf dich', 'Push-Titel: Aufgabe wartet auf Bestätigung', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.questCompleted', 'de', 'Aufgabe abgeschlossen', 'Push-Titel: Aufgabe abgeschlossen', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.loveJarNote', 'de', 'Ein neuer Zettel wartet', 'Push-Titel: Liebesglas-Zettel', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.memoryCreated', 'de', 'Neue Erinnerung', 'Push-Titel: Erinnerung erstellt', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.knowMeQuestion', 'de', 'Eine Kennst-du-mich-Frage wartet', 'Push-Titel: Kennst-du-mich-Frage', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.knowMeAnsweredHit', 'de', 'Treffer im Kennst-du-mich-Spiel', 'Push-Titel: Kennst-du-mich richtig geraten', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.knowMeAnsweredMiss', 'de', 'Eine Antwort ist da', 'Push-Titel: Kennst-du-mich falsch geraten', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.coupleDisconnected', 'de', 'Paarung wurde getrennt', 'Push-Titel: Paarung getrennt', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.coupleJoined', 'de', '{name} ist da', 'Push-Titel: Partner beigetreten', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.dailyAnswerWaiting', 'de', '{name} hat geantwortet. Jetzt fehlst noch du.', 'Push-Text: Antwort wartet', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.dailyRevealed', 'de', 'Ihr habt beide geantwortet. Eine neue Blume ist gewachsen.', 'Push-Text: Tagesfrage freigeschaltet', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.questWaitingConfirmation', 'de', '{name} hat "{title}" bestätigt. Du kannst jetzt abschließen.', 'Push-Text: Aufgabe wartet auf Bestätigung', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.questCompleted', 'de', 'Eure Aufgabe "{title}" hat euren Garten wachsen lassen.', 'Push-Text: Aufgabe abgeschlossen', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.loveJarNote', 'de', '{name} hat etwas in euer Liebesglas gelegt.', 'Push-Text: Liebesglas-Zettel', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.memoryCreated', 'de', '{name} hat "{title}" in eure Timeline gelegt.', 'Push-Text: Erinnerung erstellt', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.knowMeQuestion', 'de', '{name} hat eine Frage über sich gestellt. Was schätzt du?', 'Push-Text: Kennst-du-mich-Frage', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.knowMeAnsweredHit', 'de', '{name} hat dich richtig eingeschätzt.', 'Push-Text: Kennst-du-mich richtig geraten', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.knowMeAnsweredMiss', 'de', '{name} hat geraten. Ein neuer Gesprächsanlass ist da.', 'Push-Text: Kennst-du-mich falsch geraten', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.coupleDisconnected', 'de', '{name} hat das Konto gelöscht. Eure Paarung wurde getrennt.', 'Push-Text: Paarung getrennt', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.coupleJoined', 'de', '{name} hat deinen Paarraum betreten.', 'Push-Text: Partner beigetreten', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.test', 'de', 'Herzgarten Test', 'Push-Titel: Testnachricht', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.test', 'de', 'Push-Benachrichtigungen sind aktiv.', 'Push-Text: Testnachricht', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.dailyAnswerWaiting', 'en', 'Answer waiting', 'Push title: answer waiting', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.dailyRevealed', 'en', 'Your answers are visible', 'Push title: daily question revealed', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.questWaitingConfirmation', 'en', 'Quest waiting for you', 'Push title: quest awaiting confirmation', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.questCompleted', 'en', 'Quest completed', 'Push title: quest completed', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.loveJarNote', 'en', 'A new note is waiting', 'Push title: love jar note', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.memoryCreated', 'en', 'New memory', 'Push title: memory created', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.knowMeQuestion', 'en', 'A Know Me question is waiting', 'Push title: Know Me question', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.knowMeAnsweredHit', 'en', 'Hit in the Know Me game', 'Push title: Know Me guessed correctly', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.knowMeAnsweredMiss', 'en', 'An answer is in', 'Push title: Know Me guessed incorrectly', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.coupleDisconnected', 'en', 'Pairing was disconnected', 'Push title: pairing disconnected', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.coupleJoined', 'en', '{name} is here', 'Push title: partner joined', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.dailyAnswerWaiting', 'en', '{name} answered. Now it is your turn.', 'Push body: answer waiting', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.dailyRevealed', 'en', 'You both answered. A new flower has grown.', 'Push body: daily question revealed', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.questWaitingConfirmation', 'en', '{name} confirmed "{title}". You can complete it now.', 'Push body: quest awaiting confirmation', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.questCompleted', 'en', 'Your quest "{title}" helped your garden grow.', 'Push body: quest completed', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.loveJarNote', 'en', '{name} put something in your love jar.', 'Push body: love jar note', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.memoryCreated', 'en', '{name} added "{title}" to your timeline.', 'Push body: memory created', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.knowMeQuestion', 'en', '{name} asked a question about themselves. What is your guess?', 'Push body: Know Me question', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.knowMeAnsweredHit', 'en', '{name} guessed you correctly.', 'Push body: Know Me guessed correctly', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.knowMeAnsweredMiss', 'en', '{name} guessed. A new conversation starter is here.', 'Push body: Know Me guessed incorrectly', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.coupleDisconnected', 'en', '{name} deleted the account. Your pairing was disconnected.', 'Push body: pairing disconnected', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.coupleJoined', 'en', '{name} joined your couple space.', 'Push body: partner joined', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.test', 'en', 'Herzgarten Test', 'Push title: test notification', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.test', 'en', 'Push notifications are active.', 'Push body: test notification', '2026-06-21 04:47:24.510522+00', '2026-06-21 04:47:24.510522+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('emails.adminPasswordReset.subject', 'de', 'Dein Herzgarten-Passwort wurde neu gesetzt', 'E-Mail-Betreff: Admin hat Passwort neu gesetzt', '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('emails.adminPasswordReset.body', 'de', 'Hallo {displayName},
+
+dein Herzgarten-Passwort wurde durch einen Administrator neu gesetzt.
+
+Wenn du diese Änderung nicht erwartet hast, melde dich bitte sofort beim Support. Aus Sicherheitsgründen enthält diese E-Mail kein Passwort.', 'E-Mail-Text: Admin hat Passwort neu gesetzt', '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.adminPasswordReset', 'de', 'Dein Passwort wurde durch einen Administrator neu gesetzt', 'Benachrichtigungstitel: Admin hat Passwort neu gesetzt', '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.bodies.adminPasswordReset', 'de', 'Ein Administrator hat dein Passwort neu gesetzt. Wenn du das nicht erwartet hast, melde dich bitte sofort beim Support und ändere dein Passwort erneut.', 'Benachrichtigungstext: Admin hat Passwort neu gesetzt', '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.adminPasswordReset', 'de', 'Passwort durch Admin neu gesetzt', 'Push-Titel: Admin hat Passwort neu gesetzt', '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.adminPasswordReset', 'de', 'Prüfe dein Konto. Dein Passwort wurde durch einen Administrator geändert.', 'Push-Text: Admin hat Passwort neu gesetzt', '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.titles.adminPasswordReset', 'en', 'Your password was reset by an administrator', 'Notification title: admin reset password', '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('notifications.bodies.adminPasswordReset', 'en', 'An administrator reset your password. If you did not expect this, contact support immediately and change your password again.', 'Notification body: admin reset password', '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.titles.adminPasswordReset', 'en', 'Password reset by admin', 'Push title: admin reset password', '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('push.bodies.adminPasswordReset', 'en', 'Check your account. Your password was changed by an administrator.', 'Push body: admin reset password', '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('emails.adminPasswordReset.subject', 'en', 'Your Herzgarten password was reset', 'Email subject: admin reset password', '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+INSERT INTO public.message_template_translations (template_key, locale, text, description, created_at, updated_at) VALUES ('emails.adminPasswordReset.body', 'en', 'Hello {displayName},
+
+your Herzgarten password was reset by an administrator.
+
+If you did not expect this change, please contact support immediately. For security reasons, this email does not contain a password.', 'Email body: admin reset password', '2026-06-21 04:47:24.53672+00', '2026-06-21 04:47:24.53672+00');
+
+
+--
+-- Data for Name: notifications; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
 
+--
+-- Data for Name: password_reset_requests; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
 
+--
+-- Data for Name: password_reset_tokens; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 
+
+--
+-- Data for Name: push_subscriptions; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+
+
+--
+-- Data for Name: quest_translations; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.quest_translations (quest_id, locale, title, description) VALUES ('00000000-0000-0000-0000-000000000201', 'de', 'Drei Komplimente', 'Schreibt euch gegenseitig drei konkrete Komplimente.');
 INSERT INTO public.quest_translations (quest_id, locale, title, description) VALUES ('00000000-0000-0000-0000-000000000202', 'de', 'Spaziergang ohne Handy', 'Geht gemeinsam spazieren und lasst die Handys in der Tasche.');
@@ -1219,12 +1486,18 @@ INSERT INTO public.quest_translations (quest_id, locale, title, description) VAL
 INSERT INTO public.quest_translations (quest_id, locale, title, description) VALUES ('00000000-0000-0000-0000-000000000285', 'en', 'Future Postcard', 'Write a short postcard from a beautiful shared future to both of you.');
 
 
+--
+-- Data for Name: relationship_modes; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.relationship_modes (id, value, active, sort_order, created_at, updated_at) VALUES ('d1100bc3-4c81-4991-baf8-d0dd7af2345f', 'mixed', true, 10, '2026-06-18 04:26:14.831486+00', '2026-06-18 04:26:14.831486+00');
 INSERT INTO public.relationship_modes (id, value, active, sort_order, created_at, updated_at) VALUES ('e09f48b6-1cf5-4542-9ff7-6e86f06188f5', 'local', true, 20, '2026-06-18 04:26:14.831486+00', '2026-06-18 04:26:14.831486+00');
 INSERT INTO public.relationship_modes (id, value, active, sort_order, created_at, updated_at) VALUES ('2a58c0d2-bc1d-471c-80f7-9bc4b4240093', 'long_distance', true, 30, '2026-06-18 04:26:14.831486+00', '2026-06-18 04:26:14.831486+00');
 
 
+--
+-- Data for Name: relationship_mode_translations; Type: TABLE DATA; Schema: public; Owner: -
+--
 
 INSERT INTO public.relationship_mode_translations (mode_id, locale, label) VALUES ('d1100bc3-4c81-4991-baf8-d0dd7af2345f', 'en', 'Mixed');
 INSERT INTO public.relationship_mode_translations (mode_id, locale, label) VALUES ('d1100bc3-4c81-4991-baf8-d0dd7af2345f', 'de', 'Gemischt');
@@ -1233,31 +1506,9 @@ INSERT INTO public.relationship_mode_translations (mode_id, locale, label) VALUE
 INSERT INTO public.relationship_mode_translations (mode_id, locale, label) VALUES ('2a58c0d2-bc1d-471c-80f7-9bc4b4240093', 'en', 'Long distance');
 INSERT INTO public.relationship_mode_translations (mode_id, locale, label) VALUES ('2a58c0d2-bc1d-471c-80f7-9bc4b4240093', 'de', 'Fernbeziehung');
 
-INSERT INTO public.message_template_translations (template_key, locale, text, description)
-VALUES
-  ('notifications.titles.dailyAnswerWaiting', 'en', 'Answer waiting', 'Notification title: answer waiting'),
-  ('notifications.titles.dailyRevealed', 'en', 'Your answers are visible', 'Notification title: daily question revealed'),
-  ('notifications.titles.questWaitingConfirmation', 'en', 'Quest waiting for you', 'Notification title: quest awaiting confirmation'),
-  ('notifications.titles.questCompleted', 'en', 'Quest completed', 'Notification title: quest completed'),
-  ('notifications.titles.loveJarNote', 'en', 'A new note is waiting', 'Notification title: love jar note'),
-  ('notifications.titles.memoryCreated', 'en', 'New memory', 'Notification title: memory created'),
-  ('notifications.titles.knowMeQuestion', 'en', 'A Know Me question is waiting', 'Notification title: Know Me question'),
-  ('notifications.titles.knowMeAnsweredHit', 'en', 'Hit in the Know Me game', 'Notification title: Know Me guessed correctly'),
-  ('notifications.titles.knowMeAnsweredMiss', 'en', 'An answer is in', 'Notification title: Know Me guessed incorrectly'),
-  ('notifications.titles.coupleDisconnected', 'en', 'Pairing was disconnected', 'Notification title: pairing disconnected'),
-  ('notifications.titles.coupleJoined', 'en', 'Your partner is here', 'Notification title: partner joined'),
-  ('notifications.bodies.dailyAnswerWaiting', 'en', '{name} answered the daily question. Now it is your turn.', 'Notification body: answer waiting'),
-  ('notifications.bodies.dailyRevealed', 'en', 'You both answered. A new flower has grown.', 'Notification body: daily question revealed'),
-  ('notifications.bodies.questWaitingConfirmation', 'en', '{name} confirmed "{title}". If it works for you too, you can complete it.', 'Notification body: quest awaiting confirmation'),
-  ('notifications.bodies.questCompleted', 'en', 'Your quest "{title}" helped your garden grow.', 'Notification body: quest completed'),
-  ('notifications.bodies.loveJarNote', 'en', '{name} put something in your love jar.', 'Notification body: love jar note'),
-  ('notifications.bodies.memoryCreated', 'en', '{name} added "{title}" to your timeline.', 'Notification body: memory created'),
-  ('notifications.bodies.knowMeQuestion', 'en', '{name} asked a question about themselves. What is your guess?', 'Notification body: Know Me question'),
-  ('notifications.bodies.knowMeAnsweredHit', 'en', '{name} guessed you correctly. A special flower has grown.', 'Notification body: Know Me guessed correctly'),
-  ('notifications.bodies.knowMeAnsweredMiss', 'en', '{name} guessed. Not a hit, but a new conversation starter.', 'Notification body: Know Me guessed incorrectly'),
-  ('notifications.bodies.coupleDisconnected', 'en', '{name} deleted the account. Your pairing was disconnected because of that. You can pair again now.', 'Notification body: pairing disconnected'),
-  ('notifications.bodies.coupleJoined', 'en', 'Great, {name} joined your couple space. You can now work on your garden together.', 'Notification body: partner joined')
-ON CONFLICT (template_key, locale) DO UPDATE SET
-  text = excluded.text,
-  description = excluded.description,
-  updated_at = now();
+
+--
+-- PostgreSQL database dump complete
+--
+
+

@@ -74,7 +74,7 @@ User-facing Seed-Content speichert Texte nur noch in den jeweiligen `_translatio
 
 Die Default-Sprache kommt aus `I18N_DEFAULT_LOCALE` und faellt ohne Env-Var auf `de` zurueck. Admin-Schreibpfade muessen immer eine Translation fuer diese Default-Locale mitsenden. Public Queries nutzen `coalesce(requested, default)` und fallen nicht mehr auf Textspalten der Basistabellen zurueck.
 
-Migration `0003_remove_text_columns_use_translations_only.sql` kopiert vorhandene deutsche Basistexte zuerst in die Translation-Tabellen, legt Composite-Indizes fuer `(content_id, locale)` an und entfernt danach die alten Textspalten. Migration `0004_remove_taxonomy_label_columns_use_translations_only.sql` macht dasselbe fuer Taxonomy-Labels. Migration `0005_message_templates_translation_only_descriptions_and_en.sql` verschiebt Message-Template-Beschreibungen in die Translation-Tabelle und legt fehlende englische Notification-Defaults an.
+Die aktive SQL-Basis ist konsolidiert: `database/migrations/0001_base_schema.sql` erzeugt die finale Struktur, `database/migrations/0002_final_data_import.sql` importiert den finalen Seed-/Stammdatenstand inklusive Translation-Tabellen und Message-Template-Defaults.
 
 ---
 
