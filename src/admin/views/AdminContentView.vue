@@ -65,7 +65,7 @@ const items = ref<ContentItem[]>([]);
 const loading = ref(false);
 const saving = ref(false);
 const errors = ref<Record<string, string>>({});
-const form = reactive<ContentItem>(emptyForm('daily-questions'));
+const form = reactive<ContentItem>(emptyForm());
 const { showForm, formAnchor, openForm, closeForm } = useAdminFormPanel();
 
 const currentTypeLabel = computed(() => contentTypes.value.find((type) => type.id === selectedType.value)?.label ?? '');
@@ -110,7 +110,7 @@ function contentPayload() {
   };
 }
 
-function emptyForm(type: ContentType): ContentItem {
+function emptyForm(): ContentItem {
   return {
     active: true,
     text: '',
@@ -145,7 +145,7 @@ function ensureTranslations() {
 }
 
 function resetForm(open = false) {
-  replaceForm(emptyForm(selectedType.value));
+  replaceForm(emptyForm());
   form.category = currentCategories.value[0]?.value ?? '';
   ensureTranslations();
   errors.value = {};

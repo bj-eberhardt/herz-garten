@@ -78,6 +78,30 @@ Die aktive SQL-Basis ist konsolidiert: `database/migrations/0001_base_schema.sql
 
 ---
 
+## Linting
+
+ESLint prueft das Frontend und laeuft automatisch als Pre-Commit-Hook.
+
+Manuell pruefen:
+
+```bash
+npm run lint
+```
+
+Automatisch fixbare Probleme korrigieren:
+
+```bash
+npm run lint:fix
+```
+
+Direkt mit ESLint geht dasselbe ueber:
+
+```bash
+npx eslint . --fix
+```
+
+---
+
 ## E2E-Tests mit Playwright
 
 Die Playwright-Tests sind im Repo konfiguriert und nutzen ein eigenes Docker-Setup, damit sie vom lokalen Dev-Stack isoliert laufen.

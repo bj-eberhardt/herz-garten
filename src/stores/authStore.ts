@@ -82,7 +82,7 @@ export const useAuthStore = defineStore('auth', {
         const result = await apiRequest<{ user: AuthUser; couple: (Couple & { memberCount?: number }) | null }>('/api/me');
         this.user = result.user;
         this.couple = result.couple;
-      } catch (error) {
+      } catch {
         clearToken();
         this.token = null;
         this.user = null;

@@ -1,8 +1,6 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { apiGet, apiPatchRaw, apiPostRaw, setupCoupleByApi } from './helpers/api';
 import { testRunId, testUser } from './helpers/testUsers';
-
-const apiBaseURL = process.env.E2E_API_URL ?? 'http://localhost:3001';
 const mailpitUrl = process.env.E2E_MAILPIT_URL ?? 'http://localhost:8025';
 
 type ContentType = 'daily-questions' | 'quests' | 'know-me-catalog' | 'love-jar-templates';
@@ -445,7 +443,7 @@ test.describe('admin ui', () => {
       await page.getByTestId('admin-message-text-de').fill('{name} wartet.');
       await page.getByTestId('admin-message-save').click();
       await expect(page.getByTestId('admin-message-error')).toHaveCount(0);
-      await expect(page.getByText(/\{title\}/)).toBeVisible();
+      await expect(page.getByText(/\{title}/)).toBeVisible();
 
       const customText = `Admin UI: {name} wartet bei "{title}" ${testRunId()}.`;
       await page.getByTestId('admin-message-text-de').fill(customText);

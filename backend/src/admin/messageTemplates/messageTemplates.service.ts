@@ -4,7 +4,7 @@ import {
   replaceMessageTemplateTranslations,
 } from './messageTemplates.repository.js';
 import { config } from '../../config.js';
-import { normalizeLocale, supportedLocales } from '../support.repository.js';
+import { supportedLocales } from '../support.repository.js';
 
 export interface MessageTemplateSaveBody {
   translations?: Record<string, { text?: unknown; description?: unknown }>;
@@ -25,7 +25,7 @@ export class MessageTemplateValidationException extends Error {
   }
 }
 
-const placeholderPattern = /\{(\w+)\}/g;
+const placeholderPattern = /\{(\w+)}/g;
 const editableNamespaces = new Set(['notifications', 'push', 'email']);
 
 export function extractPlaceholders(text: string) {
