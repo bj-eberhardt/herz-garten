@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Save } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
 import { ApiError } from '@/services/api';
+import AdminFormPanel from '@/admin/components/common/AdminFormPanel.vue';
+import AdminPageHeader from '@/admin/components/common/AdminPageHeader.vue';
+import AdminTable from '@/admin/components/common/AdminTable.vue';
+import AdminTabs from '@/admin/components/common/AdminTabs.vue';
+import AdminToolbar from '@/admin/components/common/AdminToolbar.vue';
+import { useAdminFormPanel } from '@/admin/composables/useAdminFormPanel';
 
 interface LocaleOption {
   locale: string;
@@ -40,7 +46,7 @@ const loading = ref(false);
 const error = ref('');
 const successMessage = ref('');
 const validationErrors = ref<Record<string, string>>({});
-const formAnchor = ref<HTMLElement | null>(null);
+const { formAnchor, scrollToForm } = useAdminFormPanel();
 let successTimer: ReturnType<typeof window.setTimeout> | undefined;
 
 const filteredItems = computed(() => {
@@ -160,8 +166,7 @@ async function editItem(item: MessageTemplateItem) {
   validationErrors.value = {};
   error.value = '';
   clearSuccessMessage();
-  await nextTick();
-  formAnchor.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  await scrollToForm();
 }
 
 function closeForm() {
@@ -228,38 +233,34 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="admin-view" data-testid="admin-message-templates">
-    <div class="admin-heading">
-      <h1>{{ t('admin.messages.title') }}</h1>
-      <span>{{ t('admin.messages.subtitle') }}</span>
-    </div>
+    <AdminPageHeader :title="t('admin.messages.title')" :badge="t('admin.messages.subtitle')" />
     <p class="muted">{{ t('admin.messages.intro') }}</p>
     <p v-if="successMessage" class="success-note" data-testid="admin-message-success">{{ successMessage }}</p>
 
-    <div class="admin-tabs" role="tablist" :aria-label="t('admin.messages.channelLabel')">
-      <button
-        v-for="option in namespaceOptions"
-        :key="option.value"
-        type="button"
-        :class="{ active: activeNamespace === option.value }"
-        :data-testid="`admin-message-channel-${option.value}`"
-        @click="activeNamespace = option.value; loadItems()"
-      >
-        {{ option.label }}
-      </button>
-    </div>
+    <AdminTabs
+      v-model="activeNamespace"
+      :options="namespaceOptions.map((option) => ({ id: option.value, label: option.label }))"
+      :aria-label="t('admin.messages.channelLabel')"
+      test-id-prefix="admin-message-channel"
+      @change="loadItems"
+    />
 
     <div class="admin-table-header admin-message-table-header">
-      <div class="admin-toolbar admin-message-toolbar">
+      <AdminToolbar class="admin-message-toolbar">
         <input v-model="search" class="admin-message-search-input" :placeholder="t('admin.messages.searchPlaceholder')" data-testid="admin-message-search" />
-      </div>
+      </AdminToolbar>
     </div>
 
-    <section v-if="selectedItem" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-message-form">
-      <div class="admin-form-head">
-        <h2>{{ selectedItem.key }}</h2>
-        <button class="secondary-button admin-small-button" type="button" data-testid="admin-message-form-close" @click="closeForm">{{ t('admin.common.close') }}</button>
-      </div>
-      <p v-if="error" class="form-error" data-testid="admin-message-error">{{ error }}</p>
+    <AdminFormPanel
+      v-if="selectedItem"
+      ref="formAnchor"
+      :title="selectedItem.key"
+      :error="error"
+      test-id="admin-message-form"
+      close-test-id="admin-message-form-close"
+      @close="closeForm"
+    >
+      <template #error><span data-testid="admin-message-error">{{ error }}</span></template>
       <p class="muted">{{ selectedItem.description }}</p>
       <div>
         <span v-if="selectedItem.requiredParams.length === 0" class="muted">{{ t('admin.messages.noPlaceholders') }}</span>
@@ -277,10 +278,9 @@ onBeforeUnmount(() => {
         <Save :size="18" aria-hidden="true" />
         {{ savingKey === selectedItem.key ? t('admin.common.saving') : t('admin.common.save') }}
       </button>
-    </section>
+    </AdminFormPanel>
 
-    <div class="admin-table-wrap">
-      <table class="admin-table">
+    <AdminTable :loading="loading" :empty="filteredItems.length === 0" :loading-text="t('admin.common.loading')">
         <thead>
           <tr>
             <th>{{ t('admin.messages.key') }}</th>
@@ -305,9 +305,7 @@ onBeforeUnmount(() => {
             </td>
           </tr>
         </tbody>
-      </table>
-      <p v-if="loading" class="muted">{{ t('admin.common.loading') }}</p>
-      <p v-else-if="filteredItems.length === 0" class="muted" data-testid="admin-message-empty">{{ t('admin.messages.empty') }}</p>
-    </div>
+      <template #empty><span data-testid="admin-message-empty">{{ t('admin.messages.empty') }}</span></template>
+    </AdminTable>
   </section>
 </template>

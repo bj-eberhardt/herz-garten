@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Plus, Save, Trash2 } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
-import { ApiError } from '@/services/api';
+import AdminFormPanel from '@/admin/components/common/AdminFormPanel.vue';
+import AdminLocalizedLabelForm from '@/admin/components/domain/AdminLocalizedLabelForm.vue';
+import AdminPageHeader from '@/admin/components/common/AdminPageHeader.vue';
+import AdminTable from '@/admin/components/common/AdminTable.vue';
+import AdminTabs from '@/admin/components/common/AdminTabs.vue';
+import { localizeAdminApiError } from '@/admin/composables/useAdminApiError';
+import { useAdminFormPanel } from '@/admin/composables/useAdminFormPanel';
+import { useAdminTranslations } from '@/admin/composables/useAdminTranslations';
 
 type ContentType = 'daily-questions' | 'quests' | 'know-me-catalog' | 'love-jar-templates' | 'memories';
 
@@ -39,15 +46,13 @@ const contentTypes = computed<Array<{ id: ContentType; label: string }>>(() => [
 const selectedType = ref<ContentType>('daily-questions');
 const locales = ref<LocaleOption[]>([]);
 const items = ref<CategoryItem[]>([]);
-const showForm = ref(false);
 const saving = ref(false);
 const error = ref('');
-const formAnchor = ref<HTMLElement | null>(null);
 const form = reactive<CategoryItem>(emptyForm('daily-questions'));
+const { showForm, formAnchor, openForm, closeForm } = useAdminFormPanel();
 
 const filteredItems = computed(() => items.value.filter((item) => item.contentType === selectedType.value));
-const defaultLocale = computed(() => locales.value.find((locale) => locale.isDefault) ?? locales.value[0] ?? null);
-const additionalLocales = computed(() => locales.value.filter((locale) => locale.locale !== defaultLocale.value?.locale));
+const { defaultLocale, additionalLocales, ensureTranslations } = useAdminTranslations(locales, form);
 const relationshipModeOptions = ref<Array<{ value: string; label: string; active: boolean }>>([]);
 const contentStyleOptions = ref<Array<{ value: string; label: string; active: boolean }>>([]);
 
@@ -85,16 +90,6 @@ function emptyForm(contentType: ContentType): CategoryItem {
   };
 }
 
-function ensureTranslations() {
-  form.translations ??= {};
-  for (const locale of locales.value) {
-    form.translations[locale.locale] ??= {};
-  }
-  if (defaultLocale.value && form.label && !form.translations[defaultLocale.value.locale].label) {
-    form.translations[defaultLocale.value.locale].label = form.label;
-  }
-}
-
 function resetForm(open = false) {
   replaceForm(emptyForm(selectedType.value));
   ensureTranslations();
@@ -102,22 +97,16 @@ function resetForm(open = false) {
   showForm.value = open;
 }
 
-async function scrollToForm() {
-  await nextTick();
-  formAnchor.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
 async function openNew() {
-  resetForm(true);
-  await scrollToForm();
+  resetForm(false);
+  await openForm();
 }
 
 async function editCategory(category: CategoryItem) {
   replaceForm(JSON.parse(JSON.stringify(category)));
   ensureTranslations();
-  showForm.value = true;
   error.value = '';
-  await scrollToForm();
+  await openForm();
 }
 
 async function loadLocales() {
@@ -144,16 +133,6 @@ async function switchType(type: ContentType) {
   resetForm(false);
 }
 
-function localizeAdminError(caught: unknown, fallbackKey: string) {
-  if (caught instanceof ApiError && caught.errorKey) {
-    const key = `admin.serverErrors.${caught.errorKey}`;
-    const translated = t(key, caught.params ?? {});
-    if (translated !== key) return translated;
-  }
-
-  return t(fallbackKey);
-}
-
 async function saveCategory() {
   const defaultLabel = defaultLocale.value ? form.translations[defaultLocale.value.locale]?.label : '';
   if (!form.value.trim() || !defaultLabel?.trim()) {
@@ -171,7 +150,7 @@ async function saveCategory() {
     items.value = payload.items;
     resetForm(false);
   } catch (caught) {
-    error.value = localizeAdminError(caught, 'admin.categories.errors.save');
+    error.value = localizeAdminApiError(caught, t, 'admin.categories.errors.save');
   } finally {
     saving.value = false;
   }
@@ -185,7 +164,7 @@ async function deleteCategory(category: CategoryItem) {
     });
     items.value = payload.items;
   } catch (caught) {
-    error.value = localizeAdminError(caught, 'admin.categories.errors.delete');
+    error.value = localizeAdminApiError(caught, t, 'admin.categories.errors.delete');
   }
 }
 
@@ -197,77 +176,54 @@ onMounted(async () => {
 
 <template>
   <section class="admin-view" data-testid="admin-categories">
-    <div class="admin-heading">
-      <h1>{{ t('admin.categories.title') }}</h1>
-      <span>{{ filteredItems.length }}</span>
-    </div>
+    <AdminPageHeader :title="t('admin.categories.title')" :badge="filteredItems.length" />
     <p class="muted">{{ t('admin.categories.help') }}</p>
 
-    <div class="admin-tabs" role="tablist">
-      <button
-        v-for="type in contentTypes"
-        :key="type.id"
-        type="button"
-        :class="{ active: selectedType === type.id }"
-        :data-testid="`admin-category-tab-${type.id}`"
-        @click="switchType(type.id)"
+    <AdminTabs v-model="selectedType" :options="contentTypes" test-id-prefix="admin-category-tab" @change="switchType" />
+
+    <AdminFormPanel
+      v-if="showForm"
+      ref="formAnchor"
+      :title="form.id ? t('admin.categories.editTitle') : t('admin.categories.newTitle')"
+      :error="error"
+      test-id="admin-category-form"
+      close-test-id="admin-category-form-close"
+      @close="closeForm"
+    >
+      <template #error><span data-testid="admin-category-error">{{ error }}</span></template>
+      <AdminLocalizedLabelForm
+        :model-value="form"
+        :default-locale="defaultLocale"
+        :additional-locales="additionalLocales"
+        :value-help="t('admin.categories.technicalValueHelp')"
+        value-test-id="admin-category-value"
+        sort-order-test-id="admin-category-sort-order"
+        active-test-id="admin-category-active"
+        label-test-id="admin-category-label"
       >
-        {{ type.label }}
-      </button>
-    </div>
-
-    <section v-if="showForm" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-category-form">
-      <div class="admin-form-head">
-        <h2>{{ form.id ? t('admin.categories.editTitle') : t('admin.categories.newTitle') }}</h2>
-        <button class="secondary-button admin-small-button" type="button" data-testid="admin-category-form-close" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
-      </div>
-      <p v-if="error" class="form-error" data-testid="admin-category-error">{{ error }}</p>
-      <label>
-        {{ t('admin.common.technicalValue') }}
-        <input v-model="form.value" :disabled="Boolean(form.id)" placeholder="z.B. ritual" data-testid="admin-category-value" />
-        <small>{{ t('admin.categories.technicalValueHelp') }}</small>
-      </label>
-      <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" data-testid="admin-category-sort-order" /></label>
-      <label>
-        {{ t('admin.categories.relationshipModes') }}
-        <select v-model="form.relationshipModes" multiple data-testid="admin-category-relationship-modes">
-          <option v-for="mode in relationshipModeOptions" :key="mode.value" :value="mode.value">{{ mode.label }}</option>
-        </select>
-        <small>{{ t('admin.categories.emptySelectionHelp') }}</small>
-      </label>
-      <label>
-        {{ t('admin.categories.contentStyles') }}
-        <select v-model="form.contentStyles" multiple data-testid="admin-category-content-styles">
-          <option v-for="style in contentStyleOptions" :key="style.value" :value="style.value">{{ style.label }}</option>
-        </select>
-        <small>{{ t('admin.categories.emptySelectionHelp') }}</small>
-      </label>
-      <label class="admin-checkbox"><input v-model="form.active" type="checkbox" data-testid="admin-category-active" /> {{ t('admin.common.active') }}</label>
-
-      <fieldset v-if="defaultLocale" class="admin-translation-box admin-default-translation">
-        <legend>
-          {{ defaultLocale.label }} [{{ defaultLocale.locale }}]
-          <span class="admin-required-badge">{{ t('admin.messages.standardSuffix') }}</span>
-        </legend>
-        <label>
-          {{ t('admin.common.label') }}
-          <input v-model="form.translations[defaultLocale.locale].label" data-testid="admin-category-label" />
-        </label>
-      </fieldset>
-
-      <section v-if="additionalLocales.length > 0" class="admin-translation-box">
-        <h2>{{ t('admin.common.translations') }}</h2>
-        <div v-for="locale in additionalLocales" :key="locale.locale" class="admin-translation-row">
-          <strong>{{ locale.locale }}</strong>
-          <input v-model="form.translations[locale.locale].label" :placeholder="t('admin.common.labelPlaceholder', { locale: locale.locale })" />
-        </div>
-      </section>
+        <template #before-active>
+          <label>
+            {{ t('admin.categories.relationshipModes') }}
+            <select v-model="form.relationshipModes" multiple data-testid="admin-category-relationship-modes">
+              <option v-for="mode in relationshipModeOptions" :key="mode.value" :value="mode.value">{{ mode.label }}</option>
+            </select>
+            <small>{{ t('admin.categories.emptySelectionHelp') }}</small>
+          </label>
+          <label>
+            {{ t('admin.categories.contentStyles') }}
+            <select v-model="form.contentStyles" multiple data-testid="admin-category-content-styles">
+              <option v-for="style in contentStyleOptions" :key="style.value" :value="style.value">{{ style.label }}</option>
+            </select>
+            <small>{{ t('admin.categories.emptySelectionHelp') }}</small>
+          </label>
+        </template>
+      </AdminLocalizedLabelForm>
 
       <button class="primary-button" type="button" :disabled="saving" data-testid="admin-category-save" @click="saveCategory">
         <Save :size="18" aria-hidden="true" />
         {{ saving ? t('admin.common.saving') : t('admin.common.save') }}
       </button>
-    </section>
+    </AdminFormPanel>
 
     <div class="admin-table-header">
       <div class="admin-toolbar">
@@ -279,8 +235,7 @@ onMounted(async () => {
       </button>
     </div>
 
-    <div class="admin-table-wrap">
-      <table class="admin-table">
+    <AdminTable>
         <thead>
           <tr>
             <th>{{ t('admin.common.value') }}</th>
@@ -311,7 +266,6 @@ onMounted(async () => {
             </td>
           </tr>
         </tbody>
-      </table>
-    </div>
+    </AdminTable>
   </section>
 </template>

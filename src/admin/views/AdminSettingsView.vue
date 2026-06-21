@@ -4,6 +4,11 @@ import { useI18n } from 'vue-i18n';
 import { Save } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
 import { ApiError } from '@/services/api';
+import AdminAuthSettingsPanel from '@/admin/components/settings/AdminAuthSettingsPanel.vue';
+import AdminEmailSettingsPanel from '@/admin/components/settings/AdminEmailSettingsPanel.vue';
+import AdminPageHeader from '@/admin/components/common/AdminPageHeader.vue';
+import AdminPasswordResetSettingsPanel from '@/admin/components/settings/AdminPasswordResetSettingsPanel.vue';
+import AdminServerSettingsPanel from '@/admin/components/settings/AdminServerSettingsPanel.vue';
 
 interface AdminSettingsPayload {
   auth: {
@@ -183,184 +188,13 @@ onMounted(loadSettings);
 
 <template>
   <section class="admin-view" data-testid="admin-settings">
-    <div class="admin-heading">
-      <h1>{{ t('admin.settings.title') }}</h1>
-      <span>{{ t('admin.settings.subtitle') }}</span>
-    </div>
+    <AdminPageHeader :title="t('admin.settings.title')" :badge="t('admin.settings.subtitle')" />
     <p class="muted">{{ t('admin.settings.intro') }}</p>
 
-    <section class="admin-panel admin-form admin-settings-block" data-testid="admin-settings-jwt-block">
-      <div class="admin-form-head">
-        <div>
-          <h2>{{ t('admin.settings.jwt.title') }}</h2>
-          <p class="muted">{{ t('admin.settings.jwt.intro') }}</p>
-        </div>
-      </div>
-
-      <label>
-        {{ t('admin.settings.adminJwtTtlMinutes') }}
-        <input
-          v-model.number="form.adminJwtTtlMinutes"
-          type="number"
-          min="1"
-          max="1440"
-          step="1"
-          data-testid="admin-settings-admin-jwt-ttl"
-        />
-        <small>{{ t('admin.settings.adminJwtTtlHelp') }}</small>
-        <p v-if="fieldErrors.adminJwtTtlMinutes" class="form-error admin-settings-field-error" data-testid="admin-settings-error">
-          {{ fieldErrors.adminJwtTtlMinutes }}
-        </p>
-      </label>
-
-      <label>
-        {{ t('admin.settings.userJwtTtlMinutes') }}
-        <input
-          v-model.number="form.userJwtTtlMinutes"
-          type="number"
-          min="1"
-          max="43200"
-          step="1"
-          data-testid="admin-settings-user-jwt-ttl"
-        />
-        <small>{{ t('admin.settings.userJwtTtlHelp') }}</small>
-        <p v-if="fieldErrors.userJwtTtlMinutes" class="form-error admin-settings-field-error" data-testid="admin-settings-error">
-          {{ fieldErrors.userJwtTtlMinutes }}
-        </p>
-      </label>
-    </section>
-
-    <section class="admin-panel admin-form admin-settings-block" data-testid="admin-settings-server-block">
-      <div class="admin-form-head">
-        <div>
-          <h2>{{ t('admin.settings.server.title') }}</h2>
-          <p class="muted">{{ t('admin.settings.server.intro') }}</p>
-        </div>
-      </div>
-
-      <label>
-        {{ t('admin.settings.server.publicBaseUrl') }}
-        <input v-model="serverForm.publicBaseUrl" data-testid="admin-settings-public-base-url" />
-        <small>{{ t('admin.settings.server.publicBaseUrlHelp') }}</small>
-        <p v-if="fieldErrors.publicBaseUrl" class="form-error admin-settings-field-error" data-testid="admin-settings-error">
-          {{ fieldErrors.publicBaseUrl }}
-        </p>
-      </label>
-    </section>
-
-    <section class="admin-panel admin-form admin-settings-block" data-testid="admin-settings-password-reset-block">
-      <div class="admin-form-head">
-        <div>
-          <h2>{{ t('admin.settings.passwordReset.title') }}</h2>
-          <p class="muted">{{ t('admin.settings.passwordReset.intro') }}</p>
-        </div>
-      </div>
-
-      <label>
-        {{ t('admin.settings.passwordReset.ttlMinutes') }}
-        <input
-          v-model.number="passwordResetForm.ttlMinutes"
-          type="number"
-          min="15"
-          max="1440"
-          step="1"
-          data-testid="admin-settings-reset-ttl"
-        />
-        <small>{{ t('admin.settings.passwordReset.ttlHelp') }}</small>
-        <p v-if="fieldErrors.passwordResetTtlMinutes" class="form-error admin-settings-field-error" data-testid="admin-settings-error">
-          {{ fieldErrors.passwordResetTtlMinutes }}
-        </p>
-      </label>
-
-      <label>
-        {{ t('admin.settings.passwordReset.limitPer24h') }}
-        <input
-          v-model.number="passwordResetForm.limitPer24h"
-          type="number"
-          min="1"
-          max="100"
-          step="1"
-          data-testid="admin-settings-reset-limit"
-        />
-        <small>{{ t('admin.settings.passwordReset.limitHelp') }}</small>
-        <p v-if="fieldErrors.passwordResetLimitPer24h" class="form-error admin-settings-field-error" data-testid="admin-settings-error">
-          {{ fieldErrors.passwordResetLimitPer24h }}
-        </p>
-      </label>
-    </section>
-
-    <section class="admin-panel admin-form admin-settings-block" data-testid="admin-settings-email-block">
-      <div class="admin-form-head">
-        <div>
-          <h2>{{ t('admin.settings.email.title') }}</h2>
-          <p class="muted">{{ t('admin.settings.email.intro') }}</p>
-        </div>
-      </div>
-
-      <label class="admin-checkbox-row">
-        <input v-model="emailForm.enabled" type="checkbox" data-testid="admin-settings-email-enabled" />
-        <span>{{ t('admin.settings.email.enabled') }}</span>
-      </label>
-
-      <label>
-        {{ t('admin.settings.email.smtpHost') }}
-        <input v-model="emailForm.smtpHost" data-testid="admin-settings-email-host" />
-        <p v-if="fieldErrors.smtpHost" class="form-error admin-settings-field-error" data-testid="admin-settings-error">
-          {{ fieldErrors.smtpHost }}
-        </p>
-      </label>
-
-      <label>
-        {{ t('admin.settings.email.smtpPort') }}
-        <input v-model.number="emailForm.smtpPort" type="number" min="1" max="65535" step="1" data-testid="admin-settings-email-port" />
-        <p v-if="fieldErrors.smtpPort" class="form-error admin-settings-field-error" data-testid="admin-settings-error">
-          {{ fieldErrors.smtpPort }}
-        </p>
-      </label>
-
-      <label class="admin-checkbox-row">
-        <input v-model="emailForm.smtpSecure" type="checkbox" data-testid="admin-settings-email-secure" />
-        <span>{{ t('admin.settings.email.smtpSecure') }}</span>
-      </label>
-
-      <label>
-        {{ t('admin.settings.email.smtpUser') }}
-        <input v-model="emailForm.smtpUser" autocomplete="off" data-testid="admin-settings-email-user" />
-      </label>
-
-      <label>
-        {{ t('admin.settings.email.smtpPassword') }}
-        <input v-model="emailForm.smtpPassword" autocomplete="new-password" type="password" data-testid="admin-settings-email-password" />
-        <small>
-          {{
-            emailForm.smtpPasswordConfigured
-              ? t('admin.settings.email.smtpPasswordConfigured')
-              : t('admin.settings.email.smtpPasswordEmpty')
-          }}
-        </small>
-      </label>
-
-      <label>
-        {{ t('admin.settings.email.fromAddress') }}
-        <input v-model="emailForm.fromAddress" type="email" data-testid="admin-settings-email-from" />
-        <p v-if="fieldErrors.fromAddress" class="form-error admin-settings-field-error" data-testid="admin-settings-error">
-          {{ fieldErrors.fromAddress }}
-        </p>
-      </label>
-
-      <label>
-        {{ t('admin.settings.email.fromName') }}
-        <input v-model="emailForm.fromName" data-testid="admin-settings-email-from-name" />
-      </label>
-
-      <label>
-        {{ t('admin.settings.email.replyTo') }}
-        <input v-model="emailForm.replyTo" type="email" data-testid="admin-settings-email-reply-to" />
-        <p v-if="fieldErrors.replyTo" class="form-error admin-settings-field-error" data-testid="admin-settings-error">
-          {{ fieldErrors.replyTo }}
-        </p>
-      </label>
-    </section>
+    <AdminAuthSettingsPanel :model-value="form" :errors="fieldErrors" />
+    <AdminServerSettingsPanel :model-value="serverForm" :error="fieldErrors.publicBaseUrl" />
+    <AdminPasswordResetSettingsPanel :model-value="passwordResetForm" :errors="fieldErrors" />
+    <AdminEmailSettingsPanel :model-value="emailForm" :errors="fieldErrors" />
 
     <div class="admin-settings-actions">
       <p v-if="formError" class="form-error" data-testid="admin-settings-error">{{ formError }}</p>

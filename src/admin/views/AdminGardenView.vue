@@ -1,10 +1,16 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Plus, Save, Trash2 } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
-import { ApiError } from '@/services/api';
 import { resolveAssetUrl } from '@/services/assetUrls';
+import AdminFormPanel from '@/admin/components/common/AdminFormPanel.vue';
+import AdminImageUploadPreview from '@/admin/components/domain/AdminImageUploadPreview.vue';
+import AdminPageHeader from '@/admin/components/common/AdminPageHeader.vue';
+import AdminTable from '@/admin/components/common/AdminTable.vue';
+import AdminTranslationFields from '@/admin/components/common/AdminTranslationFields.vue';
+import { localizeAdminApiError } from '@/admin/composables/useAdminApiError';
+import { useAdminFormPanel } from '@/admin/composables/useAdminFormPanel';
 
 interface LocaleOption {
   locale: string;
@@ -38,14 +44,13 @@ interface GardenLevelForm {
 const locales = ref<LocaleOption[]>([]);
 const { t } = useI18n();
 const levels = ref<GardenLevelItem[]>([]);
-const showForm = ref(false);
 const saving = ref(false);
 const deletingId = ref('');
 const error = ref('');
 const backgroundFile = ref<File | null>(null);
 const backgroundPreview = ref('');
-const formAnchor = ref<HTMLElement | null>(null);
 const form = reactive<GardenLevelForm>(emptyForm());
+const { showForm, formAnchor, openForm, closeForm } = useAdminFormPanel();
 
 const isLastStage = computed(() => {
   const maxStage = Math.max(0, ...levels.value.map((level) => level.stage));
@@ -95,11 +100,6 @@ function resetForm(open = false) {
   showForm.value = open;
 }
 
-async function scrollToForm() {
-  await nextTick();
-  formAnchor.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
 async function openNew() {
   replaceForm({
     ...emptyForm(),
@@ -109,16 +109,14 @@ async function openNew() {
   });
   ensureTranslations();
   error.value = '';
-  showForm.value = true;
-  await scrollToForm();
+  await openForm();
 }
 
 async function editLevel(level: GardenLevelItem) {
   replaceForm(JSON.parse(JSON.stringify(level)));
   ensureTranslations();
   error.value = '';
-  showForm.value = true;
-  await scrollToForm();
+  await openForm();
 }
 
 async function loadLocales() {
@@ -161,16 +159,6 @@ function onBackgroundSelected(event: Event) {
   backgroundPreview.value = file ? URL.createObjectURL(file) : '';
 }
 
-function localizeAdminError(caught: unknown, fallbackKey: string) {
-  if (caught instanceof ApiError && caught.errorKey) {
-    const key = `admin.serverErrors.${caught.errorKey}`;
-    const translated = t(key, caught.params ?? {});
-    if (translated !== key) return translated;
-  }
-
-  return t(fallbackKey);
-}
-
 async function saveLevel() {
   const validationError = validateForm();
   if (validationError) {
@@ -189,7 +177,7 @@ async function saveLevel() {
     levels.value = payload.items.map(normalizeLevelItem);
     resetForm(false);
   } catch (caught) {
-    error.value = localizeAdminError(caught, 'admin.garden.errors.save');
+    error.value = localizeAdminApiError(caught, t, 'admin.garden.errors.save');
   } finally {
     saving.value = false;
   }
@@ -203,7 +191,7 @@ async function deleteLevel(level: GardenLevelItem) {
     levels.value = payload.items.map(normalizeLevelItem);
     if (form.id === level.id) resetForm(false);
   } catch (caught) {
-    error.value = localizeAdminError(caught, 'admin.garden.errors.delete');
+    error.value = localizeAdminApiError(caught, t, 'admin.garden.errors.delete');
   } finally {
     deletingId.value = '';
   }
@@ -217,36 +205,34 @@ onMounted(async () => {
 
 <template>
   <section class="admin-view" data-testid="admin-garden">
-    <div class="admin-heading">
-      <h1>{{ t('admin.garden.title') }}</h1>
-      <span>{{ t('admin.garden.subtitle') }}</span>
-    </div>
+    <AdminPageHeader :title="t('admin.garden.title')" :badge="t('admin.garden.subtitle')" />
 
-    <section v-if="showForm" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-garden-level-form">
-      <div class="admin-form-head">
-        <h2>{{ form.id ? t('admin.garden.editTitle', { stage: form.stage }) : t('admin.garden.newTitle') }}</h2>
-        <button class="secondary-button admin-small-button" type="button" data-testid="admin-garden-level-form-close" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
-      </div>
+    <AdminFormPanel
+      v-if="showForm"
+      ref="formAnchor"
+      :title="form.id ? t('admin.garden.editTitle', { stage: form.stage }) : t('admin.garden.newTitle')"
+      :error="error"
+      test-id="admin-garden-level-form"
+      close-test-id="admin-garden-level-form-close"
+      @close="closeForm"
+    >
       <p class="admin-warning">
         {{ t('admin.garden.saveWarning') }}
       </p>
-      <p v-if="error" class="form-error" data-testid="admin-garden-level-error">{{ error }}</p>
+      <template #error><span data-testid="admin-garden-level-error">{{ error }}</span></template>
 
       <label>{{ t('admin.common.name') }}<input v-model="form.name" data-testid="admin-garden-level-name" /></label>
       <label>
         {{ t('admin.garden.accent') }}
         <input v-model="form.accent" type="color" data-testid="admin-garden-level-accent" />
       </label>
-      <label>
-        {{ t('admin.garden.backgroundImage') }}
-        <input type="file" accept="image/png,image/jpeg,image/webp" data-testid="admin-garden-level-background" @change="onBackgroundSelected" />
-        <small>{{ form.id ? t('admin.garden.backgroundOptionalHelp') : t('admin.garden.backgroundRequiredHelp') }}</small>
-      </label>
-      <img
-        v-if="backgroundPreview || form.backgroundImage"
-        class="admin-image-preview admin-background-preview"
+      <AdminImageUploadPreview
+        :label="t('admin.garden.backgroundImage')"
+        :help="form.id ? t('admin.garden.backgroundOptionalHelp') : t('admin.garden.backgroundRequiredHelp')"
         :src="backgroundPreview || form.backgroundImage"
-        alt=""
+        preview-class="admin-background-preview"
+        test-id="admin-garden-level-background"
+        @change="onBackgroundSelected"
       />
       <label>
         {{ form.id ? t('admin.garden.pointsToNext') : t('admin.garden.pointsFromPrevious') }}
@@ -254,19 +240,21 @@ onMounted(async () => {
         <small v-if="isLastStage">{{ t('admin.garden.lastStageHelp') }}</small>
       </label>
 
-      <section class="admin-translation-box">
-        <h2>{{ t('admin.common.translations') }}</h2>
-        <div v-for="locale in locales" :key="locale.locale" class="admin-translation-row">
+      <AdminTranslationFields :locales="locales">
+        <template #header>
+          <h2>{{ t('admin.common.translations') }}</h2>
+        </template>
+        <template #default="{ locale }">
           <strong>{{ locale.locale }}</strong>
           <input v-model="form.translations[locale.locale].name" :placeholder="t('admin.common.namePlaceholder', { locale: locale.locale })" :data-testid="`admin-garden-level-name-${locale.locale}`" />
-        </div>
-      </section>
+        </template>
+      </AdminTranslationFields>
 
       <button class="primary-button" type="button" :disabled="saving" data-testid="admin-garden-level-save" @click="saveLevel">
         <Save :size="18" aria-hidden="true" />
         {{ saving ? t('admin.common.saving') : t('admin.common.save') }}
       </button>
-    </section>
+    </AdminFormPanel>
 
     <div class="admin-table-header">
       <p class="muted">{{ t('admin.garden.deltaHelp') }}</p>
@@ -278,8 +266,7 @@ onMounted(async () => {
 
     <p v-if="error && !showForm" class="form-error">{{ error }}</p>
 
-    <div class="admin-table-wrap">
-      <table class="admin-table">
+    <AdminTable>
         <thead>
           <tr>
             <th>{{ t('admin.garden.stage') }}</th>
@@ -315,7 +302,6 @@ onMounted(async () => {
             </td>
           </tr>
         </tbody>
-      </table>
-    </div>
+    </AdminTable>
   </section>
 </template>

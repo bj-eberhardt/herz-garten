@@ -2,8 +2,13 @@
 import { onMounted, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { Download, Search } from '@lucide/vue';
-import { adminApiRequest, adminDownloadUrl, getAdminToken } from '@/admin/services/adminApi';
+import { Download } from '@lucide/vue';
+import { adminApiRequest } from '@/admin/services/adminApi';
+import AdminPageHeader from '@/admin/components/common/AdminPageHeader.vue';
+import AdminSearchField from '@/admin/components/common/AdminSearchField.vue';
+import AdminTable from '@/admin/components/common/AdminTable.vue';
+import AdminToolbar from '@/admin/components/common/AdminToolbar.vue';
+import { useAdminExportDownload } from '@/admin/composables/useAdminExportDownload';
 
 interface AdminCouple {
   id: string;
@@ -27,6 +32,7 @@ const loading = ref(false);
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
+const { download: downloadExport } = useAdminExportDownload('herzgarten-couples');
 
 async function loadCouples() {
   loading.value = true;
@@ -42,16 +48,7 @@ async function loadCouples() {
 
 async function download(format: 'json' | 'csv') {
   const params = new URLSearchParams({ search: search.value, limit: '100', format });
-  const response = await fetch(adminDownloadUrl(`/api/admin/couples?${params}`), {
-    headers: { Authorization: `Bearer ${getAdminToken()}` },
-  });
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `herzgarten-couples.${format}`;
-  link.click();
-  URL.revokeObjectURL(url);
+  await downloadExport(`/api/admin/couples?${params}`, format);
 }
 
 onMounted(() => {
@@ -63,20 +60,18 @@ onMounted(() => {
 function filterUsers(value: string) {
   router.push({ path: '/admin/users', query: { search: value } });
 }
+
+function sortedMembers(couple: AdminCouple) {
+  return [...couple.members].sort((left, right) => left.email.localeCompare(right.email));
+}
 </script>
 
 <template>
   <section class="admin-view" data-testid="admin-couples">
-    <div class="admin-heading">
-      <h1>{{ t('admin.couples.title') }}</h1>
-      <span>{{ total }}</span>
-    </div>
+    <AdminPageHeader :title="t('admin.couples.title')" :badge="total" />
 
-    <div class="admin-toolbar">
-      <label class="admin-search">
-        <Search :size="18" aria-hidden="true" />
-        <input v-model="search" :placeholder="t('admin.common.search')" data-testid="admin-couples-search" @keyup.enter="loadCouples" />
-      </label>
+    <AdminToolbar>
+      <AdminSearchField v-model="search" :placeholder="t('admin.common.search')" test-id="admin-couples-search" @submit="loadCouples" />
       <button class="secondary-button" type="button" data-testid="admin-couples-search-submit" @click="loadCouples">{{ t('admin.common.searchAction') }}</button>
       <button class="secondary-button" type="button" data-testid="admin-couples-export-json" @click="download('json')">
         <Download :size="18" aria-hidden="true" />
@@ -86,10 +81,9 @@ function filterUsers(value: string) {
         <Download :size="18" aria-hidden="true" />
         CSV
       </button>
-    </div>
+    </AdminToolbar>
 
-    <div class="admin-table-wrap">
-      <table class="admin-table">
+    <AdminTable :loading="loading" :loading-text="t('admin.common.loading')">
         <thead>
           <tr>
             <th>{{ t('admin.common.code') }}</th>
@@ -104,7 +98,7 @@ function filterUsers(value: string) {
             <td>{{ couple.inviteCode }}</td>
             <td>
               <button
-                v-for="member in couple.members"
+                v-for="member in sortedMembers(couple)"
                 :key="member.id"
                 class="admin-chip admin-chip-button"
                 type="button"
@@ -132,8 +126,6 @@ function filterUsers(value: string) {
             </td>
           </tr>
         </tbody>
-      </table>
-    </div>
-    <p v-if="loading" class="muted">{{ t('admin.common.loading') }}</p>
+    </AdminTable>
   </section>
 </template>

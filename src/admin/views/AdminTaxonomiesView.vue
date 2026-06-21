@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Plus, Save } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
-import { ApiError } from '@/services/api';
+import AdminFormPanel from '@/admin/components/common/AdminFormPanel.vue';
+import AdminLocalizedLabelForm from '@/admin/components/domain/AdminLocalizedLabelForm.vue';
+import AdminPageHeader from '@/admin/components/common/AdminPageHeader.vue';
+import AdminTable from '@/admin/components/common/AdminTable.vue';
+import AdminTabs from '@/admin/components/common/AdminTabs.vue';
+import { localizeAdminApiError } from '@/admin/composables/useAdminApiError';
+import { useAdminFormPanel } from '@/admin/composables/useAdminFormPanel';
+import { useAdminTranslations } from '@/admin/composables/useAdminTranslations';
 
 type PreferenceKind = 'relationship-modes' | 'content-styles';
 
@@ -35,16 +42,14 @@ const items = ref<Record<PreferenceKind, PreferenceItem[]>>({
   'relationship-modes': [],
   'content-styles': [],
 });
-const showForm = ref(false);
 const saving = ref(false);
 const error = ref('');
-const formAnchor = ref<HTMLElement | null>(null);
 const form = reactive<PreferenceItem>(emptyForm());
+const { showForm, formAnchor, openForm, closeForm } = useAdminFormPanel();
 
 const currentItems = computed(() => items.value[selectedKind.value]);
 const currentKindLabel = computed(() => preferenceKinds.value.find((kind) => kind.id === selectedKind.value)?.label ?? '');
-const defaultLocale = computed(() => locales.value.find((locale) => locale.isDefault) ?? locales.value[0] ?? null);
-const additionalLocales = computed(() => locales.value.filter((locale) => locale.locale !== defaultLocale.value?.locale));
+const { defaultLocale, additionalLocales, ensureTranslations } = useAdminTranslations(locales, form);
 
 function replaceForm(nextForm: PreferenceItem) {
   for (const key of Object.keys(form)) {
@@ -74,16 +79,6 @@ function emptyForm(): PreferenceItem {
   };
 }
 
-function ensureTranslations() {
-  form.translations ??= {};
-  for (const locale of locales.value) {
-    form.translations[locale.locale] ??= {};
-  }
-  if (defaultLocale.value && form.label && !form.translations[defaultLocale.value.locale].label) {
-    form.translations[defaultLocale.value.locale].label = form.label;
-  }
-}
-
 function resetForm(open = false) {
   replaceForm(emptyForm());
   ensureTranslations();
@@ -91,22 +86,16 @@ function resetForm(open = false) {
   showForm.value = open;
 }
 
-async function scrollToForm() {
-  await nextTick();
-  formAnchor.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
 async function openNew() {
-  resetForm(true);
-  await scrollToForm();
+  resetForm(false);
+  await openForm();
 }
 
 async function editPreference(preference: PreferenceItem) {
   replaceForm(JSON.parse(JSON.stringify(preference)));
   ensureTranslations();
   error.value = '';
-  showForm.value = true;
-  await scrollToForm();
+  await openForm();
 }
 
 async function loadLocales() {
@@ -130,16 +119,6 @@ function switchKind(kind: PreferenceKind) {
   resetForm(false);
 }
 
-function localizeAdminError(caught: unknown, fallbackKey: string) {
-  if (caught instanceof ApiError && caught.errorKey) {
-    const key = `admin.serverErrors.${caught.errorKey}`;
-    const translated = t(key, caught.params ?? {});
-    if (translated !== key) return translated;
-  }
-
-  return t(fallbackKey);
-}
-
 async function savePreference() {
   const defaultLabel = defaultLocale.value ? form.translations[defaultLocale.value.locale]?.label : '';
   if (!form.value.trim() || !defaultLabel?.trim()) {
@@ -157,7 +136,7 @@ async function savePreference() {
     items.value[selectedKind.value] = payload.items;
     resetForm(false);
   } catch (caught) {
-    error.value = localizeAdminError(caught, 'admin.taxonomies.errors.save');
+    error.value = localizeAdminApiError(caught, t, 'admin.taxonomies.errors.save');
   } finally {
     saving.value = false;
   }
@@ -171,62 +150,36 @@ onMounted(async () => {
 
 <template>
   <section class="admin-view" data-testid="admin-taxonomies">
-    <div class="admin-heading">
-      <h1>{{ t('admin.taxonomies.title') }}</h1>
-      <span>{{ currentKindLabel }}</span>
-    </div>
+    <AdminPageHeader :title="t('admin.taxonomies.title')" :badge="currentKindLabel" />
 
-    <div class="admin-tabs" role="tablist">
-      <button
-        v-for="kind in preferenceKinds"
-        :key="kind.id"
-        type="button"
-        :class="{ active: selectedKind === kind.id }"
-        :data-testid="`admin-preference-tab-${kind.id}`"
-        @click="switchKind(kind.id)"
-      >
-        {{ kind.label }}
-      </button>
-    </div>
+    <AdminTabs v-model="selectedKind" :options="preferenceKinds" test-id-prefix="admin-preference-tab" @change="switchKind" />
 
-    <section v-if="showForm" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-preference-form">
-      <div class="admin-form-head">
-        <h2>{{ form.id ? t('admin.taxonomies.editTitle') : t('admin.taxonomies.newTitle') }}</h2>
-        <button class="secondary-button admin-small-button" type="button" data-testid="admin-preference-form-close" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
-      </div>
-      <p v-if="error" class="form-error" data-testid="admin-preference-error">{{ error }}</p>
-      <label>
-        {{ t('admin.common.technicalValue') }}
-        <input v-model="form.value" :disabled="Boolean(form.id)" data-testid="admin-preference-value" />
-        <small>{{ t('admin.taxonomies.technicalValueHelp') }}</small>
-      </label>
-      <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" data-testid="admin-preference-sort-order" /></label>
-      <label class="admin-checkbox"><input v-model="form.active" type="checkbox" data-testid="admin-preference-active" /> {{ t('admin.common.active') }}</label>
-
-      <fieldset v-if="defaultLocale" class="admin-translation-box admin-default-translation">
-        <legend>
-          {{ defaultLocale.label }} [{{ defaultLocale.locale }}]
-          <span class="admin-required-badge">{{ t('admin.messages.standardSuffix') }}</span>
-        </legend>
-        <label>
-          {{ t('admin.common.label') }}
-          <input v-model="form.translations[defaultLocale.locale].label" data-testid="admin-preference-label" />
-        </label>
-      </fieldset>
-
-      <section v-if="additionalLocales.length > 0" class="admin-translation-box">
-        <h2>{{ t('admin.common.translations') }}</h2>
-        <div v-for="locale in additionalLocales" :key="locale.locale" class="admin-translation-row">
-          <strong>{{ locale.locale }}</strong>
-          <input v-model="form.translations[locale.locale].label" :placeholder="t('admin.common.labelPlaceholder', { locale: locale.locale })" />
-        </div>
-      </section>
+    <AdminFormPanel
+      v-if="showForm"
+      ref="formAnchor"
+      :title="form.id ? t('admin.taxonomies.editTitle') : t('admin.taxonomies.newTitle')"
+      :error="error"
+      test-id="admin-preference-form"
+      close-test-id="admin-preference-form-close"
+      @close="closeForm"
+    >
+      <template #error><span data-testid="admin-preference-error">{{ error }}</span></template>
+      <AdminLocalizedLabelForm
+        :model-value="form"
+        :default-locale="defaultLocale"
+        :additional-locales="additionalLocales"
+        :value-help="t('admin.taxonomies.technicalValueHelp')"
+        value-test-id="admin-preference-value"
+        sort-order-test-id="admin-preference-sort-order"
+        active-test-id="admin-preference-active"
+        label-test-id="admin-preference-label"
+      />
 
       <button class="primary-button" type="button" :disabled="saving" data-testid="admin-preference-save" @click="savePreference">
         <Save :size="18" aria-hidden="true" />
         {{ saving ? t('admin.common.saving') : t('admin.common.save') }}
       </button>
-    </section>
+    </AdminFormPanel>
 
     <div class="admin-table-header">
       <p class="muted">{{ t('admin.taxonomies.help') }}</p>
@@ -236,8 +189,7 @@ onMounted(async () => {
       </button>
     </div>
 
-    <div class="admin-table-wrap">
-      <table class="admin-table">
+    <AdminTable>
         <thead>
           <tr>
             <th>{{ t('admin.common.value') }}</th>
@@ -258,7 +210,6 @@ onMounted(async () => {
             </td>
           </tr>
         </tbody>
-      </table>
-    </div>
+    </AdminTable>
   </section>
 </template>

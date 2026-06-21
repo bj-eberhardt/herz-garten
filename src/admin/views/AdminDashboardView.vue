@@ -2,6 +2,10 @@
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { adminApiRequest } from '@/admin/services/adminApi';
+import AdminMetricCard from '@/admin/components/common/AdminMetricCard.vue';
+import AdminMetricGrid from '@/admin/components/common/AdminMetricGrid.vue';
+import AdminPageHeader from '@/admin/components/common/AdminPageHeader.vue';
+import AdminPanel from '@/admin/components/common/AdminPanel.vue';
 
 interface Overview {
   userCount: number;
@@ -32,40 +36,17 @@ onMounted(loadOverview);
 
 <template>
   <section class="admin-view" data-testid="admin-dashboard">
-    <div class="admin-heading">
-      <h1>{{ t('admin.dashboard.title') }}</h1>
-    </div>
+    <AdminPageHeader :title="t('admin.dashboard.title')" />
 
-    <div v-if="loading" class="admin-panel">{{ t('admin.common.loading') }}</div>
-    <div v-else-if="overview" class="admin-metric-grid">
-      <article class="admin-metric">
-        <span>{{ t('admin.dashboard.users') }}</span>
-        <strong>{{ overview.userCount }}</strong>
-      </article>
-      <article class="admin-metric">
-        <span>{{ t('admin.dashboard.couples') }}</span>
-        <strong>{{ overview.coupleCount }}</strong>
-      </article>
-      <article class="admin-metric">
-        <span>{{ t('admin.dashboard.points') }}</span>
-        <strong>{{ overview.totalHeartPoints }}</strong>
-      </article>
-      <article class="admin-metric">
-        <span>{{ t('admin.dashboard.dailyQuestions') }}</span>
-        <strong>{{ overview.activeDailyQuestionCount }}</strong>
-      </article>
-      <article class="admin-metric">
-        <span>{{ t('admin.dashboard.quests') }}</span>
-        <strong>{{ overview.questCount }}</strong>
-      </article>
-      <article class="admin-metric">
-        <span>{{ t('admin.dashboard.knowMe') }}</span>
-        <strong>{{ overview.activeKnowMeQuestionCount }}</strong>
-      </article>
-      <article class="admin-metric">
-        <span>{{ t('admin.dashboard.loveJar') }}</span>
-        <strong>{{ overview.activeLoveJarTemplateCount }}</strong>
-      </article>
-    </div>
+    <AdminPanel v-if="loading">{{ t('admin.common.loading') }}</AdminPanel>
+    <AdminMetricGrid v-else-if="overview">
+      <AdminMetricCard :label="t('admin.dashboard.users')" :value="overview.userCount" />
+      <AdminMetricCard :label="t('admin.dashboard.couples')" :value="overview.coupleCount" />
+      <AdminMetricCard :label="t('admin.dashboard.points')" :value="overview.totalHeartPoints" />
+      <AdminMetricCard :label="t('admin.dashboard.dailyQuestions')" :value="overview.activeDailyQuestionCount" />
+      <AdminMetricCard :label="t('admin.dashboard.quests')" :value="overview.questCount" />
+      <AdminMetricCard :label="t('admin.dashboard.knowMe')" :value="overview.activeKnowMeQuestionCount" />
+      <AdminMetricCard :label="t('admin.dashboard.loveJar')" :value="overview.activeLoveJarTemplateCount" />
+    </AdminMetricGrid>
   </section>
 </template>

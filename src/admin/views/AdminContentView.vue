@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Plus, RotateCcw, Save, Trash2 } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
+import AdminFormPanel from '@/admin/components/common/AdminFormPanel.vue';
+import AdminPageHeader from '@/admin/components/common/AdminPageHeader.vue';
+import AdminTable from '@/admin/components/common/AdminTable.vue';
+import AdminTabs from '@/admin/components/common/AdminTabs.vue';
+import AdminToolbar from '@/admin/components/common/AdminToolbar.vue';
+import { useAdminFormPanel } from '@/admin/composables/useAdminFormPanel';
 
 type ContentType = 'daily-questions' | 'quests' | 'know-me-catalog' | 'love-jar-templates';
 type ActiveFilter = 'all' | 'true' | 'false';
@@ -58,10 +64,9 @@ const categories = ref<CategoryItem[]>([]);
 const items = ref<ContentItem[]>([]);
 const loading = ref(false);
 const saving = ref(false);
-const showForm = ref(false);
-const formAnchor = ref<HTMLElement | null>(null);
 const errors = ref<Record<string, string>>({});
 const form = reactive<ContentItem>(emptyForm('daily-questions'));
+const { showForm, formAnchor, openForm, closeForm } = useAdminFormPanel();
 
 const currentTypeLabel = computed(() => contentTypes.value.find((type) => type.id === selectedType.value)?.label ?? '');
 const currentCategories = computed(() => categories.value.filter((category) => category.contentType === selectedType.value && category.active));
@@ -148,21 +153,15 @@ function resetForm(open = false) {
 }
 
 async function openFormForNew() {
-  resetForm(true);
-  await scrollToForm();
+  resetForm(false);
+  await openForm();
 }
 
 async function editItem(item: ContentItem) {
   replaceForm(JSON.parse(JSON.stringify(item)));
   ensureTranslations();
-  showForm.value = true;
   errors.value = {};
-  await scrollToForm();
-}
-
-async function scrollToForm() {
-  await nextTick();
-  formAnchor.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  await openForm();
 }
 
 function validateForm() {
@@ -257,31 +256,21 @@ onMounted(async () => {
 
 <template>
   <section class="admin-view" data-testid="admin-content">
-    <div class="admin-heading">
-      <h1>{{ t('admin.content.title') }}</h1>
-      <span>{{ currentTypeLabel }}</span>
-    </div>
+    <AdminPageHeader :title="t('admin.content.title')" :badge="currentTypeLabel" />
     <p class="muted">{{ t('admin.content.help') }}</p>
 
-    <div class="admin-tabs" role="tablist">
-      <button
-        v-for="type in contentTypes"
-        :key="type.id"
-        type="button"
-        :class="{ active: selectedType === type.id }"
-        :data-testid="`admin-content-tab-${type.id}`"
-        @click="switchType(type.id)"
-      >
-        {{ type.label }}
-      </button>
-    </div>
+    <AdminTabs v-model="selectedType" :options="contentTypes" test-id-prefix="admin-content-tab" @change="switchType" />
 
-    <section v-if="showForm" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-content-form">
-      <div class="admin-form-head">
-        <h2>{{ form.id ? t('admin.content.editTitle', { type: currentTypeLabel }) : t('admin.content.newTitle', { type: currentTypeLabel }) }}</h2>
-        <button class="secondary-button admin-small-button" type="button" data-testid="admin-content-form-close" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
-      </div>
-      <p v-if="errors.form" class="form-error" data-testid="admin-content-form-error">{{ errors.form }}</p>
+    <AdminFormPanel
+      v-if="showForm"
+      ref="formAnchor"
+      :title="form.id ? t('admin.content.editTitle', { type: currentTypeLabel }) : t('admin.content.newTitle', { type: currentTypeLabel })"
+      :error="errors.form"
+      test-id="admin-content-form"
+      close-test-id="admin-content-form-close"
+      @close="closeForm"
+    >
+      <template #error><span data-testid="admin-content-form-error">{{ errors.form }}</span></template>
       <p class="muted">{{ defaultLanguageHint }}</p>
 
       <label class="admin-checkbox">
@@ -392,10 +381,10 @@ onMounted(async () => {
         <Save :size="18" aria-hidden="true" />
         {{ saving ? t('admin.common.saving') : t('admin.common.save') }}
       </button>
-    </section>
+    </AdminFormPanel>
 
     <div class="admin-table-header">
-      <div class="admin-toolbar">
+      <AdminToolbar>
         <input v-model="search" :placeholder="t('admin.content.filterPlaceholder')" data-testid="admin-content-search" @keyup.enter="loadItems" />
         <select v-model="categoryFilter" data-testid="admin-content-category-filter" @change="loadItems">
           <option value="">{{ t('admin.common.allCategories') }}</option>
@@ -407,15 +396,14 @@ onMounted(async () => {
           <option value="false">{{ t('admin.common.inactive') }}</option>
         </select>
         <button class="secondary-button" type="button" @click="loadItems">{{ t('admin.common.filter') }}</button>
-      </div>
+      </AdminToolbar>
       <button class="primary-button" type="button" data-testid="admin-content-new" @click="openFormForNew">
         <Plus :size="18" aria-hidden="true" />
         {{ t('admin.common.new') }}
       </button>
     </div>
 
-    <div class="admin-table-wrap">
-      <table class="admin-table">
+    <AdminTable :loading="loading" :loading-text="t('admin.common.loading')">
         <thead>
           <tr>
             <th>{{ t('admin.content.titleText') }}</th>
@@ -444,8 +432,6 @@ onMounted(async () => {
             </td>
           </tr>
         </tbody>
-      </table>
-    </div>
-    <p v-if="loading" class="muted">{{ t('admin.common.loading') }}</p>
+    </AdminTable>
   </section>
 </template>

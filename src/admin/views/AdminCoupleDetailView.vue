@@ -3,6 +3,10 @@ import { onMounted, ref } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { adminApiRequest } from '@/admin/services/adminApi';
+import AdminMetricCard from '@/admin/components/common/AdminMetricCard.vue';
+import AdminMetricGrid from '@/admin/components/common/AdminMetricGrid.vue';
+import AdminPageHeader from '@/admin/components/common/AdminPageHeader.vue';
+import AdminPanel from '@/admin/components/common/AdminPanel.vue';
 
 interface CoupleDetail {
   id: string;
@@ -105,14 +109,10 @@ onMounted(async () => {
       {{ t('admin.coupleDetail.backToCouples') }}
     </RouterLink>
 
-    <div v-if="couple" class="admin-heading">
-      <h1>{{ couple.inviteCode }}</h1>
-      <span>{{ t('admin.users.pointsInline', { count: couple.heartPoints }) }}</span>
-    </div>
+    <AdminPageHeader v-if="couple" :title="couple.inviteCode" :badge="t('admin.users.pointsInline', { count: couple.heartPoints })" />
 
     <div v-if="couple" class="admin-grid-two">
-      <section class="admin-panel">
-        <h2>{{ t('admin.coupleDetail.members') }}</h2>
+      <AdminPanel :title="t('admin.coupleDetail.members')">
         <div class="admin-member-list">
           <RouterLink v-for="member in couple.members" :key="member.id" class="admin-member-card" :to="userFilterLink(member.email)">
             <span class="admin-member-name">{{ member.displayName }}</span>
@@ -123,37 +123,30 @@ onMounted(async () => {
             </span>
           </RouterLink>
         </div>
-      </section>
+      </AdminPanel>
 
-      <section class="admin-panel">
-        <h2>{{ t('admin.coupleDetail.progress') }}</h2>
-        <div class="admin-metric-grid compact">
-          <article class="admin-metric" :title="t('admin.coupleDetail.dailyQuestionsTitle', { questions: couple.answeredQuestionCount, answers: couple.dailyAnswerCount })">
-            <span>{{ t('admin.coupleDetail.dailyQuestions') }}</span>
-            <strong>{{ t('admin.coupleDetail.dailyQuestionsWithAnswers', { questions: couple.answeredQuestionCount, answers: couple.dailyAnswerCount }) }}</strong>
-          </article>
-          <article class="admin-metric">
-            <span>{{ t('admin.coupleDetail.quests') }}</span>
-            <strong>{{ couple.completedQuestCount }}</strong>
-          </article>
-          <article class="admin-metric" :title="t('admin.coupleDetail.loveJarTitle', { drawn: couple.drawnLoveJarNoteCount, total: couple.loveJarNoteCount })">
-            <span>{{ t('admin.coupleDetail.loveJar') }}</span>
-            <strong>{{ t('admin.coupleDetail.loveJarDrawnOfTotal', { drawn: couple.drawnLoveJarNoteCount, total: couple.loveJarNoteCount }) }}</strong>
-          </article>
-          <article class="admin-metric">
-            <span>{{ t('admin.coupleDetail.memories') }}</span>
-            <strong>{{ couple.memoryCount }}</strong>
-          </article>
-          <article class="admin-metric" :title="t('admin.coupleDetail.knowMeTitle', { hits: couple.knowMeHitCount, rounds: couple.knowMeRoundCount })">
-            <span>{{ t('admin.coupleDetail.knowMe') }}</span>
-            <strong>{{ t('admin.coupleDetail.knowMeHitsOfRounds', { hits: couple.knowMeHitCount, rounds: couple.knowMeRoundCount }) }}</strong>
-          </article>
-          <article class="admin-metric">
-            <span>{{ t('admin.coupleDetail.objects') }}</span>
-            <strong>{{ couple.gardenObjectCount }}</strong>
-          </article>
-        </div>
-      </section>
+      <AdminPanel :title="t('admin.coupleDetail.progress')">
+        <AdminMetricGrid compact>
+          <AdminMetricCard
+            :label="t('admin.coupleDetail.dailyQuestions')"
+            :value="t('admin.coupleDetail.dailyQuestionsWithAnswers', { questions: couple.answeredQuestionCount, answers: couple.dailyAnswerCount })"
+            :title="t('admin.coupleDetail.dailyQuestionsTitle', { questions: couple.answeredQuestionCount, answers: couple.dailyAnswerCount })"
+          />
+          <AdminMetricCard :label="t('admin.coupleDetail.quests')" :value="couple.completedQuestCount" />
+          <AdminMetricCard
+            :label="t('admin.coupleDetail.loveJar')"
+            :value="t('admin.coupleDetail.loveJarDrawnOfTotal', { drawn: couple.drawnLoveJarNoteCount, total: couple.loveJarNoteCount })"
+            :title="t('admin.coupleDetail.loveJarTitle', { drawn: couple.drawnLoveJarNoteCount, total: couple.loveJarNoteCount })"
+          />
+          <AdminMetricCard :label="t('admin.coupleDetail.memories')" :value="couple.memoryCount" />
+          <AdminMetricCard
+            :label="t('admin.coupleDetail.knowMe')"
+            :value="t('admin.coupleDetail.knowMeHitsOfRounds', { hits: couple.knowMeHitCount, rounds: couple.knowMeRoundCount })"
+            :title="t('admin.coupleDetail.knowMeTitle', { hits: couple.knowMeHitCount, rounds: couple.knowMeRoundCount })"
+          />
+          <AdminMetricCard :label="t('admin.coupleDetail.objects')" :value="couple.gardenObjectCount" />
+        </AdminMetricGrid>
+      </AdminPanel>
 
       <section class="admin-panel admin-form" data-testid="admin-couple-preferences">
         <h2>{{ t('admin.coupleDetail.personalization') }}</h2>

@@ -2,9 +2,14 @@
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { Download, KeyRound, Save, Search } from '@lucide/vue';
-import { adminApiRequest, adminDownloadUrl, getAdminToken } from '@/admin/services/adminApi';
+import { Download, KeyRound, Save } from '@lucide/vue';
+import { adminApiRequest } from '@/admin/services/adminApi';
 import { ApiError } from '@/services/api';
+import AdminPageHeader from '@/admin/components/common/AdminPageHeader.vue';
+import AdminSearchField from '@/admin/components/common/AdminSearchField.vue';
+import AdminTable from '@/admin/components/common/AdminTable.vue';
+import AdminToolbar from '@/admin/components/common/AdminToolbar.vue';
+import { useAdminExportDownload } from '@/admin/composables/useAdminExportDownload';
 
 interface AdminUser {
   id: string;
@@ -26,6 +31,7 @@ const passwordSuccess = ref('');
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
+const { download: downloadExport } = useAdminExportDownload('herzgarten-users');
 
 async function loadUsers() {
   loading.value = true;
@@ -41,16 +47,7 @@ async function loadUsers() {
 
 async function download(format: 'json' | 'csv') {
   const params = new URLSearchParams({ search: search.value, limit: '100', format });
-  const response = await fetch(adminDownloadUrl(`/api/admin/users?${params}`), {
-    headers: { Authorization: `Bearer ${getAdminToken()}` },
-  });
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `herzgarten-users.${format}`;
-  link.click();
-  URL.revokeObjectURL(url);
+  await downloadExport(`/api/admin/users?${params}`, format);
 }
 
 onMounted(() => {
@@ -112,16 +109,10 @@ async function saveUserPassword(user: AdminUser) {
 
 <template>
   <section class="admin-view" data-testid="admin-users">
-    <div class="admin-heading">
-      <h1>{{ t('admin.users.title') }}</h1>
-      <span>{{ total }}</span>
-    </div>
+    <AdminPageHeader :title="t('admin.users.title')" :badge="total" />
 
-    <div class="admin-toolbar">
-      <label class="admin-search">
-        <Search :size="18" aria-hidden="true" />
-        <input v-model="search" :placeholder="t('admin.common.search')" data-testid="admin-users-search" @keyup.enter="loadUsers" />
-      </label>
+    <AdminToolbar>
+      <AdminSearchField v-model="search" :placeholder="t('admin.common.search')" test-id="admin-users-search" @submit="loadUsers" />
       <button class="secondary-button" type="button" data-testid="admin-users-search-submit" @click="loadUsers">{{ t('admin.common.searchAction') }}</button>
       <button class="secondary-button" type="button" data-testid="admin-users-export-json" @click="download('json')">
         <Download :size="18" aria-hidden="true" />
@@ -131,10 +122,9 @@ async function saveUserPassword(user: AdminUser) {
         <Download :size="18" aria-hidden="true" />
         CSV
       </button>
-    </div>
+    </AdminToolbar>
 
-    <div class="admin-table-wrap">
-      <table class="admin-table">
+    <AdminTable :loading="loading" :loading-text="t('admin.common.loading')">
         <thead>
           <tr>
             <th>{{ t('admin.common.name') }}</th>
@@ -196,9 +186,7 @@ async function saveUserPassword(user: AdminUser) {
           </tr>
           </template>
         </tbody>
-      </table>
-    </div>
+    </AdminTable>
     <p v-if="passwordSuccess" class="success-note" data-testid="admin-user-password-reset-success">{{ passwordSuccess }}</p>
-    <p v-if="loading" class="muted">{{ t('admin.common.loading') }}</p>
   </section>
 </template>

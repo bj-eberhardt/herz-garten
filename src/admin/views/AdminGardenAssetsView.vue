@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Plus, Save } from '@lucide/vue';
 import { adminApiRequest } from '@/admin/services/adminApi';
-import { ApiError } from '@/services/api';
 import { resolveAssetUrl } from '@/services/assetUrls';
 import type { GardenAsset, GardenSourceType } from '@/types/domain';
+import AdminAnchorImagePicker from '@/admin/components/domain/AdminAnchorImagePicker.vue';
+import AdminFormPanel from '@/admin/components/common/AdminFormPanel.vue';
+import AdminPageHeader from '@/admin/components/common/AdminPageHeader.vue';
+import AdminTable from '@/admin/components/common/AdminTable.vue';
+import { localizeAdminApiError } from '@/admin/composables/useAdminApiError';
+import { useAdminFormPanel } from '@/admin/composables/useAdminFormPanel';
 
 interface GardenLevelOption {
   id: string;
@@ -31,16 +36,13 @@ const { t } = useI18n();
 const items = ref<GardenAsset[]>([]);
 const levels = ref<GardenLevelOption[]>([]);
 const assetsLoaded = ref(false);
-const showForm = ref(false);
 const saving = ref(false);
 const error = ref('');
 const imageFile = ref<File | null>(null);
 const imagePreview = ref('');
 const editingKey = ref('');
-const formAnchor = ref<HTMLElement | null>(null);
-const anchorPreview = ref<HTMLElement | null>(null);
-const draggingAnchor = ref(false);
 const form = reactive<GardenAssetForm>(emptyForm());
+const { showForm, formAnchor, openForm, closeForm } = useAdminFormPanel();
 
 const sourceTypes: GardenSourceType[] = ['question', 'quest', 'memory', 'love_jar', 'milestone', 'know_me'];
 const isEditing = computed(() => Boolean(editingKey.value));
@@ -109,14 +111,9 @@ function resetForm(open = false) {
   showForm.value = open;
 }
 
-async function scrollToForm() {
-  await nextTick();
-  formAnchor.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
 async function openNew() {
-  resetForm(true);
-  await scrollToForm();
+  resetForm(false);
+  await openForm();
 }
 
 async function editAsset(asset: GardenAsset) {
@@ -137,8 +134,7 @@ async function editAsset(asset: GardenAsset) {
   imageFile.value = null;
   imagePreview.value = '';
   error.value = '';
-  showForm.value = true;
-  await scrollToForm();
+  await openForm();
 }
 
 async function loadItems() {
@@ -164,51 +160,6 @@ function validateForm() {
   if (!Number.isInteger(Number(form.stageUnlock)) || Number(form.stageUnlock) < 1) return t('admin.gardenAssets.errors.stage');
   if (!isEditing.value && !imageFile.value) return t('admin.gardenAssets.errors.image');
   return '';
-}
-
-function localizeAdminError(caught: unknown, fallbackKey: string) {
-  if (caught instanceof ApiError && caught.errorKey) {
-    const key = `admin.serverErrors.${caught.errorKey}`;
-    const translated = t(key, caught.params ?? {});
-    if (translated !== key) return translated;
-  }
-  return t(fallbackKey);
-}
-
-function clampUnit(value: number) {
-  return Math.min(1, Math.max(0, value));
-}
-
-function roundAnchor(value: number) {
-  return Math.round(clampUnit(value) * 100) / 100;
-}
-
-function updateAnchorFromPointer(event: PointerEvent) {
-  const element = anchorPreview.value;
-  if (!element) return;
-  const rect = element.getBoundingClientRect();
-  if (!rect.width || !rect.height) return;
-  form.anchorX = roundAnchor((event.clientX - rect.left) / rect.width);
-  form.anchorY = roundAnchor((event.clientY - rect.top) / rect.height);
-}
-
-function beginAnchorDrag(event: PointerEvent) {
-  if (!imagePreview.value && !form.image) return;
-  draggingAnchor.value = true;
-  updateAnchorFromPointer(event);
-  const target = event.currentTarget;
-  if (target instanceof HTMLElement) target.setPointerCapture(event.pointerId);
-}
-
-function moveAnchorDrag(event: PointerEvent) {
-  if (!draggingAnchor.value) return;
-  updateAnchorFromPointer(event);
-}
-
-function endAnchorDrag(event: PointerEvent) {
-  draggingAnchor.value = false;
-  const target = event.currentTarget;
-  if (target instanceof HTMLElement && target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);
 }
 
 function onImageSelected(event: Event) {
@@ -245,7 +196,7 @@ async function saveAsset() {
     items.value = payload.items.map(normalizeAsset);
     resetForm(false);
   } catch (caught) {
-    error.value = localizeAdminError(caught, 'admin.gardenAssets.errors.save');
+    error.value = localizeAdminApiError(caught, t, 'admin.gardenAssets.errors.save');
   } finally {
     saving.value = false;
   }
@@ -258,10 +209,7 @@ onMounted(async () => {
 
 <template>
   <section class="admin-view" data-testid="admin-garden-assets">
-    <div class="admin-heading">
-      <h1>{{ t('admin.gardenAssets.title') }}</h1>
-      <span>{{ t('admin.gardenAssets.subtitle') }}</span>
-    </div>
+    <AdminPageHeader :title="t('admin.gardenAssets.title')" :badge="t('admin.gardenAssets.subtitle')" />
 
     <p v-if="missingStageOneSources.length" class="admin-warning" data-testid="admin-garden-assets-stage-one-warning">
       <span>{{ t('admin.gardenAssets.stageOneWarning') }}</span>
@@ -270,12 +218,16 @@ onMounted(async () => {
       </span>
     </p>
 
-    <section v-if="showForm" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-garden-asset-form">
-      <div class="admin-form-head">
-        <h2>{{ isEditing ? t('admin.gardenAssets.editTitle') : t('admin.gardenAssets.newTitle') }}</h2>
-        <button class="secondary-button admin-small-button" type="button" data-testid="admin-garden-asset-form-close" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
-      </div>
-      <p v-if="error" class="form-error" data-testid="admin-garden-asset-error">{{ error }}</p>
+    <AdminFormPanel
+      v-if="showForm"
+      ref="formAnchor"
+      :title="isEditing ? t('admin.gardenAssets.editTitle') : t('admin.gardenAssets.newTitle')"
+      :error="error"
+      test-id="admin-garden-asset-form"
+      close-test-id="admin-garden-asset-form-close"
+      @close="closeForm"
+    >
+      <template #error><span data-testid="admin-garden-asset-error">{{ error }}</span></template>
 
       <label>{{ t('admin.common.code') }}<input v-model="form.key" :disabled="isEditing" data-testid="admin-garden-asset-key" /></label>
       <label>{{ t('admin.common.label') }}<input v-model="form.label" data-testid="admin-garden-asset-label" /></label>
@@ -312,27 +264,12 @@ onMounted(async () => {
         {{ t('admin.gardenAssets.image') }}
         <input type="file" accept="image/png,image/jpeg,image/webp" data-testid="admin-garden-asset-image" @change="onImageSelected" />
       </label>
-      <div v-if="imagePreview || form.image" class="admin-anchor-preview-wrap">
-        <div
-          class="admin-anchor-preview"
-          :class="{ 'is-dragging': draggingAnchor }"
-          data-testid="admin-garden-asset-preview"
-          @pointerdown="beginAnchorDrag"
-          @pointermove="moveAnchorDrag"
-          @pointerup="endAnchorDrag"
-          @pointercancel="endAnchorDrag"
-        >
-          <div ref="anchorPreview" class="admin-anchor-image-frame">
-            <img :src="imagePreview || form.image" alt="" draggable="false" />
-            <span
-              class="admin-anchor-point"
-              :style="{ left: `${clampUnit(form.anchorX) * 100}%`, top: `${clampUnit(form.anchorY) * 100}%` }"
-              :aria-label="t('admin.gardenAssets.anchorPoint')"
-            ></span>
-          </div>
-        </div>
-        <small>{{ t('admin.gardenAssets.anchorDragHelp') }}</small>
-      </div>
+      <AdminAnchorImagePicker
+        v-model:anchor-x="form.anchorX"
+        v-model:anchor-y="form.anchorY"
+        :src="imagePreview || form.image"
+        test-id="admin-garden-asset-preview"
+      />
       <p class="muted">{{ t('admin.gardenAssets.detectedSize', { size: assetSizeLabel }) }}</p>
       <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" data-testid="admin-garden-asset-sort-order" /></label>
 
@@ -340,7 +277,7 @@ onMounted(async () => {
         <Save :size="18" aria-hidden="true" />
         {{ saving ? t('admin.common.saving') : t('admin.common.save') }}
       </button>
-    </section>
+    </AdminFormPanel>
 
     <div class="admin-table-header">
       <p class="muted">{{ t('admin.gardenAssets.help') }}</p>
@@ -350,8 +287,7 @@ onMounted(async () => {
       </button>
     </div>
 
-    <div class="admin-table-wrap">
-      <table class="admin-table">
+    <AdminTable>
         <thead>
           <tr>
             <th>{{ t('admin.gardenAssets.preview') }}</th>
@@ -378,7 +314,6 @@ onMounted(async () => {
             </td>
           </tr>
         </tbody>
-      </table>
-    </div>
+    </AdminTable>
   </section>
 </template>
