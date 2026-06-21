@@ -77,7 +77,7 @@ function filterUsers(value: string) {
         <Search :size="18" aria-hidden="true" />
         <input v-model="search" :placeholder="t('admin.common.search')" data-testid="admin-couples-search" @keyup.enter="loadCouples" />
       </label>
-      <button class="secondary-button" type="button" @click="loadCouples">{{ t('admin.common.searchAction') }}</button>
+      <button class="secondary-button" type="button" data-testid="admin-couples-search-submit" @click="loadCouples">{{ t('admin.common.searchAction') }}</button>
       <button class="secondary-button" type="button" data-testid="admin-couples-export-json" @click="download('json')">
         <Download :size="18" aria-hidden="true" />
         JSON
@@ -103,7 +103,14 @@ function filterUsers(value: string) {
           <tr v-for="couple in couples" :key="couple.id">
             <td>{{ couple.inviteCode }}</td>
             <td>
-              <button v-for="member in couple.members" :key="member.id" class="admin-chip admin-chip-button" type="button" @click="filterUsers(member.email)">
+              <button
+                v-for="member in couple.members"
+                :key="member.id"
+                class="admin-chip admin-chip-button"
+                type="button"
+                :data-testid="`admin-couple-member-filter-${member.id}`"
+                @click="filterUsers(member.email)"
+              >
                 {{ member.displayName }}
               </button>
             </td>
@@ -119,7 +126,7 @@ function filterUsers(value: string) {
               }}
             </td>
             <td>
-              <RouterLink class="secondary-button admin-small-button" :to="{ path: `/admin/couples/${couple.id}`, query: search ? { search } : {} }">
+              <RouterLink class="secondary-button admin-small-button" :data-testid="`admin-couple-details-${couple.id}`" :to="{ path: `/admin/couples/${couple.id}`, query: search ? { search } : {} }">
                 {{ t('admin.common.details') }}
               </RouterLink>
             </td>

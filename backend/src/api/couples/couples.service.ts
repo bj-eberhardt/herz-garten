@@ -67,5 +67,7 @@ export async function leaveCoupleForUser(userId: string) {
     await deleteEmptyCouple(client, couple.id);
   });
 
-  return { user: await getPublicUser(userId), couple: null };
+  const user = await getPublicUser(userId);
+  if (!user) throw new Error('User not found after leaving couple');
+  return { user, couple: null };
 }

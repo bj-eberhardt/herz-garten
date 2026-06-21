@@ -300,6 +300,29 @@
   opacity: 0.5;
 }
 
+.admin-inline-form-row td {
+  background: #f8faf6;
+}
+
+.admin-inline-form {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(220px, 360px) auto;
+}
+
+.admin-inline-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-inline-form .form-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 .admin-list-row,
 .admin-form,
 .admin-translation-box,

@@ -54,7 +54,12 @@ export function registerMemoryRoutes(router: Router) {
         return;
       }
 
-      sendJson<MemoriesPayload>(response.status(201), result.payload);
+      const payload = result.payload;
+      if (!payload) {
+        sendApiError(response, 409, 'couple.notConnected');
+        return;
+      }
+      sendJson<MemoriesPayload>(response.status(201), payload);
     } catch (error) {
       handleError(response, error);
     }

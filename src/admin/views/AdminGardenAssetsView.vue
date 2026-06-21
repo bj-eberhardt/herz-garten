@@ -273,23 +273,23 @@ onMounted(async () => {
     <section v-if="showForm" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-garden-asset-form">
       <div class="admin-form-head">
         <h2>{{ isEditing ? t('admin.gardenAssets.editTitle') : t('admin.gardenAssets.newTitle') }}</h2>
-        <button class="secondary-button admin-small-button" type="button" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
+        <button class="secondary-button admin-small-button" type="button" data-testid="admin-garden-asset-form-close" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
       </div>
-      <p v-if="error" class="form-error">{{ error }}</p>
+      <p v-if="error" class="form-error" data-testid="admin-garden-asset-error">{{ error }}</p>
 
       <label>{{ t('admin.common.code') }}<input v-model="form.key" :disabled="isEditing" data-testid="admin-garden-asset-key" /></label>
       <label>{{ t('admin.common.label') }}<input v-model="form.label" data-testid="admin-garden-asset-label" /></label>
       <label>
         {{ t('admin.gardenAssets.stageUnlock') }}
-        <select v-model.number="form.stageUnlock">
+        <select v-model.number="form.stageUnlock" data-testid="admin-garden-asset-stage">
           <option v-for="level in stageOptions" :key="level.id" :value="level.stage">{{ level.stage }} ({{ level.localizedName }})</option>
         </select>
       </label>
-      <label class="admin-checkbox"><input v-model="form.active" type="checkbox" />{{ t('admin.common.active') }}</label>
+      <label class="admin-checkbox"><input v-model="form.active" type="checkbox" data-testid="admin-garden-asset-active" />{{ t('admin.common.active') }}</label>
 
       <label>
         {{ t('admin.gardenAssets.sourceTypes') }}
-        <select v-model="form.sourceTypes" multiple size="6">
+        <select v-model="form.sourceTypes" multiple size="6" data-testid="admin-garden-asset-source-types">
           <option v-for="sourceType in sourceTypes" :key="sourceType" :value="sourceType">{{ sourceType }}</option>
         </select>
         <small>{{ t('admin.gardenAssets.sourceTypesHelp') }}</small>
@@ -298,12 +298,12 @@ onMounted(async () => {
       <div class="admin-grid-two admin-even-grid">
         <label>
           {{ t('admin.gardenAssets.anchorX') }}
-          <input v-model.number="form.anchorX" type="number" min="0" max="1" step="0.01" />
+          <input v-model.number="form.anchorX" type="number" min="0" max="1" step="0.01" data-testid="admin-garden-asset-anchor-x" />
           <small>{{ t('admin.gardenAssets.anchorXHelp') }}</small>
         </label>
         <label>
           {{ t('admin.gardenAssets.anchorY') }}
-          <input v-model.number="form.anchorY" type="number" min="0" max="1" step="0.01" />
+          <input v-model.number="form.anchorY" type="number" min="0" max="1" step="0.01" data-testid="admin-garden-asset-anchor-y" />
           <small>{{ t('admin.gardenAssets.anchorYHelp') }}</small>
         </label>
       </div>
@@ -334,6 +334,7 @@ onMounted(async () => {
         <small>{{ t('admin.gardenAssets.anchorDragHelp') }}</small>
       </div>
       <p class="muted">{{ t('admin.gardenAssets.detectedSize', { size: assetSizeLabel }) }}</p>
+      <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" data-testid="admin-garden-asset-sort-order" /></label>
 
       <button class="primary-button" type="button" :disabled="saving" data-testid="admin-garden-asset-save" @click="saveAsset">
         <Save :size="18" aria-hidden="true" />
@@ -363,7 +364,7 @@ onMounted(async () => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="asset in items" :key="asset.key">
+          <tr v-for="asset in items" :key="asset.key" :data-testid="`admin-garden-asset-row-${asset.key}`">
             <td><img class="admin-asset-thumb" :src="asset.image" alt="" /></td>
             <td><code>{{ asset.key }}</code></td>
             <td>{{ asset.label }}</td>
@@ -373,7 +374,7 @@ onMounted(async () => {
             <td>{{ asset.stageUnlock }}</td>
             <td>{{ asset.active ? t('admin.common.active') : t('admin.common.inactive') }}</td>
             <td class="admin-actions">
-              <button class="secondary-button admin-small-button" type="button" @click="editAsset(asset)">{{ t('admin.common.edit') }}</button>
+              <button class="secondary-button admin-small-button" type="button" :data-testid="`admin-garden-asset-edit-${asset.key}`" @click="editAsset(asset)">{{ t('admin.common.edit') }}</button>
             </td>
           </tr>
         </tbody>

@@ -1,16 +1,46 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { apiDeleteRaw, apiGet, apiGetRaw, apiPatchRaw, apiPost, apiPostRaw, registerByApi, setupCoupleByApi } from '../helpers/api';
 import { expectApiError, expectJson } from '../helpers/apiAssertions';
+import type { AuthPayload, NotificationsPayload } from '../helpers/apiAssertions';
+import type { NotificationDetailPayload } from '../../../src/types/domain';
 import { runDbSql } from '../helpers/db';
 import { testRunId, testUser } from '../helpers/testUsers';
 
 const apiBaseURL = process.env.E2E_API_URL ?? 'http://localhost:3001';
+const mailpitUrl = process.env.E2E_MAILPIT_URL ?? 'http://localhost:8025';
 
 async function adminLogin(request: APIRequestContext) {
   const response = await apiPostRaw(request, '/api/admin/auth/login', { password: 'admin' });
   const payload = await expectJson<{ token: string; usesDefaultAdminPassword: boolean }>(response);
   expect(payload.token).toBeTruthy();
   return payload.token;
+}
+
+async function clearMailbox(request: APIRequestContext) {
+  await request.delete(`${mailpitUrl}/api/v1/messages`);
+}
+
+async function latestMailFor(request: APIRequestContext, email: string) {
+  const deadline = Date.now() + 15_000;
+
+  while (Date.now() < deadline) {
+    const response = await request.get(`${mailpitUrl}/api/v1/messages`);
+    const payload = await response.json() as { messages?: Array<{ ID: string; Subject?: string; To?: Array<{ Address: string }> }> };
+    const message = payload.messages?.find((item) =>
+      item.To?.some((recipient) => recipient.Address.toLowerCase() === email.toLowerCase()),
+    );
+    if (message) {
+      const detailResponse = await request.get(`${mailpitUrl}/api/v1/message/${message.ID}`);
+      const detail = await detailResponse.json() as { Subject?: string; Text?: string };
+      return {
+        subject: detail.Subject ?? message.Subject ?? '',
+        text: detail.Text ?? '',
+      };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  throw new Error(`No email received for ${email}`);
 }
 
 function jwtPayload(token: string) {
@@ -236,6 +266,70 @@ test.describe('admin api', () => {
     expect(csvResponse.ok()).toBe(true);
     expect(csvResponse.headers()['content-type']).toContain('text/csv');
     expect(await csvResponse.text()).toContain('email');
+  });
+
+  test('sets a user password and creates account notifications', async ({ request }) => {
+    const runId = testRunId();
+    const user = testUser('admin-password-reset', runId);
+    const registered = await registerByApi(request, user);
+    const adminToken = await adminLogin(request);
+    const nextPassword = `Admin-reset-${runId}`;
+    await clearMailbox(request);
+
+    await expectApiError(
+      await apiPostRaw(request, `/api/admin/users/${registered.user.id}/password`, { password: 'short' }, adminToken),
+      400,
+      'common.validation',
+    );
+
+    const resetResponse = await expectJson<{ user: { id: string; email: string; displayName: string } }>(
+      await apiPostRaw(request, `/api/admin/users/${registered.user.id}/password`, { password: nextPassword }, adminToken),
+    );
+    expect(resetResponse.user).toEqual(
+      expect.objectContaining({
+        id: registered.user.id,
+        email: user.email,
+        displayName: user.displayName,
+      }),
+    );
+
+    await expectApiError(
+      await apiPostRaw(request, '/api/auth/login', { email: user.email, password: user.password }),
+      401,
+      'auth.invalidCredentials',
+    );
+    const loginPayload = await expectJson<AuthPayload>(
+      await apiPostRaw(request, '/api/auth/login', { email: user.email, password: nextPassword }),
+    );
+    expect(loginPayload.user.id).toBe(registered.user.id);
+
+    const notifications = await expectJson<NotificationsPayload>(await apiGetRaw(request, '/api/notifications', loginPayload.token));
+    const notification = notifications.notifications.find((item) => item.type === 'admin_password_reset');
+    expect(notification).toEqual(
+      expect.objectContaining({
+        coupleId: null,
+        titleKey: 'notifications.titles.adminPasswordReset',
+        bodyKey: 'notifications.bodies.adminPasswordReset',
+        sourceType: 'account',
+        sourceId: registered.user.id,
+        readAt: null,
+      }),
+    );
+    expect(notification!.title).toContain('Passwort');
+    expect(notification!.body).toContain('Administrator');
+
+    const detail = await expectJson<NotificationDetailPayload>(
+      await apiGetRaw(request, `/api/notifications/${notification!.id}/detail`, loginPayload.token),
+    );
+    expect(detail.targetPageId).toBe('settings');
+    expect(detail.gardenDetail).toBeNull();
+
+    const mail = await latestMailFor(request, user.email);
+    expect(mail.subject).toBe('Dein Herzgarten-Passwort wurde neu gesetzt');
+    expect(mail.text).toContain(`Hallo ${user.displayName}`);
+    expect(mail.text).toContain('dein Herzgarten-Passwort wurde durch einen Administrator neu gesetzt');
+    expect(mail.text).toContain('enthaelt diese E-Mail kein Passwort');
+    expect(mail.text).not.toContain(nextPassword);
   });
 
   test('lists a one-member couple once even when joined content creates many rows', async ({ request }) => {
@@ -677,9 +771,31 @@ test.describe('admin api', () => {
       items: Array<{ key: string; namespace: string; requiredParams: string[]; translations: Record<string, { text: string }> }>;
     }>(request, '/api/admin/message-templates?namespace=email', token);
     const template = listed.items.find((item) => item.key === key);
+    const adminSubject = listed.items.find((item) => item.key === 'emails.adminPasswordReset.subject');
+    const adminBody = listed.items.find((item) => item.key === 'emails.adminPasswordReset.body');
     expect(template).toBeTruthy();
     expect(template!.namespace).toBe('email');
     expect(template!.requiredParams.sort()).toEqual(['displayName', 'expiresInMinutes', 'resetUrl']);
+    expect(adminSubject).toEqual(
+      expect.objectContaining({
+        namespace: 'email',
+        requiredParams: [],
+        translations: expect.objectContaining({
+          de: expect.objectContaining({ text: 'Dein Herzgarten-Passwort wurde neu gesetzt' }),
+          en: expect.objectContaining({ text: 'Your Herzgarten password was reset' }),
+        }),
+      }),
+    );
+    expect(adminBody).toEqual(
+      expect.objectContaining({
+        namespace: 'email',
+        requiredParams: ['displayName'],
+        translations: expect.objectContaining({
+          de: expect.objectContaining({ text: expect.stringContaining('{displayName}') }),
+          en: expect.objectContaining({ text: expect.stringContaining('{displayName}') }),
+        }),
+      }),
+    );
     const originalText = template!.translations.de.text;
 
     await expectApiError(
@@ -721,11 +837,15 @@ test.describe('admin api', () => {
     }>(request, '/api/admin/message-templates?namespace=push', token);
     const questPush = listed.items.find((item) => item.key === 'push.bodies.questWaitingConfirmation');
     const testPush = listed.items.find((item) => item.key === 'push.bodies.test');
+    const adminPasswordResetTitle = listed.items.find((item) => item.key === 'push.titles.adminPasswordReset');
+    const adminPasswordResetBody = listed.items.find((item) => item.key === 'push.bodies.adminPasswordReset');
     expect(questPush).toBeTruthy();
     expect(questPush!.namespace).toBe('push');
     expect(questPush!.requiredParams.sort()).toEqual(['name', 'title']);
     expect(questPush!.translations.de.text).toContain('{name}');
     expect(testPush?.translations.de.text).toBe('Push-Benachrichtigungen sind aktiv.');
+    expect(adminPasswordResetTitle?.translations.de.text).toContain('Passwort');
+    expect(adminPasswordResetBody?.translations.de.text).toContain('Administrator');
   });
 
   test('manages garden levels and recalculates existing gardens', async ({ request }) => {

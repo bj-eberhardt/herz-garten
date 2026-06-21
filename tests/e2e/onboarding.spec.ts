@@ -194,6 +194,28 @@ test('login with an existing couple opens today', async ({ page, request }) => {
   await expect(page.getByTestId('today-card')).toBeVisible();
 });
 
+test('app version footer is only visible on onboarding and garden', async ({ page, request }) => {
+  await page.goto('/onboarding');
+  await expect(page.getByTestId('app-version')).toBeVisible();
+  await expect(page.getByTestId('app-version')).toHaveText(/^v\d+\.\d+\.\d+/);
+
+  const runId = testRunId();
+  const userA = testUser('version-footer-a', runId);
+  const userB = testUser('version-footer-b', runId);
+  const { partnerA } = await setupCoupleByApi(request, userA, userB);
+
+  await authenticatePage(page.context(), page, partnerA.token);
+  await expect(page).toHaveURL(/\/today$/);
+  await expect(page.getByTestId('app-version')).toHaveCount(0);
+
+  await page.goto('/garden');
+  await expect(page.getByTestId('app-version')).toBeVisible();
+  await expect(page.getByTestId('app-version')).toHaveText(/^v\d+\.\d+\.\d+/);
+
+  await page.goto('/settings');
+  await expect(page.getByTestId('app-version')).toHaveCount(0);
+});
+
 test('login with a one-member couple stays on onboarding and shows invite code', async ({ page, request }) => {
   const user = testUser('login-one-member-couple', testRunId());
   const auth = await registerByApi(request, user);

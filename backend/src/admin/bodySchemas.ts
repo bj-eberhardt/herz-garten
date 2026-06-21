@@ -58,6 +58,12 @@ export const adminCouplePreferencesBodySchema = z
   })
   .strict();
 
+export const adminUserPasswordBodySchema = z
+  .object({
+    password: trimmedString.pipe(z.string().min(8)),
+  })
+  .strict();
+
 export const messageTemplateBodySchema = z
   .object({
     translations: z.record(

@@ -6,6 +6,7 @@ const actionNotificationTypes = new Set([
   'know_me_question',
   'love_jar_note',
   'couple_joined',
+  'admin_password_reset',
 ]);
 
 export function normalizePushNotificationMode(value: unknown): PushNotificationMode {

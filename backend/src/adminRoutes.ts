@@ -10,6 +10,7 @@ import {
   adminCouplePreferencesBodySchema,
   adminLoginBodySchema,
   adminSettingsBodySchema,
+  adminUserPasswordBodySchema,
   categoryBodySchema,
   messageTemplateBodySchema,
   preferenceBodySchema,
@@ -41,6 +42,7 @@ import {
   normalizeText,
   parseAcceptLanguage,
   requestedFormat,
+  resetUserPasswordByAdmin,
   saveContent,
   sendCsv,
   supportedLocales,
@@ -180,6 +182,25 @@ export function adminRouter(): Router {
         return;
       }
       response.json(payload);
+    } catch (error) {
+      handleError(response, error);
+    }
+  });
+
+  router.post('/users/:id/password', requireAdminAuth, validateBody(adminUserPasswordBodySchema), async (request, response) => {
+    try {
+      const user = await resetUserPasswordByAdmin(
+        String(request.params.id),
+        normalizeText(request.body.password),
+        String(request.header('accept-language') ?? config.i18nDefaultLocale).slice(0, 2),
+      );
+      if (!user) {
+        sendAdminError(response, 404, 'admin.userNotFound', 'User not found.');
+        return;
+      }
+
+      await audit('update', 'user-password', user.id);
+      response.json({ user });
     } catch (error) {
       handleError(response, error);
     }

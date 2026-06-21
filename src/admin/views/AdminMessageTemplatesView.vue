@@ -257,9 +257,9 @@ onBeforeUnmount(() => {
     <section v-if="selectedItem" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-message-form">
       <div class="admin-form-head">
         <h2>{{ selectedItem.key }}</h2>
-        <button class="secondary-button admin-small-button" type="button" @click="closeForm">{{ t('admin.common.close') }}</button>
+        <button class="secondary-button admin-small-button" type="button" data-testid="admin-message-form-close" @click="closeForm">{{ t('admin.common.close') }}</button>
       </div>
-      <p v-if="error" class="form-error">{{ error }}</p>
+      <p v-if="error" class="form-error" data-testid="admin-message-error">{{ error }}</p>
       <p class="muted">{{ selectedItem.description }}</p>
       <div>
         <span v-if="selectedItem.requiredParams.length === 0" class="muted">{{ t('admin.messages.noPlaceholders') }}</span>
@@ -268,7 +268,7 @@ onBeforeUnmount(() => {
 
       <div v-for="locale in activeLocales" :key="locale.locale" class="admin-translation-row">
         <strong>{{ locale.label }} ({{ locale.locale }}){{ locale.locale === defaultLocale ? t('admin.messages.standardSuffix') : '' }}</strong>
-        <input v-model="selectedItem.translations[locale.locale].description" :placeholder="t('admin.common.descriptionPlaceholder', { locale: locale.locale })" />
+        <input v-model="selectedItem.translations[locale.locale].description" :placeholder="t('admin.common.descriptionPlaceholder', { locale: locale.locale })" :data-testid="`admin-message-description-${locale.locale}`" />
         <textarea v-model="selectedItem.translations[locale.locale].text" rows="4" :data-testid="`admin-message-text-${locale.locale}`" />
         <small v-if="validationErrors[locale.locale]" class="admin-field-error">{{ validationErrors[locale.locale] }}</small>
       </div>
@@ -290,7 +290,7 @@ onBeforeUnmount(() => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in filteredItems" :key="item.key">
+          <tr v-for="item in filteredItems" :key="item.key" :data-testid="`admin-message-row-${item.key}`">
             <td>
               <strong>{{ item.key }}</strong>
               <p class="muted">{{ item.description }}</p>
@@ -301,7 +301,7 @@ onBeforeUnmount(() => {
               <span v-for="param in item.requiredParams" v-else :key="param" class="admin-chip">{ {{ param }} }</span>
             </td>
             <td class="admin-actions">
-              <button class="secondary-button admin-small-button" type="button" @click="editItem(item)">{{ t('admin.common.edit') }}</button>
+              <button class="secondary-button admin-small-button" type="button" :data-testid="`admin-message-edit-${item.key}`" @click="editItem(item)">{{ t('admin.common.edit') }}</button>
             </td>
           </tr>
         </tbody>

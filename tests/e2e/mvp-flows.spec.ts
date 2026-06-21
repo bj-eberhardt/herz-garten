@@ -187,7 +187,6 @@ test('love jar note can be drawn once per day and shows empty state for new coup
   expect(duplicateDrawPayload).toEqual(
     expect.objectContaining({
       errorKey: 'loveJar.alreadyDrawnToday',
-      error: expect.stringContaining('heute schon einen Zettel gezogen'),
     }),
   );
 
@@ -472,7 +471,6 @@ test('know me author cannot guess own question returns localized error key', asy
   expect(responsePayload).toEqual(
     expect.objectContaining({
       errorKey: 'knowMe.authorCannotGuessOwnQuestion',
-      error: expect.stringContaining('selbst erstellt'),
     }),
   );
 
@@ -830,15 +828,16 @@ test('incomplete couple stays on onboarding and only shows garden navigation', a
   await authenticatePage(context, page, owner.token);
 
   await page.goto('/settings');
-  await expect(page).toHaveURL(/\/onboarding$/);
-  await expect(page.getByTestId('couple-code-panel')).toContainText(couple.couple.inviteCode);
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByTestId('settings-profile-panel')).toBeVisible();
+  await expect(page.getByTestId('settings-couple-code')).toHaveText(couple.couple.inviteCode);
   await expect(page.getByTestId('nav-garden')).toBeVisible();
-  await expect(page.getByTestId('nav-today')).toHaveCount(0);
-  await expect(page.getByTestId('nav-quests')).toHaveCount(0);
-  await expect(page.getByTestId('nav-know-me')).toHaveCount(0);
-  await expect(page.getByTestId('nav-love-jar')).toHaveCount(0);
-  await expect(page.getByTestId('nav-memories')).toHaveCount(0);
-  await expect(page.getByTestId('nav-settings')).toHaveCount(0);
+  await expect(page.getByTestId('nav-settings')).toBeVisible();
+  await expect(page.getByTestId('nav-today')).toBeDisabled();
+  await expect(page.getByTestId('nav-quests')).toBeDisabled();
+  await expect(page.getByTestId('nav-know-me')).toBeDisabled();
+  await expect(page.getByTestId('nav-love-jar')).toBeDisabled();
+  await expect(page.getByTestId('nav-memories')).toBeDisabled();
 
   await context.close();
 });

@@ -225,12 +225,12 @@ onMounted(async () => {
     <section v-if="showForm" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-garden-level-form">
       <div class="admin-form-head">
         <h2>{{ form.id ? t('admin.garden.editTitle', { stage: form.stage }) : t('admin.garden.newTitle') }}</h2>
-        <button class="secondary-button admin-small-button" type="button" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
+        <button class="secondary-button admin-small-button" type="button" data-testid="admin-garden-level-form-close" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
       </div>
       <p class="admin-warning">
         {{ t('admin.garden.saveWarning') }}
       </p>
-      <p v-if="error" class="form-error">{{ error }}</p>
+      <p v-if="error" class="form-error" data-testid="admin-garden-level-error">{{ error }}</p>
 
       <label>{{ t('admin.common.name') }}<input v-model="form.name" data-testid="admin-garden-level-name" /></label>
       <label>
@@ -258,7 +258,7 @@ onMounted(async () => {
         <h2>{{ t('admin.common.translations') }}</h2>
         <div v-for="locale in locales" :key="locale.locale" class="admin-translation-row">
           <strong>{{ locale.locale }}</strong>
-          <input v-model="form.translations[locale.locale].name" :placeholder="t('admin.common.namePlaceholder', { locale: locale.locale })" />
+          <input v-model="form.translations[locale.locale].name" :placeholder="t('admin.common.namePlaceholder', { locale: locale.locale })" :data-testid="`admin-garden-level-name-${locale.locale}`" />
         </div>
       </section>
 
@@ -291,7 +291,7 @@ onMounted(async () => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="level in levels" :key="level.id">
+          <tr v-for="level in levels" :key="level.id" :data-testid="`admin-garden-level-row-${level.id}`">
             <td>{{ level.stage }}</td>
             <td>{{ level.localizedName }}</td>
             <td>
@@ -301,7 +301,7 @@ onMounted(async () => {
             <td>{{ level.minimumPoints }}</td>
             <td>{{ level.pointsToNext ?? '-' }}</td>
             <td class="admin-actions">
-              <button class="secondary-button admin-small-button" type="button" @click="editLevel(level)">{{ t('admin.common.edit') }}</button>
+              <button class="secondary-button admin-small-button" type="button" :data-testid="`admin-garden-level-edit-${level.id}`" @click="editLevel(level)">{{ t('admin.common.edit') }}</button>
               <button
                 class="secondary-button admin-small-button"
                 type="button"

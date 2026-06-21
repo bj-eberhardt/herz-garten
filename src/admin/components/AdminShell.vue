@@ -19,7 +19,7 @@ function logout() {
   <div class="admin-shell">
     <aside class="admin-sidebar">
       <RouterLink to="/admin" class="admin-brand" data-testid="admin-brand">
-        <span class="brand-mark">H</span>
+        <span class="brand-mark"></span>
         <span>{{ t('admin.shell.brand') }}</span>
       </RouterLink>
       <nav class="admin-nav" :aria-label="t('admin.shell.navLabel')">

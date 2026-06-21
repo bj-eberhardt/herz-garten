@@ -1,4 +1,3 @@
-import { randomInt } from 'node:crypto';
 import { pool } from '../../db.js';
 import type { Queryable } from './catalog.js';
 import { assetKeyForGardenObject, assetKeyForQuest } from './garden.mapper.js';
@@ -39,14 +38,13 @@ export async function selectGardenAssetForReward(
       where active = true
         and stage_unlock <= $1
         and $2 = any(source_types)
-      order by key
+      order by sort_order, key
+      limit 1
     `,
     [Math.max(1, input.gardenStage), input.sourceType],
   );
 
-  if (result.rows.length > 0) {
-    return result.rows[randomInt(result.rows.length)];
-  }
+  if (result.rows[0]) return result.rows[0];
 
   const fallbackKey = fallbackAssetKey(input);
   console.error('No matching garden asset found for reward; using fallback asset.', {

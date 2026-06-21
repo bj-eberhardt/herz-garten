@@ -526,7 +526,7 @@ export async function getCoupleMemberIds(client: Queryable, coupleId: string) {
 export async function createNotifications(
   client: Queryable,
   options: {
-    coupleId: string;
+    coupleId: string | null;
     userIds: string[];
     type:
       | 'daily_answer_waiting'
@@ -538,7 +538,8 @@ export async function createNotifications(
       | 'know_me_question'
       | 'know_me_answered'
       | 'couple_disconnected'
-      | 'couple_joined';
+      | 'couple_joined'
+      | 'admin_password_reset';
     sourceType: string;
     sourceId?: string | null;
     titleKey: NotificationMessageKey;
@@ -1109,6 +1110,7 @@ export async function buildNotificationPayload(userId: string) {
 
 function targetPageForNotification(notification: NotificationRow) {
   if (notification.sourceType === 'account_deletion') return 'onboarding';
+  if (notification.sourceType === 'account') return 'settings';
   if (notification.type === 'daily_revealed' || notification.type === 'quest_completed') return 'garden';
   if (notification.sourceType === 'today') return 'today';
   if (notification.sourceType === 'quest') return 'quests';

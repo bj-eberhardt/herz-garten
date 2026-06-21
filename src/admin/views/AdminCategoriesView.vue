@@ -204,7 +204,14 @@ onMounted(async () => {
     <p class="muted">{{ t('admin.categories.help') }}</p>
 
     <div class="admin-tabs" role="tablist">
-      <button v-for="type in contentTypes" :key="type.id" type="button" :class="{ active: selectedType === type.id }" @click="switchType(type.id)">
+      <button
+        v-for="type in contentTypes"
+        :key="type.id"
+        type="button"
+        :class="{ active: selectedType === type.id }"
+        :data-testid="`admin-category-tab-${type.id}`"
+        @click="switchType(type.id)"
+      >
         {{ type.label }}
       </button>
     </div>
@@ -212,15 +219,15 @@ onMounted(async () => {
     <section v-if="showForm" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-category-form">
       <div class="admin-form-head">
         <h2>{{ form.id ? t('admin.categories.editTitle') : t('admin.categories.newTitle') }}</h2>
-        <button class="secondary-button admin-small-button" type="button" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
+        <button class="secondary-button admin-small-button" type="button" data-testid="admin-category-form-close" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
       </div>
-      <p v-if="error" class="form-error">{{ error }}</p>
+      <p v-if="error" class="form-error" data-testid="admin-category-error">{{ error }}</p>
       <label>
         {{ t('admin.common.technicalValue') }}
         <input v-model="form.value" :disabled="Boolean(form.id)" placeholder="z.B. ritual" data-testid="admin-category-value" />
         <small>{{ t('admin.categories.technicalValueHelp') }}</small>
       </label>
-      <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" /></label>
+      <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" data-testid="admin-category-sort-order" /></label>
       <label>
         {{ t('admin.categories.relationshipModes') }}
         <select v-model="form.relationshipModes" multiple data-testid="admin-category-relationship-modes">
@@ -235,7 +242,7 @@ onMounted(async () => {
         </select>
         <small>{{ t('admin.categories.emptySelectionHelp') }}</small>
       </label>
-      <label class="admin-checkbox"><input v-model="form.active" type="checkbox" /> {{ t('admin.common.active') }}</label>
+      <label class="admin-checkbox"><input v-model="form.active" type="checkbox" data-testid="admin-category-active" /> {{ t('admin.common.active') }}</label>
 
       <fieldset v-if="defaultLocale" class="admin-translation-box admin-default-translation">
         <legend>
@@ -285,7 +292,7 @@ onMounted(async () => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="category in filteredItems" :key="category.id">
+          <tr v-for="category in filteredItems" :key="category.id" :data-testid="`admin-category-row-${category.id}`">
             <td><code>{{ category.value }}</code></td>
             <td>{{ category.label }}</td>
             <td>{{ category.active ? t('admin.common.activeLower') : t('admin.common.inactiveLower') }}</td>
@@ -296,8 +303,8 @@ onMounted(async () => {
             </td>
             <td>{{ category.usageCount ?? 0 }}</td>
             <td class="admin-actions">
-              <button class="secondary-button admin-small-button" type="button" @click="editCategory(category)">{{ t('admin.common.edit') }}</button>
-              <button class="danger-button admin-small-button" type="button" :disabled="Boolean(category.usageCount)" @click="deleteCategory(category)">
+              <button class="secondary-button admin-small-button" type="button" :data-testid="`admin-category-edit-${category.id}`" @click="editCategory(category)">{{ t('admin.common.edit') }}</button>
+              <button class="danger-button admin-small-button" type="button" :disabled="Boolean(category.usageCount)" :data-testid="`admin-category-delete-${category.id}`" @click="deleteCategory(category)">
                 <Trash2 :size="16" aria-hidden="true" />
                 {{ t('admin.common.delete') }}
               </button>

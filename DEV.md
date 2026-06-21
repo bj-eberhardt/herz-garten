@@ -118,6 +118,47 @@ Die Tests starten ein eigenes Docker-Setup (Playwright):
 
 Vor jedem Lauf wird dieses E2E-Projekt mit `down -v` geleert, damit Tests nicht von Daten aus der lokalen Dev-Datenbank abhängen. Der normale Dev-Stack auf `5173/3000/5432` bleibt davon getrennt.
 
+### E2E-Stack für Debugging stehen lassen
+
+Standardmäßig fährt Playwright den E2E-Docker-Stack nach dem Testlauf wieder herunter und löscht die Volumes. Für Debugging kannst du das Abschalten per Env-Variable verhindern:
+
+```bash
+E2E_KEEP_DOCKER=1 npm run test:e2e
+```
+
+Windows PowerShell:
+
+```powershell
+$env:E2E_KEEP_DOCKER = "1"
+npm run test:e2e
+```
+
+Danach bleiben Frontend, Backend, PostgreSQL und Mailpit erreichbar:
+
+- Frontend: http://localhost:5174
+- Backend: http://localhost:3001
+- Mailpit: http://localhost:8025
+- PostgreSQL: localhost:5433
+
+Wenn du gegen den bereits laufenden E2E-Stack erneut testen willst, ohne dass Playwright Docker neu startet oder vorher `down -v` ausführt, nutze:
+
+```bash
+E2E_SKIP_DOCKER=1 npm run test:e2e
+```
+
+Windows PowerShell:
+
+```powershell
+$env:E2E_SKIP_DOCKER = "1"
+npm run test:e2e
+```
+
+Manuelles Aufräumen:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.e2e.yml -p herzgarten-e2e down -v --remove-orphans
+```
+
 ---
 
 ## Browser-Push (Web Push / VAPID)

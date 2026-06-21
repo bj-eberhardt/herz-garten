@@ -264,7 +264,14 @@ onMounted(async () => {
     <p class="muted">{{ t('admin.content.help') }}</p>
 
     <div class="admin-tabs" role="tablist">
-      <button v-for="type in contentTypes" :key="type.id" type="button" :class="{ active: selectedType === type.id }" @click="switchType(type.id)">
+      <button
+        v-for="type in contentTypes"
+        :key="type.id"
+        type="button"
+        :class="{ active: selectedType === type.id }"
+        :data-testid="`admin-content-tab-${type.id}`"
+        @click="switchType(type.id)"
+      >
         {{ type.label }}
       </button>
     </div>
@@ -272,13 +279,13 @@ onMounted(async () => {
     <section v-if="showForm" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-content-form">
       <div class="admin-form-head">
         <h2>{{ form.id ? t('admin.content.editTitle', { type: currentTypeLabel }) : t('admin.content.newTitle', { type: currentTypeLabel }) }}</h2>
-        <button class="secondary-button admin-small-button" type="button" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
+        <button class="secondary-button admin-small-button" type="button" data-testid="admin-content-form-close" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
       </div>
-      <p v-if="errors.form" class="form-error">{{ errors.form }}</p>
+      <p v-if="errors.form" class="form-error" data-testid="admin-content-form-error">{{ errors.form }}</p>
       <p class="muted">{{ defaultLanguageHint }}</p>
 
       <label class="admin-checkbox">
-        <input v-model="form.active" type="checkbox" />
+        <input v-model="form.active" type="checkbox" data-testid="admin-content-active" />
         {{ t('admin.common.active') }}
       </label>
 
@@ -288,7 +295,7 @@ onMounted(async () => {
           <option value="">{{ t('admin.content.chooseCategory') }}</option>
           <option v-for="category in currentCategories" :key="category.id" :value="category.value">{{ category.label }}</option>
         </select>
-        <small v-if="errors.category" class="admin-field-error">{{ errors.category }}</small>
+        <small v-if="errors.category" class="admin-field-error" data-testid="admin-content-category-error">{{ errors.category }}</small>
       </label>
 
       <template v-if="selectedType === 'daily-questions'">
@@ -300,17 +307,17 @@ onMounted(async () => {
           <label>
             {{ t('admin.content.defaultText') }}
             <input v-model="form.translations[defaultLocale.locale].text" data-testid="admin-content-text" />
-            <small v-if="errors.text" class="admin-field-error">{{ errors.text }}</small>
+            <small v-if="errors.text" class="admin-field-error" data-testid="admin-content-text-error">{{ errors.text }}</small>
           </label>
         </fieldset>
         <label>
           {{ t('admin.content.depth') }}
-          <input v-model.number="form.depthLevel" min="1" max="4" type="number" />
+          <input v-model.number="form.depthLevel" min="1" max="4" type="number" data-testid="admin-content-depth" />
           <small>{{ t('admin.content.depthHelp') }}</small>
           <small v-if="errors.depthLevel" class="admin-field-error">{{ errors.depthLevel }}</small>
         </label>
         <label class="admin-checkbox">
-          <input v-model="form.longDistanceSuitable" type="checkbox" />
+          <input v-model="form.longDistanceSuitable" type="checkbox" data-testid="admin-content-long-distance" />
           {{ t('admin.content.longDistanceSuitable') }}
         </label>
         <small>{{ t('admin.content.longDistanceHelp') }}</small>
@@ -322,21 +329,21 @@ onMounted(async () => {
             {{ defaultLocale.label }} [{{ defaultLocale.locale }}]
             <span class="admin-required-badge">{{ t('admin.messages.standardSuffix') }}</span>
           </legend>
-          <label>{{ t('admin.content.defaultTitle') }}<input v-model="form.translations[defaultLocale.locale].title" data-testid="admin-content-title" /><small v-if="errors.title" class="admin-field-error">{{ errors.title }}</small></label>
-          <label>{{ t('admin.content.defaultDescription') }}<textarea v-model="form.translations[defaultLocale.locale].description" rows="3" data-testid="admin-content-description" /><small v-if="errors.description" class="admin-field-error">{{ errors.description }}</small></label>
+          <label>{{ t('admin.content.defaultTitle') }}<input v-model="form.translations[defaultLocale.locale].title" data-testid="admin-content-title" /><small v-if="errors.title" class="admin-field-error" data-testid="admin-content-title-error">{{ errors.title }}</small></label>
+          <label>{{ t('admin.content.defaultDescription') }}<textarea v-model="form.translations[defaultLocale.locale].description" rows="3" data-testid="admin-content-description" /><small v-if="errors.description" class="admin-field-error" data-testid="admin-content-description-error">{{ errors.description }}</small></label>
         </fieldset>
-        <label>{{ t('admin.content.minutes') }}<input v-model.number="form.estimatedMinutes" min="1" type="number" /><small v-if="errors.estimatedMinutes" class="admin-field-error">{{ errors.estimatedMinutes }}</small></label>
+        <label>{{ t('admin.content.minutes') }}<input v-model.number="form.estimatedMinutes" min="1" type="number" data-testid="admin-content-minutes" /><small v-if="errors.estimatedMinutes" class="admin-field-error">{{ errors.estimatedMinutes }}</small></label>
         <label>
           {{ t('admin.content.effort') }}
-          <select v-model="form.effortLevel">
+          <select v-model="form.effortLevel" data-testid="admin-content-effort">
             <option value="low">{{ t('admin.content.effortLow') }}</option>
             <option value="medium">{{ t('admin.content.effortMedium') }}</option>
             <option value="high">{{ t('admin.content.effortHigh') }}</option>
           </select>
         </label>
-        <label>{{ t('admin.common.points') }}<input v-model.number="form.rewardPoints" min="0" type="number" /><small v-if="errors.rewardPoints" class="admin-field-error">{{ errors.rewardPoints }}</small></label>
-        <label>{{ t('admin.content.seed') }}<input v-model="form.rewardSeedType" /></label>
-        <label class="admin-checkbox"><input v-model="form.requiresBothPartners" type="checkbox" /> {{ t('admin.content.requiresBothPartners') }}</label>
+        <label>{{ t('admin.common.points') }}<input v-model.number="form.rewardPoints" min="0" type="number" data-testid="admin-content-reward-points" /><small v-if="errors.rewardPoints" class="admin-field-error">{{ errors.rewardPoints }}</small></label>
+        <label>{{ t('admin.content.seed') }}<input v-model="form.rewardSeedType" data-testid="admin-content-seed" /></label>
+        <label class="admin-checkbox"><input v-model="form.requiresBothPartners" type="checkbox" data-testid="admin-content-requires-both" /> {{ t('admin.content.requiresBothPartners') }}</label>
       </template>
 
       <template v-if="selectedType === 'know-me-catalog'">
@@ -345,10 +352,10 @@ onMounted(async () => {
             {{ defaultLocale.label }} [{{ defaultLocale.locale }}]
             <span class="admin-required-badge">{{ t('admin.messages.standardSuffix') }}</span>
           </legend>
-          <label>{{ t('admin.content.defaultQuestion') }}<input v-model="form.translations[defaultLocale.locale].questionText" data-testid="admin-content-question-text" /><small v-if="errors.questionText" class="admin-field-error">{{ errors.questionText }}</small></label>
+          <label>{{ t('admin.content.defaultQuestion') }}<input v-model="form.translations[defaultLocale.locale].questionText" data-testid="admin-content-question-text" /><small v-if="errors.questionText" class="admin-field-error" data-testid="admin-content-question-text-error">{{ errors.questionText }}</small></label>
           <label>{{ t('admin.content.categoryLabelPlaceholder', { locale: defaultLocale.locale }) }}<input v-model="form.translations[defaultLocale.locale].categoryLabel" /></label>
         </fieldset>
-        <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" /></label>
+        <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" data-testid="admin-content-sort-order" /></label>
       </template>
 
       <template v-if="selectedType === 'love-jar-templates'">
@@ -357,9 +364,9 @@ onMounted(async () => {
             {{ defaultLocale.label }} [{{ defaultLocale.locale }}]
             <span class="admin-required-badge">{{ t('admin.messages.standardSuffix') }}</span>
           </legend>
-          <label>{{ t('admin.content.defaultText') }}<input v-model="form.translations[defaultLocale.locale].text" data-testid="admin-content-love-jar-text" /><small v-if="errors.text" class="admin-field-error">{{ errors.text }}</small></label>
+          <label>{{ t('admin.content.defaultText') }}<input v-model="form.translations[defaultLocale.locale].text" data-testid="admin-content-love-jar-text" /><small v-if="errors.text" class="admin-field-error" data-testid="admin-content-text-error">{{ errors.text }}</small></label>
         </fieldset>
-        <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" /></label>
+        <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" data-testid="admin-content-sort-order" /></label>
       </template>
 
       <section v-if="additionalLocales.length > 0" class="admin-translation-box">
@@ -418,19 +425,19 @@ onMounted(async () => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in items" :key="item.id">
+          <tr v-for="item in items" :key="item.id" :data-testid="`admin-content-row-${item.id}`">
             <td>{{ item.title || item.questionText || item.text }}</td>
             <td>
               <span class="admin-chip">{{ categoryFor(item.category)?.label ?? item.category }}</span>
             </td>
             <td>{{ item.active ? t('admin.common.activeLower') : t('admin.common.inactiveLower') }}</td>
             <td class="admin-actions">
-              <button class="secondary-button admin-small-button" type="button" @click="editItem(item)">{{ t('admin.common.edit') }}</button>
-              <button v-if="item.active" class="danger-button admin-small-button" type="button" @click="setActive(item, false)">
+              <button class="secondary-button admin-small-button" type="button" :data-testid="`admin-content-edit-${item.id}`" @click="editItem(item)">{{ t('admin.common.edit') }}</button>
+              <button v-if="item.active" class="danger-button admin-small-button" type="button" :data-testid="`admin-content-deactivate-${item.id}`" @click="setActive(item, false)">
                 <Trash2 :size="16" aria-hidden="true" />
                 {{ t('admin.common.deactivate') }}
               </button>
-              <button v-else class="secondary-button admin-small-button" type="button" @click="setActive(item, true)">
+              <button v-else class="secondary-button admin-small-button" type="button" :data-testid="`admin-content-reactivate-${item.id}`" @click="setActive(item, true)">
                 <RotateCcw :size="16" aria-hidden="true" />
                 {{ t('admin.common.reactivate') }}
               </button>

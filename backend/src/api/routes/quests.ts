@@ -41,7 +41,12 @@ export function registerQuestRoutes(router: Router) {
         return;
       }
 
-      sendJson<QuestsPayload>(response, result.payload);
+      const payload = result.payload;
+      if (!payload) {
+        sendApiError(response, 409, 'couple.notConnected');
+        return;
+      }
+      sendJson<QuestsPayload>(response, payload);
     } catch (error) {
       handleError(response, error);
     }
@@ -61,7 +66,12 @@ export function registerQuestRoutes(router: Router) {
         return;
       }
 
-      sendJson<QuestsPayload>(response, result.payload);
+      const payload = result.payload;
+      if (!payload) {
+        sendApiError(response, 409, 'couple.notConnected');
+        return;
+      }
+      sendJson<QuestsPayload>(response, payload);
     } catch (error) {
       handleError(response, error);
     }

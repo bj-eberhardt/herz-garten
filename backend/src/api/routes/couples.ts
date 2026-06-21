@@ -83,7 +83,7 @@ export function registerCoupleRoutes(router: Router) {
         return;
       }
 
-      sendJson<LeaveCouplePayload>(response, { user: payload.user ?? user, couple: null });
+      sendJson<LeaveCouplePayload>(response, { user: payload.user, couple: null });
     } catch (error) {
       handleError(response, error);
     }

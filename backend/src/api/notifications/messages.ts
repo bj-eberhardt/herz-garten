@@ -13,6 +13,7 @@ export const notificationMessageKeys = [
   'notifications.titles.knowMeAnsweredMiss',
   'notifications.titles.coupleDisconnected',
   'notifications.titles.coupleJoined',
+  'notifications.titles.adminPasswordReset',
   'notifications.bodies.dailyAnswerWaiting',
   'notifications.bodies.dailyRevealed',
   'notifications.bodies.questWaitingConfirmation',
@@ -24,6 +25,7 @@ export const notificationMessageKeys = [
   'notifications.bodies.knowMeAnsweredMiss',
   'notifications.bodies.coupleDisconnected',
   'notifications.bodies.coupleJoined',
+  'notifications.bodies.adminPasswordReset',
 ] as const;
 
 export type NotificationMessageKey = (typeof notificationMessageKeys)[number];

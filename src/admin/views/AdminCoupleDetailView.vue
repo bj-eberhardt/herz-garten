@@ -101,7 +101,7 @@ onMounted(async () => {
 
 <template>
   <section class="admin-view" data-testid="admin-couple-detail">
-    <RouterLink class="secondary-button admin-back-link" :to="backToCouplesLink()">
+    <RouterLink class="secondary-button admin-back-link" data-testid="admin-couple-detail-back" :to="backToCouplesLink()">
       {{ t('admin.coupleDetail.backToCouples') }}
     </RouterLink>
 
@@ -169,8 +169,8 @@ onMounted(async () => {
             <option v-for="style in contentStyles" :key="style.value" :value="style.value">{{ style.label }}</option>
           </select>
         </label>
-        <p v-if="preferenceMessage" class="success-note">{{ preferenceMessage }}</p>
-        <p v-if="preferenceError" class="form-error">{{ preferenceError }}</p>
+        <p v-if="preferenceMessage" class="success-note" data-testid="admin-couple-preferences-success">{{ preferenceMessage }}</p>
+        <p v-if="preferenceError" class="form-error" data-testid="admin-couple-preferences-error">{{ preferenceError }}</p>
         <button class="primary-button" type="button" :disabled="savingPreferences" data-testid="admin-couple-preferences-save" @click="savePreferences">
           {{ savingPreferences ? t('admin.common.saving') : t('admin.common.save') }}
         </button>

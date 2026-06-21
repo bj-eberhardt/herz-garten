@@ -1,10 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import type { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
 import { config } from '../config.js';
 import { pool } from '../db.js';
+import { withTransaction } from '../db/transaction.js';
 import { SqlWhereBuilder } from '../db/queryBuilder.js';
 import { normalizeLocale, parseAcceptLanguage } from '../i18n/locales.js';
 import { validateBody } from '../validation.js';
+import { createNotifications } from '../api/support.repository.js';
+import { renderEmailTemplate, sendMail } from '../email/email.service.js';
 import { contentBodySchema } from './bodySchemas.js';
 import {
   isContentType,
@@ -179,6 +183,53 @@ export async function listUsers(request: Request) {
   );
 
   return { items: result.rows, total: countResult.rows[0]?.total ?? 0, limit, offset };
+}
+
+export async function resetUserPasswordByAdmin(userId: string, password: string, locale = config.i18nDefaultLocale) {
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  const user = await withTransaction(async (client) => {
+    const result = await client.query<{ id: string; email: string; displayName: string }>(
+      `
+        update profiles
+        set password_hash = $2,
+            updated_at = now()
+        where id = $1
+        returning id, email, display_name as "displayName"
+      `,
+      [userId, passwordHash],
+    );
+
+    const user = result.rows[0];
+    if (!user) return null;
+
+    await client.query('update password_reset_tokens set used_at = now() where user_id = $1 and used_at is null', [userId]);
+    await createNotifications(client, {
+      coupleId: null,
+      userIds: [userId],
+      type: 'admin_password_reset',
+      titleKey: 'notifications.titles.adminPasswordReset',
+      bodyKey: 'notifications.bodies.adminPasswordReset',
+      sourceType: 'account',
+      sourceId: userId,
+    });
+
+    return user;
+  });
+
+  if (user) {
+    try {
+      await sendMail({
+        to: user.email,
+        subject: await renderEmailTemplate('emails.adminPasswordReset.subject', {}, locale),
+        text: await renderEmailTemplate('emails.adminPasswordReset.body', { displayName: user.displayName }, locale),
+      });
+    } catch (error) {
+      console.error('[admin] password reset email delivery failed', error);
+    }
+  }
+
+  return user;
 }
 
 export async function listCouples(request: Request) {

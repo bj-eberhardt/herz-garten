@@ -46,7 +46,12 @@ export function registerTodayRoutes(router: Router) {
         return;
       }
 
-      sendJson<TodayPayload>(response, result.payload);
+      const payload = result.payload;
+      if (!payload) {
+        sendApiError(response, 409, 'couple.notConnected');
+        return;
+      }
+      sendJson<TodayPayload>(response, payload);
     } catch (error) {
       handleError(response, error);
     }

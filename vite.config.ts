@@ -2,10 +2,14 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import packageJson from './package.json';
 
 const proxyTarget = process.env.VITE_PROXY_TARGET ?? 'http://localhost:3000';
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(packageJson.version),
+  },
   server: {
     proxy: {
       '/uploads': {

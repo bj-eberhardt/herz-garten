@@ -76,7 +76,12 @@ export function registerKnowMeRoutes(router: Router) {
         return;
       }
 
-      sendJson<KnowMePayload>(response.status(201), result.payload);
+      const payload = result.payload;
+      if (!payload) {
+        sendApiError(response, 409, 'couple.notConnected');
+        return;
+      }
+      sendJson<KnowMePayload>(response.status(201), payload);
     } catch (error) {
       handleError(response, error);
     }
@@ -120,7 +125,12 @@ export function registerKnowMeRoutes(router: Router) {
         return;
       }
 
-      sendJson<KnowMePayload>(response, result.payload);
+      const payload = result.payload;
+      if (!payload) {
+        sendApiError(response, 409, 'couple.notConnected');
+        return;
+      }
+      sendJson<KnowMePayload>(response, payload);
     } catch (error) {
       handleError(response, error);
     }

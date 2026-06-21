@@ -177,7 +177,14 @@ onMounted(async () => {
     </div>
 
     <div class="admin-tabs" role="tablist">
-      <button v-for="kind in preferenceKinds" :key="kind.id" type="button" :class="{ active: selectedKind === kind.id }" @click="switchKind(kind.id)">
+      <button
+        v-for="kind in preferenceKinds"
+        :key="kind.id"
+        type="button"
+        :class="{ active: selectedKind === kind.id }"
+        :data-testid="`admin-preference-tab-${kind.id}`"
+        @click="switchKind(kind.id)"
+      >
         {{ kind.label }}
       </button>
     </div>
@@ -185,16 +192,16 @@ onMounted(async () => {
     <section v-if="showForm" ref="formAnchor" class="admin-panel admin-form" data-testid="admin-preference-form">
       <div class="admin-form-head">
         <h2>{{ form.id ? t('admin.taxonomies.editTitle') : t('admin.taxonomies.newTitle') }}</h2>
-        <button class="secondary-button admin-small-button" type="button" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
+        <button class="secondary-button admin-small-button" type="button" data-testid="admin-preference-form-close" @click="resetForm(false)">{{ t('admin.common.close') }}</button>
       </div>
-      <p v-if="error" class="form-error">{{ error }}</p>
+      <p v-if="error" class="form-error" data-testid="admin-preference-error">{{ error }}</p>
       <label>
         {{ t('admin.common.technicalValue') }}
         <input v-model="form.value" :disabled="Boolean(form.id)" data-testid="admin-preference-value" />
         <small>{{ t('admin.taxonomies.technicalValueHelp') }}</small>
       </label>
-      <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" /></label>
-      <label class="admin-checkbox"><input v-model="form.active" type="checkbox" /> {{ t('admin.common.active') }}</label>
+      <label>{{ t('admin.common.sortOrder') }}<input v-model.number="form.sortOrder" type="number" data-testid="admin-preference-sort-order" /></label>
+      <label class="admin-checkbox"><input v-model="form.active" type="checkbox" data-testid="admin-preference-active" /> {{ t('admin.common.active') }}</label>
 
       <fieldset v-if="defaultLocale" class="admin-translation-box admin-default-translation">
         <legend>
@@ -241,13 +248,13 @@ onMounted(async () => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="preference in currentItems" :key="preference.id">
+          <tr v-for="preference in currentItems" :key="preference.id" :data-testid="`admin-preference-row-${preference.id}`">
             <td><code>{{ preference.value }}</code></td>
             <td>{{ preference.label }}</td>
             <td>{{ preference.active ? t('admin.common.activeLower') : t('admin.common.inactiveLower') }}</td>
             <td>{{ preference.sortOrder }}</td>
             <td class="admin-actions">
-              <button class="secondary-button admin-small-button" type="button" @click="editPreference(preference)">{{ t('admin.common.edit') }}</button>
+              <button class="secondary-button admin-small-button" type="button" :data-testid="`admin-preference-edit-${preference.id}`" @click="editPreference(preference)">{{ t('admin.common.edit') }}</button>
             </td>
           </tr>
         </tbody>

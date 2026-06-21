@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue';
-import { RouterLink, RouterView, useRouter } from 'vue-router';
+import { computed, onMounted, watch } from 'vue';
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router';
 import { Bell, LogOut } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '@/stores/authStore';
@@ -9,8 +9,11 @@ import BottomNavigation from './BottomNavigation.vue';
 
 const authStore = useAuthStore();
 const notificationStore = useNotificationStore();
+const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
+const appVersion = __APP_VERSION__;
+const showAppVersion = computed(() => route.path === '/garden' || route.path === '/onboarding');
 
 function loadNotificationsIfReady() {
   if (authStore.isAuthenticated) {
@@ -31,7 +34,7 @@ watch(() => authStore.couple?.id, loadNotificationsIfReady);
   <div class="app-shell">
     <header class="topbar">
       <RouterLink to="/today" class="brand" :aria-label="t('common.brandStart')" data-testid="nav-brand">
-        <span class="brand-mark">H</span>
+        <span class="brand-mark"></span>
         <span>{{ t('common.appName') }}</span>
       </RouterLink>
       <div class="topbar-actions">
@@ -54,6 +57,8 @@ watch(() => authStore.couple?.id, loadNotificationsIfReady);
     <main class="app-main">
       <RouterView />
     </main>
+
+    <footer v-if="showAppVersion" class="app-footer" data-testid="app-version">v{{ appVersion }}</footer>
 
     <BottomNavigation v-if="authStore.isAuthenticated" />
   </div>

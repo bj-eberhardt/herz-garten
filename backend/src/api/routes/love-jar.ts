@@ -57,7 +57,12 @@ export function registerLoveJarRoutes(router: Router) {
         return;
       }
 
-      sendJson<LoveJarPayload>(response.status(201), result.payload);
+      const payload = result.payload;
+      if (!payload) {
+        sendApiError(response, 409, 'couple.notConnected');
+        return;
+      }
+      sendJson<LoveJarPayload>(response.status(201), payload);
     } catch (error) {
       handleError(response, error);
     }
@@ -81,7 +86,12 @@ export function registerLoveJarRoutes(router: Router) {
         return;
       }
 
-      sendJson<LoveJarPayload>(response, result.payload);
+      const payload = result.payload;
+      if (!payload) {
+        sendApiError(response, 409, 'couple.notConnected');
+        return;
+      }
+      sendJson<LoveJarPayload>(response, payload);
     } catch (error) {
       handleError(response, error);
     }
