@@ -41,52 +41,79 @@ function emailSettingsInput<T extends { smtpPasswordConfigured?: boolean }>(sett
   return input;
 }
 
+async function adminSettings(request: APIRequestContext, token: string) {
+  return apiGet<{
+    auth: { adminJwtTtlMinutes: number; userJwtTtlMinutes: number };
+    server: { publicBaseUrl: string };
+    passwordReset: { ttlMinutes: number; limitPer24h: number };
+    email: {
+      enabled: boolean;
+      smtpHost: string;
+      smtpPort: number;
+      smtpSecure: boolean;
+      smtpUser: string;
+      smtpPasswordConfigured: boolean;
+      fromAddress: string;
+      fromName: string;
+      replyTo: string;
+    };
+  }>(request, '/api/admin/settings', token);
+}
+
 test.describe('password reset ui', () => {
   test('shows forgot password when email is enabled and resets the password', async ({ page, request }) => {
+    const adminToken = await adminLogin(request);
+    const original = await adminSettings(request, adminToken);
+    const originalEmail = emailSettingsInput(original.email);
+
     await clearMailbox(request);
-    const user = testUser('ui-reset', testRunId());
-    await expectJson<AuthPayload>(await apiPostRaw(request, '/api/auth/register', user), 201);
+    try {
+      await apiPatchRaw(request, '/api/admin/settings', {
+        auth: original.auth,
+        server: original.server,
+        passwordReset: original.passwordReset,
+        email: {
+          ...originalEmail,
+          enabled: true,
+        },
+      }, adminToken);
 
-    await page.goto('/onboarding');
-    await page.getByTestId('auth-mode-login').click();
-    await expect(page.getByTestId('forgot-password-link')).toBeVisible();
-    await page.getByTestId('forgot-password-link').click();
-    await page.getByTestId('forgot-password-email').fill(user.email);
-    await page.getByTestId('forgot-password-submit').click();
-    await expect(page.getByTestId('forgot-password-success')).toBeVisible();
+      const user = testUser('ui-reset', testRunId());
+      await expectJson<AuthPayload>(await apiPostRaw(request, '/api/auth/register', user), 201);
 
-    const token = await latestResetToken(request, user.email);
-    await page.goto(`/reset-password?token=${encodeURIComponent(token)}`);
-    await page.getByTestId('reset-password-input').fill('new-password-123');
-    await page.getByTestId('reset-password-submit').click();
-    await expect(page.getByTestId('reset-password-success')).toBeVisible();
+      await page.goto('/onboarding');
+      await page.getByTestId('auth-mode-login').click();
+      await expect(page.getByTestId('forgot-password-link')).toBeVisible();
+      await page.getByTestId('forgot-password-link').click();
+      await page.getByTestId('forgot-password-email').fill(user.email);
+      await page.getByTestId('forgot-password-submit').click();
+      await expect(page.getByTestId('forgot-password-success')).toBeVisible();
 
-    await page.getByTestId('reset-password-login-link').click();
-    await page.getByTestId('auth-mode-login').click();
-    await page.getByTestId('auth-email').fill(user.email);
-    await page.getByTestId('auth-password').fill('new-password-123');
-    await page.getByTestId('auth-submit').click();
-    await expect(page.getByTestId('auth-error')).toHaveCount(0);
+      const token = await latestResetToken(request, user.email);
+      await page.goto(`/reset-password?token=${encodeURIComponent(token)}`);
+      await page.getByTestId('reset-password-input').fill('new-password-123');
+      await page.getByTestId('reset-password-submit').click();
+      await expect(page.getByTestId('reset-password-success')).toBeVisible();
+
+      await page.getByTestId('reset-password-login-link').click();
+      await page.getByTestId('auth-mode-login').click();
+      await page.getByTestId('auth-email').fill(user.email);
+      await page.getByTestId('auth-password').fill('new-password-123');
+      await page.getByTestId('auth-submit').click();
+      await expect(page.getByTestId('auth-error')).toHaveCount(0);
+    } finally {
+      await apiPatchRaw(request, '/api/admin/settings', {
+        auth: original.auth,
+        server: original.server,
+        passwordReset: original.passwordReset,
+        email: originalEmail,
+      }, adminToken);
+    }
   });
 
   test('hides forgot password when email reset is disabled', async ({ page, request }) => {
     const adminToken = await adminLogin(request);
-    const original = await apiGet<{
-      auth: { adminJwtTtlMinutes: number; userJwtTtlMinutes: number };
-      server: { publicBaseUrl: string };
-      passwordReset: { ttlMinutes: number; limitPer24h: number };
-      email: {
-        enabled: boolean;
-        smtpHost: string;
-        smtpPort: number;
-        smtpSecure: boolean;
-        smtpUser: string;
-        smtpPasswordConfigured: boolean;
-        fromAddress: string;
-        fromName: string;
-        replyTo: string;
-      };
-    }>(request, '/api/admin/settings', adminToken);
+    const original = await adminSettings(request, adminToken);
     const originalEmail = emailSettingsInput(original.email);
 
     try {

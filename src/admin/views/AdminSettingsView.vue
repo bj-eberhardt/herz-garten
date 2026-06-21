@@ -191,10 +191,10 @@ onMounted(loadSettings);
     <AdminPageHeader :title="t('admin.settings.title')" :badge="t('admin.settings.subtitle')" />
     <p class="muted">{{ t('admin.settings.intro') }}</p>
 
-    <AdminAuthSettingsPanel :model-value="form" :errors="fieldErrors" />
-    <AdminServerSettingsPanel :model-value="serverForm" :error="fieldErrors.publicBaseUrl" />
-    <AdminPasswordResetSettingsPanel :model-value="passwordResetForm" :errors="fieldErrors" />
-    <AdminEmailSettingsPanel :model-value="emailForm" :errors="fieldErrors" />
+    <AdminAuthSettingsPanel :model-value="form" :errors="fieldErrors" @update:model-value="Object.assign(form, $event)" />
+    <AdminServerSettingsPanel :model-value="serverForm" :error="fieldErrors.publicBaseUrl" @update:model-value="Object.assign(serverForm, $event)" />
+    <AdminPasswordResetSettingsPanel :model-value="passwordResetForm" :errors="fieldErrors" @update:model-value="Object.assign(passwordResetForm, $event)" />
+    <AdminEmailSettingsPanel :model-value="emailForm" :errors="fieldErrors" @update:model-value="Object.assign(emailForm, $event)" />
 
     <div class="admin-settings-actions">
       <p v-if="formError" class="form-error" data-testid="admin-settings-error">{{ formError }}</p>

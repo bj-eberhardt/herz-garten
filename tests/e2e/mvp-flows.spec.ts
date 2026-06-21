@@ -72,7 +72,7 @@ test('daily question reveal creates notifications and a garden detail', async ({
     .poll(() => pageA.evaluate(() => document.querySelector('.garden-scrollport')!.scrollWidth > document.querySelector('.garden-scrollport')!.clientWidth))
     .toBeTruthy();
   await expect(pageA.getByTestId('garden-progress')).toContainText('Tagesfragen');
-  await expect(pageA.getByTestId('garden-locked-area').first()).toContainText('200 Punkte');
+  await expect(pageA.getByTestId('garden-level-progress')).toContainText('Noch 90 Punkte');
   await expect(pageA.getByTestId('garden-object').first()).toHaveAttribute('title', /10 Punkte/);
   await expect(pageA.getByTestId('garden-legend-item').first()).toBeVisible();
   await expect(pageA.getByTestId('garden-legend-item').first()).toHaveAttribute('title', /.+/);

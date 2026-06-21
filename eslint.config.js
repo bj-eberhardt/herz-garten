@@ -40,7 +40,6 @@ export default tseslint.config(
     },
     rules: {
       "vue/multi-word-component-names": "off",
-      "vue/no-mutating-props": "off",
       "no-undef": "off",
     },
   },

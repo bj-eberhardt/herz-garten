@@ -200,6 +200,7 @@ onMounted(async () => {
         sort-order-test-id="admin-category-sort-order"
         active-test-id="admin-category-active"
         label-test-id="admin-category-label"
+        @update:model-value="Object.assign(form, $event)"
       >
         <template #before-active>
           <label>

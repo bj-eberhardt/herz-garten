@@ -328,7 +328,7 @@ test.describe('admin api', () => {
     expect(mail.subject).toBe('Dein Herzgarten-Passwort wurde neu gesetzt');
     expect(mail.text).toContain(`Hallo ${user.displayName}`);
     expect(mail.text).toContain('dein Herzgarten-Passwort wurde durch einen Administrator neu gesetzt');
-    expect(mail.text).toContain('enthaelt diese E-Mail kein Passwort');
+    expect(mail.text).toContain('enthält diese E-Mail kein Passwort');
     expect(mail.text).not.toContain(nextPassword);
   });
 
@@ -945,7 +945,7 @@ test.describe('admin api', () => {
         objects: Array<{ label: string; areaKey: string; positionX: number; positionY: number; zIndex: number; placedByUser: boolean }>;
       }>(request, '/api/garden', setup.partnerA.token);
       expect(garden.couple.heartPoints).toBe(300);
-      expect(garden.couple.gardenStage).toBe(3);
+      expect(garden.couple.gardenStage).toBe(4);
       expect(garden.areas[0]).toMatchObject({ startX: 0, width: 700, backgroundImage: expect.any(String), accent: expect.any(String) });
       expect(garden.areas[1]).toMatchObject({ startX: 700, width: 700 });
       expect(garden.assetCatalog.some((asset) => asset.key === 'garden_decor')).toBeTruthy();
@@ -971,7 +971,7 @@ test.describe('admin api', () => {
         placedByUser: false,
       });
       expect(garden.objects.find((object) => object.label === 'Later reward')).toMatchObject({
-        areaKey: 'bench_grove',
+        areaKey: 'memory_tree',
         positionX: 84,
         positionY: 64,
         zIndex: 10,

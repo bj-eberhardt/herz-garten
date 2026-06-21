@@ -183,7 +183,7 @@ test.describe('memories and garden api', () => {
     const garden = await expectJson<GardenPayload>(await apiGetRaw(request, '/api/garden', partnerA.token));
     expectGardenPayload(garden);
     expect(garden.areas.length).toBeGreaterThanOrEqual(10);
-    expect(garden.unlocks.find((unlock) => unlock.stage === 10)?.points).toBe(1800);
+    expect(garden.unlocks.find((unlock) => unlock.stage === 10)?.points).toBe(1400);
     expect(garden.availableAssets.every((asset) => asset.stageUnlock <= garden.couple.gardenStage)).toBeTruthy();
     expect(garden.assetCatalog?.some((asset) => asset.key === 'memory_stone')).toBeTruthy();
     expect(garden.nextUnlock).toEqual(expect.objectContaining({ stage: expect.any(Number), pointsRemaining: expect.any(Number) }));

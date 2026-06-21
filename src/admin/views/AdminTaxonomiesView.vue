@@ -173,6 +173,7 @@ onMounted(async () => {
         sort-order-test-id="admin-preference-sort-order"
         active-test-id="admin-preference-active"
         label-test-id="admin-preference-label"
+        @update:model-value="Object.assign(form, $event)"
       />
 
       <button class="primary-button" type="button" :disabled="saving" data-testid="admin-preference-save" @click="savePreference">
