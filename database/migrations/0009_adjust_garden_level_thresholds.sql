@@ -3,7 +3,7 @@ set
   points_to_next = case stage
     when 1 then 100
     when 2 then 100
-    when 3 then 150
+    when 3 then 100
     when 4 then 150
     when 5 then 150
     when 6 then 200
