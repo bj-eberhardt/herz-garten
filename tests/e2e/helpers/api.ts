@@ -12,7 +12,7 @@ function authHeaders(token?: string, headers: Record<string, string> = {}) {
 
 interface AuthResponse {
   token: string;
-  user: { id: string; displayName: string; email: string };
+  user: { id: string; displayName: string; email: string; };
 }
 
 export async function apiPost<T>(
@@ -94,7 +94,7 @@ export async function registerByApi(request: APIRequestContext, user: TestUser) 
 }
 
 export async function createCoupleByApi(request: APIRequestContext, token: string) {
-  return apiPost<{ couple: { inviteCode: string } }>(
+  return apiPost<{ couple: { inviteCode: string; }; }>(
     request,
     '/api/couples',
     { relationshipType: 'mixed', contentPreference: 'balanced' },

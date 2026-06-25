@@ -18,7 +18,7 @@ import type {
 
 export interface AuthPayload {
   token: string;
-  user: Pick<User, 'id' | 'email' | 'displayName'> & { preferences?: Record<string, unknown> };
+  user: Pick<User, 'id' | 'email' | 'displayName'> & { preferences?: Record<string, unknown>; };
 }
 
 export interface ErrorPayload {
@@ -28,7 +28,7 @@ export interface ErrorPayload {
 }
 
 export interface MePayload {
-  user: Pick<User, 'id' | 'email' | 'displayName'> & { preferences?: Record<string, unknown> };
+  user: Pick<User, 'id' | 'email' | 'displayName'> & { preferences?: Record<string, unknown>; };
   couple: Couple | null;
 }
 
@@ -41,7 +41,7 @@ export interface TodayPayload {
   couple: Couple;
   locale: string;
   question: DailyQuestion;
-  instance: { id: string; coupleId: string; questionId: string; date: string; rewardAppliedAt: string | null };
+  instance: { id: string; coupleId: string; questionId: string; date: string; rewardAppliedAt: string | null; };
   answeredByCurrentUser: boolean;
   revealed: boolean;
   answers: Array<{
@@ -82,7 +82,7 @@ export interface KnowMePayload {
 export interface LoveJarPayload {
   couple: Couple;
   notes: LoveJarNote[];
-  categories?: Array<{ value: string; label: string }>;
+  categories?: Array<{ value: string; label: string; }>;
   drawStatus: {
     drawnToday: boolean;
     canDrawToday: boolean;
@@ -93,7 +93,7 @@ export interface LoveJarPayload {
 
 export interface MemoriesPayload {
   couple: Couple;
-  categories?: Array<{ value: string; label: string }>;
+  categories?: Array<{ value: string; label: string; }>;
   memories: MemoryEntry[];
 }
 
