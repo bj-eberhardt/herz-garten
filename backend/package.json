@@ -22,7 +22,8 @@
     "nodemailer": "^9.0.1",
     "pg": "^8.22.0",
     "web-push": "^3.6.7",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "mime-types": "^3.0.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
