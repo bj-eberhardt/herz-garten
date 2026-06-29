@@ -4,10 +4,16 @@ import { requireAdminAuth, signAdminToken } from './adminAuth.js';
 import { config } from './config.js';
 import { handleError, sendApiError } from './errors.js';
 import { createRateLimiter } from './security/rateLimit.js';
-import { validateBody } from './validation.js';
+import { validateBody, validateQuery } from './validation.js';
 import { deleteUploadedImageIfManaged, saveUploadedImage, upload } from './admin/uploads.js';
 import {
   adminCouplePreferencesBodySchema,
+  adminCategoriesQuerySchema,
+  adminContentListQuerySchema,
+  adminListQuerySchema,
+  adminLocalizedQuerySchema,
+  adminMessageTemplatesQuerySchema,
+  emptyQuerySchema,
   adminLoginBodySchema,
   adminSettingsBodySchema,
   adminUserPasswordBodySchema,
@@ -17,7 +23,7 @@ import {
 } from './admin/bodySchemas.js';
 import type { ContentType } from './admin/support.repository.js';
 import { audit, buildAuditLogPayload } from './admin/audit/audit.service.js';
-import { deleteCategory, listCategories, saveCategory } from './admin/categories/categories.service.js';
+import { deleteCategory, defaultTranslationMissingMessage, listCategories, saveCategory } from './admin/categories/categories.service.js';
 import {
   listMessageTemplates,
   MessageTemplateValidationException,
@@ -54,11 +60,12 @@ import {
   GardenLevelValidationError,
   listGardenLevels,
   saveGardenLevel,
+  type GardenLevelInput,
   type GardenLevelRow,
 } from './api/garden/levels.repository.js';
 import { gardenAssetExists, listAdminGardenAssets, saveGardenAsset } from './api/garden/catalog.js';
 
-export interface AdminGardenLevelItem extends GardenLevelRow {}
+export type AdminGardenLevelItem = GardenLevelRow;
 
 export interface AdminGardenLevelsResponse {
   items: AdminGardenLevelItem[];
@@ -72,48 +79,225 @@ function textField(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function numberField(value: unknown, fallback = 0) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : fallback;
-}
 
-function booleanField(value: unknown, fallback = false) {
-  if (value === undefined) return fallback;
-  return value === true || value === 'true' || value === '1' || value === 'on';
-}
+const localeCodePattern = /^[a-z]{2}(?:-[A-Z]{2})?$/;
 
-function jsonField<T>(value: unknown, fallback: T): T {
-  if (typeof value !== 'string' || !value.trim()) return fallback;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
+function parseGardenLevelPoints(body: Record<string, unknown>, issues: ValidationIssue[]) {
+  const value = multipartString(body, 'pointsToNext');
+  if (!value) return null;
+  if (!/^\d+$/.test(value)) {
+    issues.push({ path: 'pointsToNext', message: 'Expected positive integer' });
+    return null;
   }
+  return Number(value);
+}
+
+function parseGardenLevelTranslations(body: Record<string, unknown>, issues: ValidationIssue[]) {
+  const value = multipartString(body, 'translations');
+  if (!value) return {};
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    issues.push({ path: 'translations', message: 'Expected JSON object' });
+    return {};
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    issues.push({ path: 'translations', message: 'Expected JSON object' });
+    return {};
+  }
+
+  const translations: Record<string, { name?: string }> = {};
+  for (const [locale, rawTranslation] of Object.entries(parsed)) {
+    if (!localeCodePattern.test(locale)) {
+      issues.push({ path: `translations.${locale}`, message: 'Invalid locale' });
+      continue;
+    }
+    if (!rawTranslation || typeof rawTranslation !== 'object' || Array.isArray(rawTranslation)) {
+      issues.push({ path: `translations.${locale}`, message: 'Expected object' });
+      continue;
+    }
+    const translation = rawTranslation as Record<string, unknown>;
+    const extraFields = Object.keys(translation).filter((field) => field !== 'name');
+    if (extraFields.length > 0) {
+      issues.push({ path: `translations.${locale}`, message: 'Unexpected field' });
+      continue;
+    }
+    if ('name' in translation) {
+      if (typeof translation.name !== 'string' || !translation.name.trim()) {
+        issues.push({ path: `translations.${locale}.name`, message: 'Expected non-empty string' });
+        continue;
+      }
+      translations[locale] = { name: translation.name.trim() };
+    } else {
+      translations[locale] = {};
+    }
+  }
+
+  return translations;
 }
 
 function gardenLevelMultipartBody(request: Request, backgroundImage?: string) {
+  const body = request.body as Record<string, unknown>;
+  const issues: ValidationIssue[] = [];
+  const pointsToNext = parseGardenLevelPoints(body, issues);
+  const translations = parseGardenLevelTranslations(body, issues);
+
+  if (issues.length > 0) return { ok: false as const, issues };
+
   return {
-    name: textField(request.body.name),
-    pointsToNext: request.body.pointsToNext === '' || request.body.pointsToNext === undefined ? null : Number(request.body.pointsToNext),
-    backgroundImage,
-    accent: textField(request.body.accent),
-    translations: jsonField(request.body.translations, {}),
+    ok: true as const,
+    value: {
+      name: textField(body.name),
+      pointsToNext,
+      backgroundImage,
+      accent: textField(body.accent),
+      translations,
+    } satisfies GardenLevelInput,
   };
 }
 
-function gardenAssetMultipartBody(request: Request, image?: { path: string; width: number; height: number }) {
+async function unsupportedGardenLevelTranslationLocales(translations: Record<string, { name?: string }>) {
+  const localeCodes = Object.keys(translations);
+  if (localeCodes.length === 0) return [];
+  const activeLocales = new Set((await supportedLocales()).filter((locale) => locale.active).map((locale) => locale.locale));
+  return localeCodes.filter((locale) => !activeLocales.has(locale));
+}
+
+function validateGardenLevelRequiredFields(response: Response, input: GardenLevelInput) {
+  if (!input.name) {
+    sendAdminError(response, 400, 'admin.gardenLevel.nameRequired', 'Garden level name is required.');
+    return false;
+  }
+  if (!input.accent || !/^#[0-9a-f]{6}$/i.test(input.accent)) {
+    sendAdminError(response, 400, 'admin.gardenLevel.accentRequired', 'Garden level accent color is required.');
+    return false;
+  }
+  return true;
+}
+
+const gardenAssetSourceTypes = new Set(['question', 'quest', 'memory', 'love_jar', 'milestone', 'know_me']);
+
+interface ValidationIssue {
+  path: string;
+  message: string;
+}
+
+function multipartString(body: Record<string, unknown>, field: string) {
+  const value = body[field];
+  return typeof value === 'string' ? value.trim() : undefined;
+}
+
+function parseRequiredMultipartString(body: Record<string, unknown>, field: string, issues: ValidationIssue[]) {
+  const value = multipartString(body, field);
+  if (!value) {
+    issues.push({ path: field, message: 'Required' });
+    return '';
+  }
+  return value;
+}
+
+function parseMultipartInteger(body: Record<string, unknown>, field: string, issues: ValidationIssue[], options: { required?: boolean; min?: number } = {}) {
+  const value = multipartString(body, field);
+  if (!value) {
+    if (options.required) issues.push({ path: field, message: 'Required' });
+    return undefined;
+  }
+  if (!/^-?\d+$/.test(value)) {
+    issues.push({ path: field, message: 'Expected integer' });
+    return undefined;
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || (options.min !== undefined && parsed < options.min)) {
+    issues.push({ path: field, message: options.min !== undefined ? `Must be >= ${options.min}` : 'Expected integer' });
+    return undefined;
+  }
+  return parsed;
+}
+
+function parseMultipartNumber(body: Record<string, unknown>, field: string, issues: ValidationIssue[], options: { min: number; max: number }) {
+  const value = multipartString(body, field);
+  if (!value) {
+    issues.push({ path: field, message: 'Required' });
+    return 0;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < options.min || parsed > options.max) {
+    issues.push({ path: field, message: `Must be between ${options.min} and ${options.max}` });
+    return 0;
+  }
+  return parsed;
+}
+
+function parseMultipartBoolean(body: Record<string, unknown>, field: string, issues: ValidationIssue[]) {
+  const value = multipartString(body, field);
+  if (!value) {
+    issues.push({ path: field, message: 'Required' });
+    return false;
+  }
+  if (value !== 'true' && value !== 'false') {
+    issues.push({ path: field, message: 'Expected boolean' });
+    return false;
+  }
+  return value === 'true';
+}
+
+function parseGardenAssetSourceTypes(body: Record<string, unknown>, issues: ValidationIssue[]) {
+  const value = multipartString(body, 'sourceTypes');
+  if (!value) {
+    issues.push({ path: 'sourceTypes', message: 'Required' });
+    return [];
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    issues.push({ path: 'sourceTypes', message: 'Expected JSON array' });
+    return [];
+  }
+
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    issues.push({ path: 'sourceTypes', message: 'Expected non-empty array' });
+    return [];
+  }
+
+  const sourceTypes = parsed.map((item) => (typeof item === 'string' ? item.trim() : ''));
+  if (sourceTypes.some((item) => !item || !gardenAssetSourceTypes.has(item))) {
+    issues.push({ path: 'sourceTypes', message: 'Contains unsupported source type' });
+    return [];
+  }
+
+  return sourceTypes;
+}
+
+function gardenAssetMultipartBody(request: Request, key: string) {
+  const body = request.body as Record<string, unknown>;
+  const issues: ValidationIssue[] = [];
+  const label = parseRequiredMultipartString(body, 'label', issues);
+  const sourceTypes = parseGardenAssetSourceTypes(body, issues);
+  const stageUnlock = parseMultipartInteger(body, 'stageUnlock', issues, { required: true, min: 1 }) ?? 1;
+  const anchorX = parseMultipartNumber(body, 'anchorX', issues, { min: 0, max: 1 });
+  const anchorY = parseMultipartNumber(body, 'anchorY', issues, { min: 0, max: 1 });
+  const active = parseMultipartBoolean(body, 'active', issues);
+  const sortOrder = parseMultipartInteger(body, 'sortOrder', issues) ?? 0;
+
+  if (issues.length > 0) return { ok: false as const, issues };
+
   return {
-    key: textField(request.body.key),
-    label: textField(request.body.label),
-    sourceTypes: jsonField<string[]>(request.body.sourceTypes, []),
-    stageUnlock: Math.max(1, Math.round(numberField(request.body.stageUnlock, 1))),
-    image: image?.path,
-    width: image?.width,
-    height: image?.height,
-    anchorX: Math.min(1, Math.max(0, numberField(request.body.anchorX, 0.5))),
-    anchorY: Math.min(1, Math.max(0, numberField(request.body.anchorY, 0.9))),
-    active: booleanField(request.body.active, true),
-    sortOrder: Math.round(numberField(request.body.sortOrder, 0)),
+    ok: true as const,
+    value: {
+      key,
+      label,
+      sourceTypes,
+      stageUnlock,
+      anchorX,
+      anchorY,
+      active,
+      sortOrder,
+    },
   };
 }
 
@@ -123,6 +307,23 @@ const adminAuthRateLimit = createRateLimiter({
   max: config.authRateLimitMax,
 });
 
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+function sendValidationError(response: Response, issues: ValidationIssue[]) {
+  sendApiError(response, 400, 'common.validation', { issues });
+}
+
+function defaultTranslationMissingErrorMessage() {
+  return `Default Translation "${config.i18nDefaultLocale}" is missing`;
+}
+
+function sendDefaultTranslationMissingError(response: Response) {
+  sendAdminError(response, 400, 'admin.defaultTranslationMissing', defaultTranslationMissingErrorMessage(), {
+    locale: config.i18nDefaultLocale,
+  });
+}
 function sendAdminError(response: Response, status: number, errorKey: string, error: string, params?: Record<string, unknown>) {
   response.status(status).json({
     errorKey,
@@ -135,7 +336,7 @@ function sendAdminError(response: Response, status: number, errorKey: string, er
 export function adminRouter(): Router {
   const router = createRouter();
 
-  router.post('/auth/login', adminAuthRateLimit, validateBody(adminLoginBodySchema), async (request, response) => {
+  router.post('/auth/login', adminAuthRateLimit, validateQuery(emptyQuerySchema), validateBody(adminLoginBodySchema), async (request, response) => {
     const password = normalizeText(request.body.password);
     if (!password || password !== config.adminPassword) {
       sendApiError(response, 401, 'auth.invalidCredentials');
@@ -152,7 +353,7 @@ export function adminRouter(): Router {
     }
   });
 
-  router.get('/auth/me', requireAdminAuth, (_request, response) => {
+  router.get('/auth/me', requireAdminAuth, validateQuery(emptyQuerySchema), (_request, response) => {
     response.json({ admin: true, usesDefaultAdminPassword: config.adminPassword === 'admin' });
   });
 
@@ -164,7 +365,7 @@ export function adminRouter(): Router {
     }
   });
 
-  router.get('/users', requireAdminAuth, async (request, response) => {
+  router.get('/users', requireAdminAuth, validateQuery(adminListQuerySchema), async (request, response) => {
     try {
       const payload = await listUsers(request);
       if (requestedFormat(request) === 'csv') {
@@ -206,7 +407,7 @@ export function adminRouter(): Router {
     }
   });
 
-  router.get('/couples', requireAdminAuth, async (request, response) => {
+  router.get('/couples', requireAdminAuth, validateQuery(adminListQuerySchema), async (request, response) => {
     try {
       const payload = await listCouples(request);
       if (requestedFormat(request) === 'csv') {
@@ -232,9 +433,15 @@ export function adminRouter(): Router {
     }
   });
 
-  router.get('/couples/:id', requireAdminAuth, async (request, response) => {
+  router.get('/couples/:id', requireAdminAuth, validateQuery(emptyQuerySchema), async (request, response) => {
     try {
-      const couple = await getCoupleDetail(String(request.params.id));
+      const coupleId = String(request.params.id);
+      if (!isUuid(coupleId)) {
+        sendAdminError(response, 404, 'couple.notFound', 'Couple space not found.');
+        return;
+      }
+
+      const couple = await getCoupleDetail(coupleId);
       if (!couple) {
         sendAdminError(response, 404, 'couple.notFound', 'Couple space not found.');
         return;
@@ -245,13 +452,17 @@ export function adminRouter(): Router {
     }
   });
 
-  router.patch('/couples/:id/preferences', requireAdminAuth, validateBody(adminCouplePreferencesBodySchema), async (request, response) => {
+  router.patch('/couples/:id/preferences', requireAdminAuth, validateQuery(emptyQuerySchema), validateBody(adminCouplePreferencesBodySchema), async (request, response) => {
     try {
+      const coupleId = String(request.params.id);
+      if (!isUuid(coupleId)) {
+        sendAdminError(response, 404, 'couple.notFound', 'Couple space not found.');
+        return;
+      }
+
       const relationshipType = normalizeText(request.body.relationshipType);
       const contentPreference = normalizeText(request.body.contentPreference);
       if (
-        !relationshipType ||
-        !contentPreference ||
         !(await preferenceValueExists('relationshipModes', relationshipType, true)) ||
         !(await preferenceValueExists('contentStyles', contentPreference, true))
       ) {
@@ -259,12 +470,12 @@ export function adminRouter(): Router {
         return;
       }
 
-      const couple = await updateCouplePreferences(String(request.params.id), relationshipType, contentPreference);
+      const couple = await updateCouplePreferences(coupleId, relationshipType, contentPreference);
       if (!couple) {
         sendAdminError(response, 404, 'couple.notFound', 'Couple space not found.');
         return;
       }
-      await audit('update', 'couple', String(request.params.id), { relationshipType, contentPreference });
+      await audit('update', 'couple', coupleId, { relationshipType, contentPreference });
       response.json({ couple });
     } catch (error) {
       handleError(response, error);
@@ -279,7 +490,7 @@ export function adminRouter(): Router {
     }
   });
 
-  router.get('/settings', requireAdminAuth, async (_request, response) => {
+  router.get('/settings', requireAdminAuth, validateQuery(emptyQuerySchema), async (_request, response) => {
     try {
       response.json(await getAdminSettings());
     } catch (error) {
@@ -287,7 +498,7 @@ export function adminRouter(): Router {
     }
   });
 
-  router.patch('/settings', requireAdminAuth, validateBody(adminSettingsBodySchema), async (request, response) => {
+  router.patch('/settings', requireAdminAuth, validateQuery(emptyQuerySchema), validateBody(adminSettingsBodySchema), async (request, response) => {
     try {
       const settings = await saveAdminSettings(request.body);
       await audit('update', 'app-settings', null, {
@@ -308,7 +519,7 @@ export function adminRouter(): Router {
     }
   });
 
-  router.get('/message-templates', requireAdminAuth, async (request, response) => {
+  router.get('/message-templates', requireAdminAuth, validateQuery(adminMessageTemplatesQuerySchema), async (request, response) => {
     try {
       const namespace = normalizeText(request.query.namespace) || 'notifications';
       const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || config.i18nDefaultLocale;
@@ -318,7 +529,7 @@ export function adminRouter(): Router {
     }
   });
 
-  router.patch('/message-templates/:key', requireAdminAuth, validateBody(messageTemplateBodySchema), async (request, response) => {
+  router.patch('/message-templates/:key', requireAdminAuth, validateQuery(adminLocalizedQuerySchema), validateBody(messageTemplateBodySchema), async (request, response) => {
     try {
       const key = String(request.params.key);
       const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || config.i18nDefaultLocale;
@@ -340,7 +551,7 @@ export function adminRouter(): Router {
     }
   });
 
-  router.get('/garden/levels', requireAdminAuth, async (request, response) => {
+  router.get('/garden/levels', requireAdminAuth, validateQuery(adminLocalizedQuerySchema), async (request, response) => {
     try {
       const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
       const payload: AdminGardenLevelsResponse = { items: await listGardenLevels(locale) };
@@ -350,7 +561,7 @@ export function adminRouter(): Router {
     }
   });
 
-  router.post('/garden/levels', requireAdminAuth, upload.single('backgroundImage'), async (request, response) => {
+  router.post('/garden/levels', requireAdminAuth, validateQuery(adminLocalizedQuerySchema), upload.single('backgroundImage'), async (request, response) => {
     let uploadedImage: { path: string; absolutePath: string; width: number; height: number } | null = null;
     try {
       const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
@@ -358,8 +569,19 @@ export function adminRouter(): Router {
         sendAdminError(response, 400, 'admin.gardenLevel.backgroundRequired', 'Garden level background image is required.');
         return;
       }
+      const parsedBody = gardenLevelMultipartBody(request);
+      if (!parsedBody.ok) {
+        sendValidationError(response, parsedBody.issues);
+        return;
+      }
+      if (!validateGardenLevelRequiredFields(response, parsedBody.value)) return;
+      const unsupportedLocales = await unsupportedGardenLevelTranslationLocales(parsedBody.value.translations ?? {});
+      if (unsupportedLocales.length > 0) {
+        sendAdminError(response, 400, 'admin.gardenLevel.translationInvalid', 'Garden level translations are invalid.', { locales: unsupportedLocales });
+        return;
+      }
       uploadedImage = await saveUploadedImage(request.file, 'garden-backgrounds', { width: 700, height: 520 });
-      const result = await saveGardenLevel(gardenLevelMultipartBody(request, uploadedImage.path), undefined, locale);
+      const result = await saveGardenLevel({ ...parsedBody.value, backgroundImage: uploadedImage.path }, undefined, locale);
       await audit('create', 'garden-level', result.id, { name: request.body.name });
       const payload: AdminGardenLevelMutationResponse = result;
       response.status(201).json(payload);
@@ -381,16 +603,32 @@ export function adminRouter(): Router {
     }
   });
 
-  router.patch('/garden/levels/:id', requireAdminAuth, upload.single('backgroundImage'), async (request, response) => {
+  router.patch('/garden/levels/:id', requireAdminAuth, validateQuery(adminLocalizedQuerySchema), upload.single('backgroundImage'), async (request, response) => {
     let uploadedImage: { path: string; absolutePath: string; width: number; height: number } | null = null;
     let oldBackgroundImage: string | undefined;
     try {
+      const levelId = String(request.params.id);
+      if (!isUuid(levelId)) {
+        sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Garden level not found.');
+        return;
+      }
       const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
-      oldBackgroundImage = (await listGardenLevels(locale)).find((level) => level.id === String(request.params.id))?.backgroundImage;
+      oldBackgroundImage = (await listGardenLevels(locale)).find((level) => level.id === levelId)?.backgroundImage;
+      const parsedBody = gardenLevelMultipartBody(request);
+      if (!parsedBody.ok) {
+        sendValidationError(response, parsedBody.issues);
+        return;
+      }
+      if (!validateGardenLevelRequiredFields(response, parsedBody.value)) return;
+      const unsupportedLocales = await unsupportedGardenLevelTranslationLocales(parsedBody.value.translations ?? {});
+      if (unsupportedLocales.length > 0) {
+        sendAdminError(response, 400, 'admin.gardenLevel.translationInvalid', 'Garden level translations are invalid.', { locales: unsupportedLocales });
+        return;
+      }
       if (request.file) {
         uploadedImage = await saveUploadedImage(request.file, 'garden-backgrounds', { width: 700, height: 520 });
       }
-      const result = await saveGardenLevel(gardenLevelMultipartBody(request, uploadedImage?.path), String(request.params.id), locale);
+      const result = await saveGardenLevel({ ...parsedBody.value, backgroundImage: uploadedImage?.path }, levelId, locale);
       await audit('update', 'garden-level', result.id, { name: request.body.name });
       if (uploadedImage) await deleteUploadedImageIfManaged(oldBackgroundImage);
       const payload: AdminGardenLevelMutationResponse = result;
@@ -417,10 +655,15 @@ export function adminRouter(): Router {
     }
   });
 
-  router.delete('/garden/levels/:id', requireAdminAuth, async (request, response) => {
+  router.delete('/garden/levels/:id', requireAdminAuth, validateQuery(adminLocalizedQuerySchema), async (request, response) => {
     try {
+      const levelId = String(request.params.id);
+      if (!isUuid(levelId)) {
+        sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Garden level not found.');
+        return;
+      }
       const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
-      const result = await deleteGardenLevel(String(request.params.id), locale);
+      const result = await deleteGardenLevel(levelId, locale);
       if (result.status === 'not_found') {
         sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Garden level not found.');
         return;
@@ -429,7 +672,7 @@ export function adminRouter(): Router {
         sendAdminError(response, 400, 'admin.gardenLevel.cannotDeleteFirstStage', 'Stage 1 cannot be deleted.');
         return;
       }
-      await audit('delete', 'garden-level', String(request.params.id));
+      await audit('delete', 'garden-level', levelId);
       response.json({ items: result.items });
     } catch (error) {
       if (error instanceof GardenLevelValidationError) {
@@ -440,7 +683,7 @@ export function adminRouter(): Router {
     }
   });
 
-  router.get('/garden/assets', requireAdminAuth, async (_request, response) => {
+  router.get('/garden/assets', requireAdminAuth, validateQuery(emptyQuerySchema), async (_request, response) => {
     try {
       response.json({ items: await listAdminGardenAssets() });
     } catch (error) {
@@ -448,12 +691,17 @@ export function adminRouter(): Router {
     }
   });
 
-  router.post('/garden/assets', requireAdminAuth, upload.single('image'), async (request, response) => {
+  router.post('/garden/assets', requireAdminAuth, validateQuery(emptyQuerySchema), upload.single('image'), async (request, response) => {
     let uploadedImage: { path: string; absolutePath: string; width: number; height: number } | null = null;
     try {
       const key = textField(request.body.key);
       if (!key || !/^[a-z0-9_]+$/.test(key)) {
         sendAdminError(response, 400, 'admin.gardenAsset.keyInvalid', 'Garden asset key is invalid.');
+        return;
+      }
+      const parsedBody = gardenAssetMultipartBody(request, key);
+      if (!parsedBody.ok) {
+        sendValidationError(response, parsedBody.issues);
         return;
       }
       if (await gardenAssetExists(key)) {
@@ -465,7 +713,7 @@ export function adminRouter(): Router {
         return;
       }
       uploadedImage = await saveUploadedImage(request.file, 'garden-assets');
-      const item = await saveGardenAsset(gardenAssetMultipartBody(request, uploadedImage));
+      const item = await saveGardenAsset({ ...parsedBody.value, image: uploadedImage.path, width: uploadedImage.width, height: uploadedImage.height });
       await audit('create', 'garden-asset', null, { key });
       response.status(201).json({ item, items: await listAdminGardenAssets() });
     } catch (error) {
@@ -478,7 +726,7 @@ export function adminRouter(): Router {
     }
   });
 
-  router.patch('/garden/assets/:key', requireAdminAuth, upload.single('image'), async (request, response) => {
+  router.patch('/garden/assets/:key', requireAdminAuth, validateQuery(emptyQuerySchema), upload.single('image'), async (request, response) => {
     let uploadedImage: { path: string; absolutePath: string; width: number; height: number } | null = null;
     try {
       const key = String(request.params.key);
@@ -487,10 +735,15 @@ export function adminRouter(): Router {
         sendAdminError(response, 404, 'admin.gardenAsset.notFound', 'Garden asset not found.');
         return;
       }
+      const parsedBody = gardenAssetMultipartBody(request, key);
+      if (!parsedBody.ok) {
+        sendValidationError(response, parsedBody.issues);
+        return;
+      }
       if (request.file) {
         uploadedImage = await saveUploadedImage(request.file, 'garden-assets');
       }
-      const item = await saveGardenAsset(gardenAssetMultipartBody(request, uploadedImage ?? undefined), key);
+      const item = await saveGardenAsset({ ...parsedBody.value, image: uploadedImage?.path, width: uploadedImage?.width, height: uploadedImage?.height }, key);
       if (uploadedImage) await deleteUploadedImageIfManaged(existing.image);
       await audit('update', 'garden-asset', null, { key });
       response.json({ item, items: await listAdminGardenAssets() });
@@ -504,7 +757,7 @@ export function adminRouter(): Router {
     }
   });
 
-  router.get('/content/locales', requireAdminAuth, async (_request, response) => {
+  router.get('/content/locales', requireAdminAuth, validateQuery(emptyQuerySchema), async (_request, response) => {
     try {
       response.json({ locales: await supportedLocales() });
     } catch (error) {
@@ -517,7 +770,7 @@ export function adminRouter(): Router {
     response.json({ items: await listPreferences(kind, locale) });
   }
 
-  router.get('/relationship-modes', requireAdminAuth, async (request, response) => {
+  router.get('/relationship-modes', requireAdminAuth, validateQuery(adminLocalizedQuerySchema), async (request, response) => {
     try {
       await handlePreferenceList('relationshipModes', request, response);
     } catch (error) {
@@ -525,27 +778,58 @@ export function adminRouter(): Router {
     }
   });
 
-  router.post('/relationship-modes', requireAdminAuth, validateBody(preferenceBodySchema), async (request, response) => {
-    try {
-      const id = await savePreference('relationshipModes', request.body);
-      await audit('create', 'relationship-mode', id, { value: request.body.value });
-      response.status(201).json({ id, items: await listPreferences('relationshipModes') });
-    } catch {
+  async function handlePreferenceSave(
+    kind: PreferenceKind,
+    resourceType: 'relationship-mode' | 'content-style',
+    action: 'create' | 'update',
+    request: Request,
+    response: Response,
+    id?: string,
+  ) {
+    const result = await savePreference(kind, request.body, id);
+    if (result.status === 'notFound') {
+      sendAdminError(response, 404, 'admin.preferenceNotFound', 'Taxonomy not found.');
+      return;
+    }
+    if (result.status === 'exists') {
+      sendAdminError(response, 409, 'admin.preferenceExists', 'Taxonomy value already exists.');
+      return;
+    }
+    if (result.status === 'defaultTranslationMissing') {
+      sendDefaultTranslationMissingError(response);
+      return;
+    }
+    if (result.status === 'invalid' || !result.id) {
       sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomy data is invalid.');
+      return;
+    }
+
+    await audit(action, resourceType, result.id, { value: request.body.value });
+    const payload = { id: result.id, items: await listPreferences(kind) };
+    if (action === 'create') {
+      response.status(201).json(payload);
+      return;
+    }
+    response.json(payload);
+  }
+
+  router.post('/relationship-modes', requireAdminAuth, validateQuery(emptyQuerySchema), validateBody(preferenceBodySchema), async (request, response) => {
+    try {
+      await handlePreferenceSave('relationshipModes', 'relationship-mode', 'create', request, response);
+    } catch (error) {
+      handleError(response, error);
     }
   });
 
-  router.patch('/relationship-modes/:id', requireAdminAuth, validateBody(preferenceBodySchema), async (request, response) => {
+  router.patch('/relationship-modes/:id', requireAdminAuth, validateQuery(emptyQuerySchema), validateBody(preferenceBodySchema), async (request, response) => {
     try {
-      const id = await savePreference('relationshipModes', request.body, String(request.params.id));
-      await audit('update', 'relationship-mode', id, { value: request.body.value });
-      response.json({ id, items: await listPreferences('relationshipModes') });
-    } catch {
-      sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomy data is invalid.');
+      await handlePreferenceSave('relationshipModes', 'relationship-mode', 'update', request, response, String(request.params.id));
+    } catch (error) {
+      handleError(response, error);
     }
   });
 
-  router.get('/content-styles', requireAdminAuth, async (request, response) => {
+  router.get('/content-styles', requireAdminAuth, validateQuery(adminLocalizedQuerySchema), async (request, response) => {
     try {
       await handlePreferenceList('contentStyles', request, response);
     } catch (error) {
@@ -553,27 +837,23 @@ export function adminRouter(): Router {
     }
   });
 
-  router.post('/content-styles', requireAdminAuth, validateBody(preferenceBodySchema), async (request, response) => {
+  router.post('/content-styles', requireAdminAuth, validateQuery(emptyQuerySchema), validateBody(preferenceBodySchema), async (request, response) => {
     try {
-      const id = await savePreference('contentStyles', request.body);
-      await audit('create', 'content-style', id, { value: request.body.value });
-      response.status(201).json({ id, items: await listPreferences('contentStyles') });
-    } catch {
-      sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomy data is invalid.');
+      await handlePreferenceSave('contentStyles', 'content-style', 'create', request, response);
+    } catch (error) {
+      handleError(response, error);
     }
   });
 
-  router.patch('/content-styles/:id', requireAdminAuth, validateBody(preferenceBodySchema), async (request, response) => {
+  router.patch('/content-styles/:id', requireAdminAuth, validateQuery(emptyQuerySchema), validateBody(preferenceBodySchema), async (request, response) => {
     try {
-      const id = await savePreference('contentStyles', request.body, String(request.params.id));
-      await audit('update', 'content-style', id, { value: request.body.value });
-      response.json({ id, items: await listPreferences('contentStyles') });
-    } catch {
-      sendAdminError(response, 400, 'admin.preferenceInvalid', 'Taxonomy data is invalid.');
+      await handlePreferenceSave('contentStyles', 'content-style', 'update', request, response, String(request.params.id));
+    } catch (error) {
+      handleError(response, error);
     }
   });
 
-  router.get('/categories', requireAdminAuth, async (request, response) => {
+  router.get('/categories', requireAdminAuth, validateQuery(adminCategoriesQuerySchema), async (request, response) => {
     try {
       const type = normalizeText(request.query.type);
       const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
@@ -592,7 +872,11 @@ export function adminRouter(): Router {
       const id = await saveCategory(request.body);
       await audit('create', 'category', id, { contentType: request.body.contentType, value: request.body.value });
       response.status(201).json({ id, items: await listCategories() });
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message === defaultTranslationMissingMessage) {
+        sendDefaultTranslationMissingError(response);
+        return;
+      }
       sendAdminError(response, 400, 'admin.categoryInvalid', 'Category data is invalid.');
     }
   });
@@ -602,7 +886,11 @@ export function adminRouter(): Router {
       const id = await saveCategory(request.body, String(request.params.id));
       await audit('update', 'category', id, { contentType: request.body.contentType, value: request.body.value });
       response.json({ id, items: await listCategories() });
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message === defaultTranslationMissingMessage) {
+        sendDefaultTranslationMissingError(response);
+        return;
+      }
       sendAdminError(response, 400, 'admin.categoryInvalid', 'Category data is invalid.');
     }
   });
@@ -627,7 +915,7 @@ export function adminRouter(): Router {
     }
   });
 
-  router.get('/content/:type', requireAdminAuth, async (request, response) => {
+  router.get('/content/:type', requireAdminAuth, validateQuery(adminContentListQuerySchema), async (request, response) => {
     try {
       const type = String(request.params.type);
       if (!isEditableContentType(type)) {
@@ -650,7 +938,7 @@ export function adminRouter(): Router {
       const id = await saveContent(type, request.body);
       await audit('create', type, id, { fields: Object.keys(request.body ?? {}) });
       response.status(201).json({ id, items: await listContent(type, request) });
-    } catch (error) {
+    } catch (_error) {
       sendAdminError(response, 400, 'admin.contentInvalid', 'Content data is invalid.');
     }
   });
@@ -665,7 +953,7 @@ export function adminRouter(): Router {
       const id = await saveContent(type, request.body, String(request.params.id));
       await audit('update', type, id, { fields: Object.keys(request.body ?? {}) });
       response.json({ id, items: await listContent(type, request) });
-    } catch (error) {
+    } catch (_error) {
       sendAdminError(response, 400, 'admin.contentInvalid', 'Content data is invalid.');
     }
   });

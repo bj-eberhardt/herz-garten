@@ -38,7 +38,7 @@ test.describe('user flow / notifications', () => {
       await test.step('Click notification detail cta', async () => {
         await pageB.getByTestId('notification-detail-cta').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: notification opens love jar page', async () => {
         await expect(pageB).toHaveURL(/\/love-jar$/);
       });
 

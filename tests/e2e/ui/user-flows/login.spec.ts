@@ -64,8 +64,7 @@ test.describe('user flow / login', () => {
       await test.step('Click auth submit', async () => {
         await page.getByTestId('auth-submit').click();
       });
-
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user reaches today page', async () => {
         await expect(page).toHaveURL(/\/today$/);
       });
       await test.step('Verify today card', async () => {
@@ -95,8 +94,7 @@ test.describe('user flow / login', () => {
       await test.step('Click auth submit', async () => {
         await page.getByTestId('auth-submit').click();
       });
-
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user is on onboarding page', async () => {
         await expect(page).toHaveURL(/\/onboarding$/);
       });
       await test.step('Verify waiting partner panel', async () => {
@@ -146,7 +144,7 @@ test.describe('user flow / login', () => {
       await test.step('Click nav settings', async () => {
         await page.getByTestId('nav-settings').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user reaches settings page', async () => {
         await expect(page).toHaveURL(/\/settings$/);
       });
       await test.step('Verify settings profile panel', async () => {
@@ -155,7 +153,7 @@ test.describe('user flow / login', () => {
       await test.step('Click nav garden', async () => {
         await page.getByTestId('nav-garden').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user is on onboarding page', async () => {
         await expect(page).toHaveURL(/\/onboarding$/);
       });
       await test.step('Verify waiting partner panel', async () => {
@@ -165,7 +163,7 @@ test.describe('user flow / login', () => {
       await test.step('Open /today', async () => {
         await page.goto('/today');
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user is on onboarding page', async () => {
         await expect(page).toHaveURL(/\/onboarding$/);
       });
     });
@@ -191,8 +189,7 @@ test.describe('user flow / login', () => {
       await test.step('Click auth submit', async () => {
         await page.getByTestId('auth-submit').click();
       });
-
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user is on onboarding page', async () => {
         await expect(page).toHaveURL(/\/onboarding$/);
       });
       await test.step('Verify join couple form', async () => {
@@ -225,8 +222,7 @@ test.describe('user flow / login', () => {
       await test.step('Click nav logout', async () => {
         await page.getByTestId('nav-logout').click();
       });
-
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user is on onboarding page', async () => {
         await expect(page).toHaveURL(/\/onboarding$/);
       });
       await test.step('Verify auth form', async () => {
@@ -238,7 +234,7 @@ test.describe('user flow / login', () => {
       await test.step('Verify nav logout', async () => {
         await expect(page.getByTestId('nav-logout')).toHaveCount(0);
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: auth token is removed from storage', async () => {
         await expect(page.evaluate(() => window.localStorage.getItem('herzgarten_token'))).resolves.toBeNull();
       });
     });
@@ -255,8 +251,7 @@ test.describe('user flow / login', () => {
       await test.step('Open /today', async () => {
         await page.goto('/today');
       });
-
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user is on onboarding page', async () => {
         await expect(page).toHaveURL(/\/onboarding$/);
       });
       await test.step('Verify auth form', async () => {
@@ -265,7 +260,7 @@ test.describe('user flow / login', () => {
       await test.step('Verify auth error', async () => {
         await expect(page.getByTestId('auth-error')).toHaveText('Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.');
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: auth token is removed from storage', async () => {
         await expect(page.evaluate(() => window.localStorage.getItem('herzgarten_token'))).resolves.toBeNull();
       });
     });
@@ -283,7 +278,7 @@ test.describe('user flow / login', () => {
       await test.step('Open /today', async () => {
         await page.goto('/today');
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user is on onboarding page', async () => {
         await expect(page).toHaveURL(/\/onboarding$/);
       });
       await test.step('Verify join couple form', async () => {

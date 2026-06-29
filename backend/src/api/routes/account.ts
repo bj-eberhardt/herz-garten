@@ -2,8 +2,11 @@ import type { Router } from 'express';
 import { currentUser, requireAuth } from '../../auth.js';
 import { handleError, sendApiError } from '../../errors.js';
 import { sendJson } from '../../http.js';
-import { validateBody } from '../../validation.js';
+import { validateBody, validateQuery } from '../../validation.js';
 import {
+  accountExportQuerySchema,
+  emptyBodySchema,
+  emptyQuerySchema,
   passwordBodySchema,
   preferencesBodySchema,
   profileBodySchema,
@@ -29,7 +32,7 @@ type AccountUserPayload = {
 type AccountExportPayload = Awaited<ReturnType<typeof buildAccountExport>>;
 
 export function registerAccountRoutes(router: Router) {
-  router.get('/me', requireAuth, async (request, response) => {
+  router.get('/me', requireAuth, validateQuery(emptyQuerySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
     try {
       sendJson<MePayload>(response, await getMePayload(user.id, user, await resolveLocale(request)));
@@ -38,7 +41,7 @@ export function registerAccountRoutes(router: Router) {
     }
   });
 
-  router.patch('/me/preferences', requireAuth, validateBody(preferencesBodySchema), async (request, response) => {
+  router.patch('/me/preferences', requireAuth, validateQuery(emptyQuerySchema, 'rejected'), validateBody(preferencesBodySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
     const body = request.body as PreferencesBody;
 
@@ -54,14 +57,14 @@ export function registerAccountRoutes(router: Router) {
     }
   });
 
-  router.patch('/me/profile', requireAuth, validateBody(profileBodySchema), async (request, response) => {
+  router.patch('/me/profile', requireAuth, validateQuery(emptyQuerySchema, 'rejected'), validateBody(profileBodySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
     const body = request.body as ProfileBody;
     const email = body.email === undefined ? undefined : normalizeEmail(body.email);
     const displayName = body.displayName === undefined ? undefined : normalizeText(body.displayName);
 
     if ((email === undefined && displayName === undefined) || email === '' || displayName === '') {
-      sendApiError(response, 400, 'profile.updateInvalid');
+      sendApiError(response, 400, 'rejected');
       return;
     }
 
@@ -80,7 +83,7 @@ export function registerAccountRoutes(router: Router) {
     }
   });
 
-  router.patch('/me/password', requireAuth, validateBody(passwordBodySchema), async (request, response) => {
+  router.patch('/me/password', requireAuth, validateQuery(emptyQuerySchema, 'rejected'), validateBody(passwordBodySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
     const body = request.body as PasswordBody;
 
@@ -97,7 +100,7 @@ export function registerAccountRoutes(router: Router) {
     }
   });
 
-  router.get('/me/export', requireAuth, async (request, response) => {
+  router.get('/me/export', requireAuth, validateQuery(accountExportQuerySchema), async (request, response) => {
     const user = currentUser(request);
 
     try {
@@ -107,14 +110,21 @@ export function registerAccountRoutes(router: Router) {
     }
   });
 
-  router.delete('/me', requireAuth, async (request, response) => {
-    const user = currentUser(request);
+  router.delete(
+    '/me',
+    requireAuth,
+    validateQuery(emptyQuerySchema),
+    validateBody(emptyBodySchema),
+    async (request, response) => {
+      const user = currentUser(request);
 
-    try {
-      await deleteAccount(user);
-      response.status(204).send();
-    } catch (error) {
-      handleError(response, error);
-    }
-  });
+      try {
+        await deleteAccount(user);
+        response.status(204).send();
+      } catch (error) {
+        handleError(response, error);
+      }
+    },
+  );
 }
+

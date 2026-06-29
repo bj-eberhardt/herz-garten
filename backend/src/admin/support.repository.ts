@@ -504,7 +504,16 @@ export async function saveQuest(body: Record<string, unknown>, id: string = rand
   const description = normalizeText(translation.description);
   const category = normalizeText(body.category);
   const effortLevel = normalizeText(body.effortLevel);
-  if (!title || !description || !(await categoryExists('quests', category)) || !effortLevels.has(effortLevel)) {
+  const estimatedMinutes = normalizeInteger(body.estimatedMinutes, 0);
+  const rewardPoints = normalizeInteger(body.rewardPoints, 0);
+  if (
+    !title ||
+    !description ||
+    estimatedMinutes <= 0 ||
+    rewardPoints <= 0 ||
+    !(await categoryExists('quests', category)) ||
+    !effortLevels.has(effortLevel)
+  ) {
     throw new Error('invalid quest');
   }
 
@@ -527,9 +536,9 @@ export async function saveQuest(body: Record<string, unknown>, id: string = rand
     [
       id,
       category,
-      Math.max(normalizeInteger(body.estimatedMinutes, 10), 1),
+      estimatedMinutes,
       effortLevel,
-      Math.max(normalizeInteger(body.rewardPoints, 0), 0),
+      rewardPoints,
       normalizeText(body.rewardSeedType) || null,
       normalizeBoolean(body.requiresBothPartners),
       normalizeBoolean(body.active),
@@ -680,8 +689,8 @@ export async function saveLoveJarTemplate(body: Record<string, unknown>, id: str
   const translations = contentTranslations(body);
   const { translation } = requiredTranslation(translations, ['text']);
   const text = normalizeText(translation.text);
-  const category = normalizeText(body.category) || 'compliment';
-  if (!text || !(await categoryExists('love-jar-templates', category))) throw new Error('invalid love jar template');
+  const category = normalizeText(body.category);
+  if (!text || !category || !(await categoryExists('love-jar-templates', category))) throw new Error('invalid love jar template');
 
   await pool.query(
     `

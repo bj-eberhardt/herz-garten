@@ -1,15 +1,8 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 
 import { apiGetRaw, apiPostRaw, setupCoupleByApi } from '../../helpers/api';
-
-import {
-  expectJson,
-  type GardenPayload,
-  type MemoriesPayload
-} from '../../helpers/apiAssertions';
-
+import { expectJson, type GardenPayload, type MemoriesPayload } from '../../helpers/apiAssertions';
 import { runDbSql } from '../../helpers/db';
-
 import { testRunId, testUser } from '../../helpers/testUsers';
 
 const apiBaseURL = process.env.E2E_API_URL ?? 'http://localhost:3001';
@@ -42,45 +35,56 @@ function pngHeader(width: number, height: number) {
 
 test.describe('user api / memories garden rewards', () => {
   test('memory rewards use unlocked areas after stage progression', async ({ request }) => {
-    await test.step('Flow: memory rewards use unlocked areas after stage progression', async () => {
-      const runId = testRunId();
-      const { partnerA } = await setupCoupleByApi(
+    const runId = testRunId();
+    const { partnerA } = await test.step('Setup: connected couple', async () => {
+      return setupCoupleByApi(
         request,
         testUser('api-memory-stage-a', runId),
         testUser('api-memory-stage-b', runId),
       );
+    });
+
+    await test.step('Setup: advance couple to garden stage four', async () => {
       const initialGarden = await expectJson<GardenPayload>(await apiGetRaw(request, '/api/garden', partnerA.token));
       runDbSql(`
-                update couples
-                set heart_points = 600, garden_stage = 4
-                where id = ${sqlLiteral(initialGarden.couple.id)};
-              `);
+        update couples
+        set heart_points = 600, garden_stage = 4
+        where id = ${sqlLiteral(initialGarden.couple.id)};
+      `);
+    });
 
+    const memory = await test.step('Flow: create memory reward at advanced garden stage', async () => {
       const created = await expectJson<MemoriesPayload>(
         await apiPostRaw(request, '/api/memories', { title: 'Stage four memory', category: 'everyday' }, partnerA.token),
         201,
       );
-      const memory = created.memories.find((item) => item.title === 'Stage four memory');
-      await test.step('Verify expected result', async () => {
-        expect(memory?.linkedGardenObjectId).toEqual(expect.any(String));
-      });
+      const createdMemory = created.memories.find((item) => item.title === 'Stage four memory');
+      expect(createdMemory?.linkedGardenObjectId).toEqual(expect.any(String));
+      return createdMemory!;
+    });
+
+    await test.step('Assert: memory reward uses the unlocked memory area', async () => {
+
       const garden = await expectJson<GardenPayload>(await apiGetRaw(request, '/api/garden', partnerA.token));
-      const object = garden.objects.find((item) => item.id === memory!.linkedGardenObjectId);
-      await test.step('Verify expected result', async () => {
-        expect(object).toEqual(expect.objectContaining({ areaKey: 'memory_tree' }));
-      });
-      await test.step('Verify expected result', async () => {
-        expect(['memory_stone', 'polaroid_frame']).toContain(object?.assetKey);
-      });
+
+      const object = garden.objects.find((item) => item.id === memory.linkedGardenObjectId);
+
+      expect(object).toEqual(expect.objectContaining({ areaKey: 'memory_tree' }));
+
+      expect(['memory_stone', 'polaroid_frame']).toContain(object?.assetKey);
+
     });
   });
 
   test('memory rewards can use uploaded matching garden assets', async ({ request }) => {
-    await test.step('Flow: memory rewards can use uploaded matching garden assets', async () => {
-      const adminToken = await adminLogin(request);
-      const runId = testRunId().replaceAll('-', '_');
-      const assetKey = `e2e_memory_asset_${runId}`;
+    const adminToken = await test.step('Setup: authenticate admin user', async () => {
+      return adminLogin(request);
+    });
 
+    const runId = testRunId().replaceAll('-', '_');
+    const assetKey = `e2e_memory_asset_${runId}`;
+
+    await test.step('Setup: upload active memory garden asset', async () => {
       runDbSql("update garden_assets set active = false where key like 'e2e_memory_asset_%';");
 
       await expectJson(
@@ -104,32 +108,40 @@ test.describe('user api / memories garden rewards', () => {
         }),
         201,
       );
+    });
 
-      const { partnerA } = await setupCoupleByApi(
+    const { partnerA } = await test.step('Setup: connected couple', async () => {
+      return setupCoupleByApi(
         request,
         testUser('api-memory-asset-a', runId),
         testUser('api-memory-asset-b', runId),
       );
+    });
 
+    const memory = await test.step('Flow: create memory that should select uploaded asset', async () => {
       const created = await expectJson<MemoriesPayload>(
         await apiPostRaw(request, '/api/memories', { title: 'Memory with uploaded asset', category: 'everyday' }, partnerA.token),
         201,
       );
-      const memory = created.memories.find((item) => item.title === 'Memory with uploaded asset');
-      await test.step('Verify expected result', async () => {
-        expect(memory?.linkedGardenObjectId).toEqual(expect.any(String));
-      });
+      const createdMemory = created.memories.find((item) => item.title === 'Memory with uploaded asset');
+      expect(createdMemory?.linkedGardenObjectId).toEqual(expect.any(String));
+      return createdMemory!;
+    });
+
+    await test.step('Assert: uploaded memory asset is selected and exposed in catalog', async () => {
 
       const garden = await expectJson<GardenPayload>(await apiGetRaw(request, '/api/garden', partnerA.token));
-      const object = garden.objects.find((item) => item.id === memory!.linkedGardenObjectId);
-      await test.step('Verify expected result', async () => {
-        expect(object).toEqual(expect.objectContaining({ assetKey, type: 'stone' }));
-      });
-      await test.step('Verify expected result', async () => {
-        expect(garden.assetCatalog?.find((asset) => asset.key === assetKey)).toEqual(
-          expect.objectContaining({ image: expect.stringMatching(/^\/uploads\/garden-assets\//), width: 72, height: 64 }),
-        );
-      });
+
+      const object = garden.objects.find((item) => item.id === memory.linkedGardenObjectId);
+
+      expect(object).toEqual(expect.objectContaining({ assetKey, type: 'stone' }));
+
+      expect(garden.assetCatalog?.find((asset) => asset.key === assetKey)).toEqual(
+
+      expect.objectContaining({ image: expect.stringMatching(/^\/uploads\/garden-assets\//), width: 72, height: 64 }),
+
+      );
+
     });
   });
 });

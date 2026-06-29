@@ -28,13 +28,9 @@ test.describe('user flow / memory', () => {
         await pageA.getByTestId('memory-save').click();
       });
       const memoryItem = pageA.getByTestId('memory-item').first();
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: saved memory shows localized category', async () => {
         await expect(memoryItem).toContainText('Unser E2E Moment');
-      });
-      await test.step('Verify expected result', async () => {
         await expect(memoryItem).toContainText('Alltag');
-      });
-      await test.step('Verify expected result', async () => {
         await expect(memoryItem).not.toContainText('everyday');
       });
 

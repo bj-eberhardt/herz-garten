@@ -1,157 +1,188 @@
 import { expect, test } from '@playwright/test';
 
-import {
-  apiGetRaw,
-  apiPostRaw,
-  registerByApi
-} from '../../helpers/api';
+import { apiGetRaw, registerByApi, setupCoupleByApi } from '../../helpers/api';
 
 import {
   expectApiError,
-
   expectExportPayload,
-
   expectJson,
-
-  expectMePayload,
-
-  expectNotificationsPayload,
-
   type AuthPayload,
-
   type ExportPayload,
-
-  type MePayload,
-
-  type NotificationsPayload,
 } from '../../helpers/apiAssertions';
 
 import { testRunId, testUser } from '../../helpers/testUsers';
 
+const exportDataKeys = [
+  'members',
+  'dailyQuestionAnswers',
+  'coupleQuests',
+  'gardenObjects',
+  'loveJarNotes',
+  'memories',
+  'knowMeQuestions',
+  'knowMeGuesses',
+  'notifications',
+] as const;
+
 test.describe('user api / account overview export', () => {
-  test('returns current user creates exports and leaves a couple', async ({ request }) => {
-    await test.step('Flow: returns current user creates exports and leaves a couple', async () => {
+  test('exports paired account overview data with locale selection', async ({ request }) => {
+    await test.step('Flow: exports paired account overview data with locale selection', async () => {
       const runId = testRunId();
-      const userA = testUser('api-couple-a', runId);
-      const userB = testUser('api-couple-b', runId);
-      const partnerA = await registerByApi(request, userA);
-      const partnerB = await registerByApi(request, userB);
+      let partnerA!: AuthPayload;
+      let partnerB!: AuthPayload;
 
-      const meBeforeCouple = await expectJson<MePayload>(await apiGetRaw(request, '/api/me', partnerA.token));
-      expectMePayload(meBeforeCouple);
-      await test.step('Verify expected result', async () => {
-        expect(meBeforeCouple.couple).toBeNull();
-      });
-
-      const created = await expectJson<{ couple: NonNullable<MePayload['couple']>; }>(
-        await apiPostRaw(request, '/api/couples', { relationshipType: 'mixed', contentPreference: 'balanced' }, partnerA.token),
-        201,
-      );
-      await test.step('Verify expected result', async () => {
-        expect(created.couple.memberCount).toBe(1);
-      });
-
-      const joined = await expectJson<{ couple: NonNullable<MePayload['couple']>; }>(
-        await apiPostRaw(request, '/api/couples/join', { inviteCode: created.couple.inviteCode.toLowerCase() }, partnerB.token),
-      );
-      await test.step('Verify expected result', async () => {
-        expect(joined.couple.memberCount).toBe(2);
-      });
-
-      const ownerNotifications = await expectJson<NotificationsPayload>(await apiGetRaw(request, '/api/notifications', partnerA.token));
-      expectNotificationsPayload(ownerNotifications);
-      const joinedNotifications = ownerNotifications.notifications.filter((item) => item.type === 'couple_joined');
-      await test.step('Verify expected result', async () => {
-        expect(joinedNotifications).toHaveLength(1);
-      });
-      await test.step('Verify expected result', async () => {
-        expect(joinedNotifications[0]).toEqual(
-          expect.objectContaining({
-            titleKey: 'notifications.titles.coupleJoined',
-            bodyKey: 'notifications.bodies.coupleJoined',
-            title: 'Dein Partner ist da',
-            body: `Toll, ${partnerB.user.displayName} hat deinen Paarraum betreten. Ihr könnt nun gemeinsam an eurem Garten arbeiten.`,
-            sourceType: 'couple',
-            sourceId: created.couple.id,
-            params: { name: partnerB.user.displayName },
-          }),
+      await test.step('Arrange: create paired users', async () => {
+        const setup = await setupCoupleByApi(
+          request,
+          testUser('api-export-couple-a', runId),
+          testUser('api-export-couple-b', runId),
         );
+        partnerA = setup.partnerA;
+        partnerB = setup.partnerB;
       });
 
-      const joiningUserNotifications = await expectJson<NotificationsPayload>(await apiGetRaw(request, '/api/notifications', partnerB.token));
-      await test.step('Verify expected result', async () => {
-        expect(joiningUserNotifications.notifications.filter((item) => item.type === 'couple_joined')).toHaveLength(0);
+      let exported!: ExportPayload;
+      await test.step('Act: export account overview in English', async () => {
+        exported = await expectJson<ExportPayload>(await apiGetRaw(request, '/api/me/export?lang=en', partnerA.token));
       });
 
-      await test.step('Verify API error response', async () => {
-        await expectApiError(
-          await apiPostRaw(request, '/api/couples/join', { inviteCode: created.couple.inviteCode }, partnerB.token),
-          409,
-          'couple.alreadyConnected',
-        );
-      });
-      const thirdUser = await registerByApi(request, testUser('api-couple-third', runId));
-      await test.step('Verify API error response', async () => {
-        await expectApiError(
-          await apiPostRaw(request, '/api/couples/join', { inviteCode: created.couple.inviteCode }, thirdUser.token),
-          409,
-          'couple.full',
-        );
-      });
-      const ownerNotificationsAfterInvalidJoins = await expectJson<NotificationsPayload>(
-        await apiGetRaw(request, '/api/notifications', partnerA.token),
-      );
-      await test.step('Verify expected result', async () => {
-        expect(ownerNotificationsAfterInvalidJoins.notifications.filter((item) => item.type === 'couple_joined')).toHaveLength(1);
-      });
+      await test.step('Assert: export contains current user and couple data', async () => {
 
-      const meWithCouple = await expectJson<MePayload>(await apiGetRaw(request, '/api/me', partnerB.token));
-      expectMePayload(meWithCouple);
-      await test.step('Verify expected result', async () => {
-        expect(meWithCouple.couple?.id).toBe(created.couple.id);
-      });
+        expectExportPayload(exported);
 
-      const exported = await expectJson<ExportPayload>(await apiGetRaw(request, '/api/me/export?lang=en', partnerA.token));
-      expectExportPayload(exported);
-      await test.step('Verify expected result', async () => {
         expect(exported.locale).toBe('en');
-      });
-      await test.step('Verify expected result', async () => {
-        expect(exported.data).toEqual(
-          expect.objectContaining({
-            members: expect.any(Array),
-            dailyQuestionAnswers: expect.any(Array),
-            coupleQuests: expect.any(Array),
-            gardenObjects: expect.any(Array),
-            loveJarNotes: expect.any(Array),
-            memories: expect.any(Array),
-            knowMeQuestions: expect.any(Array),
-            knowMeGuesses: expect.any(Array),
-            notifications: expect.any(Array),
-          }),
-        );
+
+        expect(exported.user.id).toBe(partnerA.user.id);
+
+        expect(exported.couple).toEqual(expect.objectContaining({ memberCount: 2 }));
+
+        expect(exported.data).toEqual(expect.any(Object));
+
+        for (const key of exportDataKeys) {
+
+        expect(exported.data?.[key]).toEqual(expect.any(Array));
+
+        }
+
       });
 
-      const leaveResponse = await apiPostRaw(request, '/api/couples/leave', {}, partnerB.token);
-      const leavePayload = await expectJson<MePayload>(leaveResponse);
-      expectMePayload(leavePayload);
-      await test.step('Verify expected result', async () => {
-        expect(leavePayload.couple).toBeNull();
+      await test.step('Assert: export includes both couple members', async () => {
+
+        const members = exported.data?.members ?? [];
+
+        expect(members).toEqual(
+
+        expect.arrayContaining([
+
+        expect.objectContaining({ id: partnerA.user.id }),
+
+        expect.objectContaining({ id: partnerB.user.id }),
+
+        ]),
+
+        );
+
       });
     });
   });
 
   test('exports user without couple with minimal data', async ({ request }) => {
     await test.step('Flow: exports user without couple with minimal data', async () => {
-      const user = (await registerByApi(request, testUser('api-export-no-couple', testRunId()))) as AuthPayload;
+      let user!: AuthPayload;
 
-      const exported = await expectJson<ExportPayload>(await apiGetRaw(request, '/api/me/export', user.token));
-      expectExportPayload(exported);
-      await test.step('Verify expected result', async () => {
-        expect(exported.couple).toBeNull();
+      await test.step('Arrange: create authenticated user without couple', async () => {
+        user = await registerByApi(request, testUser('api-export-no-couple', testRunId()));
       });
-      await test.step('Verify expected result', async () => {
+
+      let exported!: ExportPayload;
+      await test.step('Act: export account overview', async () => {
+        exported = await expectJson<ExportPayload>(await apiGetRaw(request, '/api/me/export', user.token));
+      });
+
+      await test.step('Assert: export omits couple-only data', async () => {
+
+        expectExportPayload(exported);
+
+        expect(exported.user.id).toBe(user.user.id);
+
+        expect(exported.couple).toBeNull();
+
         expect(exported.data).toBeUndefined();
+
+      });
+    });
+  });
+
+  test('falls back for syntactically valid unsupported locale', async ({ request }) => {
+    await test.step('Flow: falls back for syntactically valid unsupported locale', async () => {
+      let user!: AuthPayload;
+
+      await test.step('Arrange: create authenticated user', async () => {
+        user = await registerByApi(request, testUser('api-export-locale-fallback', testRunId()));
+      });
+
+      let exported!: ExportPayload;
+      await test.step('Act: export with unsupported but valid locale', async () => {
+        exported = await expectJson<ExportPayload>(await apiGetRaw(request, '/api/me/export?lang=fr', user.token));
+      });
+
+      await test.step('Assert: export falls back to supported locale', async () => {
+
+        expectExportPayload(exported);
+
+        expect(exported.locale).not.toBe('fr');
+
+        expect(exported.locale).toEqual(expect.any(String));
+
+      });
+    });
+  });
+
+  test('rejects missing auth and invalid auth token', async ({ request }) => {
+    await test.step('Flow: rejects missing auth and invalid auth token', async () => {
+      await test.step('Assert: rejects missing auth token', async () => {
+        await expectApiError(await apiGetRaw(request, '/api/me/export'), 401, 'auth.missingToken');
+      });
+
+      await test.step('Assert: rejects invalid auth token', async () => {
+
+        await expectApiError(await apiGetRaw(request, '/api/me/export', 'invalid-token'), 401, 'auth.invalidToken');
+
+      });
+    });
+  });
+
+  test('rejects invalid export query parameters', async ({ request }) => {
+    await test.step('Flow: rejects invalid export query parameters', async () => {
+      let token = '';
+
+      await test.step('Arrange: create authenticated user', async () => {
+        const user = await registerByApi(request, testUser('api-export-query-validation', testRunId()));
+        token = user.token;
+      });
+
+      await test.step('Assert: rejects unexpected query parameters', async () => {
+
+        await expectApiError(await apiGetRaw(request, '/api/me/export?unexpected=true', token), 400, 'common.validation');
+
+      });
+
+      await test.step('Assert: rejects malformed locale parameter', async () => {
+
+        await expectApiError(await apiGetRaw(request, '/api/me/export?lang=de-DE-extra', token), 400, 'common.validation');
+
+      });
+
+      await test.step('Assert: rejects duplicate locale parameters', async () => {
+
+        await expectApiError(await apiGetRaw(request, '/api/me/export?lang=en&lang=de', token), 400, 'common.validation');
+
+      });
+
+      await test.step('Assert: rejects empty locale parameter', async () => {
+
+        await expectApiError(await apiGetRaw(request, '/api/me/export?lang=', token), 400, 'common.validation');
+
       });
     });
   });

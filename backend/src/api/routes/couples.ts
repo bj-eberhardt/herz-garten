@@ -2,10 +2,11 @@ import type { Router } from 'express';
 import { currentUser, requireAuth } from '../../auth.js';
 import { handleError, sendApiError } from '../../errors.js';
 import { sendJson } from '../../http.js';
-import { validateBody } from '../../validation.js';
+import { validateBody, validateQuery } from '../../validation.js';
 import {
   createCoupleBodySchema,
   emptyBodySchema,
+  emptyQuerySchema,
   joinCoupleBodySchema,
   type CreateCoupleBody,
   type JoinCoupleBody,
@@ -19,7 +20,7 @@ type CouplePayload = { couple: CreateCoupleResult['couple'] | JoinCoupleResult['
 type LeaveCouplePayload = { user: NonNullable<Awaited<ReturnType<typeof leaveCoupleForUser>>>['user']; couple: null };
 
 export function registerCoupleRoutes(router: Router) {
-  router.post('/couples', requireAuth, validateBody(createCoupleBodySchema), async (request, response) => {
+  router.post('/couples', requireAuth, validateQuery(emptyQuerySchema, 'rejected'), validateBody(createCoupleBodySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
     const body = request.body as CreateCoupleBody;
     const relationshipType = normalizeText(body.relationshipType) || 'mixed';
@@ -32,7 +33,7 @@ export function registerCoupleRoutes(router: Router) {
         return;
       }
       if (result.status === 'invalidPreferences') {
-        sendApiError(response, 400, 'common.validation');
+        sendApiError(response, 400, 'rejected');
         return;
       }
 
@@ -42,13 +43,13 @@ export function registerCoupleRoutes(router: Router) {
     }
   });
 
-  router.post('/couples/join', requireAuth, validateBody(joinCoupleBodySchema), async (request, response) => {
+  router.post('/couples/join', requireAuth, validateQuery(emptyQuerySchema, 'rejected'), validateBody(joinCoupleBodySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
     const body = request.body as JoinCoupleBody;
     const code = normalizeText(body.inviteCode).toLowerCase();
 
     if (!code) {
-      sendApiError(response, 400, 'couple.inviteCodeRequired');
+      sendApiError(response, 400, 'rejected');
       return;
     }
 
@@ -73,7 +74,7 @@ export function registerCoupleRoutes(router: Router) {
     }
   });
 
-  router.post('/couples/leave', requireAuth, validateBody(emptyBodySchema), async (request, response) => {
+  router.post('/couples/leave', requireAuth, validateQuery(emptyQuerySchema, 'rejected'), validateBody(emptyBodySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
 
     try {

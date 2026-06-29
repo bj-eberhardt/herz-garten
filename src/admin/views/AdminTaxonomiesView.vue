@@ -59,10 +59,8 @@ function replaceForm(nextForm: PreferenceItem) {
 }
 
 function preferencePayload() {
-  const defaultTranslation = defaultLocale.value ? form.translations[defaultLocale.value.locale] ?? {} : {};
   return {
     value: form.value,
-    label: defaultTranslation.label ?? form.label,
     active: form.active,
     sortOrder: form.sortOrder,
     translations: form.translations,

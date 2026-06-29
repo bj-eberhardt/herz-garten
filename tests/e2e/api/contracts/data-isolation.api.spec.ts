@@ -26,10 +26,8 @@ test.describe('api contracts / data isolation', () => {
         `/api/garden/objects/${foreignGardenObjectId}`,
         coupleB.partnerA.token,
       );
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: foreign garden object returns not found', async () => {
         expect(foreignGardenResponse.status()).toBe(404);
-      });
-      await test.step('Verify expected result', async () => {
         expect(await foreignGardenResponse.json()).toEqual(expect.objectContaining({ errorKey: 'garden.objectNotFound' }));
       });
 
@@ -49,15 +47,13 @@ test.describe('api contracts / data isolation', () => {
         { selectedOptionIndex: 0 },
         coupleB.partnerA.token,
       );
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: response status is 404', async () => {
         expect(foreignGuessResponse.status()).toBe(404);
-      });
-      await test.step('Verify expected result', async () => {
         expect(await foreignGuessResponse.json()).toEqual(expect.objectContaining({ errorKey: 'knowMe.questionNotFound' }));
       });
 
       const exportB = await apiGet<Record<string, unknown>>(request, '/api/me/export?lang=en', coupleB.partnerA.token);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: data export excludes other couple content', async () => {
         expect(JSON.stringify(exportB)).not.toContain('Isolation Secret');
       });
     });

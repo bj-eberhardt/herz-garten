@@ -5,7 +5,7 @@ import {
 } from './categories.repository.js';
 import type { ContentType } from '../contentTypes.js';
 
-export { categoryExists } from './categories.repository.js';
+export { categoryExists, defaultTranslationMissingMessage } from './categories.repository.js';
 
 export async function listCategories(type?: ContentType, locale = 'de') {
   return listCategoryRecords(type, locale);

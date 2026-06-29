@@ -15,7 +15,7 @@ test.describe('complete user flow / incomplete couple onboarding', () => {
       await test.step('Open /settings', async () => {
         await page.goto('/settings');
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user reaches settings page', async () => {
         await expect(page).toHaveURL(/\/settings$/);
       });
       await test.step('Verify settings profile panel', async () => {

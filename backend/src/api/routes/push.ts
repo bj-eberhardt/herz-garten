@@ -3,8 +3,10 @@ import { currentUser, requireAuth } from '../../auth.js';
 import { config } from '../../config.js';
 import { handleError, sendApiError } from '../../errors.js';
 import { sendJson } from '../../http.js';
-import { validateBody } from '../../validation.js';
+import { validateBody, validateQuery } from '../../validation.js';
 import {
+  emptyBodySchema,
+  emptyQuerySchema,
   pushSubscriptionBodySchema,
   pushUnsubscribeBodySchema,
   type PushSubscriptionBody,
@@ -25,11 +27,11 @@ type PushUnsubscribePayload = Awaited<ReturnType<typeof removePushSubscriptions>
 type PushTestPayload = { ok: true };
 
 export function registerPushRoutes(router: Router) {
-  router.get('/push/vapid-public-key', (_request, response) => {
+  router.get('/push/vapid-public-key', validateQuery(emptyQuerySchema, 'rejected'), (_request, response) => {
     sendJson<PushAvailabilityPayload>(response, pushAvailability());
   });
 
-  router.get('/push/subscriptions/me', requireAuth, async (request, response) => {
+  router.get('/push/subscriptions/me', requireAuth, validateQuery(emptyQuerySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
 
     try {
@@ -39,7 +41,7 @@ export function registerPushRoutes(router: Router) {
     }
   });
 
-  router.post('/push/subscriptions', requireAuth, validateBody(pushSubscriptionBodySchema), async (request, response) => {
+  router.post('/push/subscriptions', requireAuth, validateQuery(emptyQuerySchema, 'rejected'), validateBody(pushSubscriptionBodySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
     const body = request.body as PushSubscriptionBody;
 
@@ -53,7 +55,7 @@ export function registerPushRoutes(router: Router) {
     }
   });
 
-  router.delete('/push/subscriptions', requireAuth, validateBody(pushUnsubscribeBodySchema), async (request, response) => {
+  router.delete('/push/subscriptions', requireAuth, validateQuery(emptyQuerySchema, 'rejected'), validateBody(pushUnsubscribeBodySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
     const body = request.body as PushUnsubscribeBody;
 
@@ -64,7 +66,7 @@ export function registerPushRoutes(router: Router) {
     }
   });
 
-  router.post('/push/test', requireAuth, async (request, response) => {
+  router.post('/push/test', requireAuth, validateQuery(emptyQuerySchema, 'rejected'), validateBody(emptyBodySchema, 'rejected'), async (request, response) => {
     if (config.nodeEnv === 'production') {
       sendApiError(response, 404, 'common.unexpected');
       return;

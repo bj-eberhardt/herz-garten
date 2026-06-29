@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const emptyBodySchema = z.object({}).strict();
+export const emptyQuerySchema = z.object({}).strict();
 
 export const configResponseSchema = z.object({
   defaultLocale: z.string(),
@@ -24,6 +25,10 @@ const trimmedNullableString = z
   .transform((value) => value.trim())
   .nullable();
 const optionalQueryString = z.string().optional();
+const localeQueryString = z
+  .string()
+  .trim()
+  .regex(/^[a-z]{2}(?:-[A-Z]{2})?$/);
 
 export const authRegisterBodySchema = z
   .object({
@@ -87,7 +92,7 @@ export type ProfileBody = z.infer<typeof profileBodySchema>;
 
 export const passwordBodySchema = z
   .object({
-    currentPassword: trimmedString,
+    currentPassword: trimmedString.pipe(z.string().min(1)),
     newPassword: trimmedString.pipe(z.string().min(8)),
   })
   .strict();
@@ -186,6 +191,20 @@ export const pushUnsubscribeBodySchema = z
   .strict();
 export type PushUnsubscribeBody = z.infer<typeof pushUnsubscribeBodySchema>;
 
+export const accountExportQuerySchema = z
+  .object({
+    lang: localeQueryString.optional(),
+  })
+  .strict();
+export type AccountExportQuery = z.infer<typeof accountExportQuerySchema>;
+
+export const localizedQuerySchema = z
+  .object({
+    lang: localeQueryString.optional(),
+  })
+  .strict();
+export type LocalizedQuery = z.infer<typeof localizedQuerySchema>;
+
 export const questQuerySchema = z
   .object({
     category: optionalQueryString,
@@ -196,7 +215,8 @@ export const questQuerySchema = z
       .refine((value) => Number(value) > 0)
       .optional(),
     mode: z.enum(['all', 'solo', 'together', 'long_distance']).optional(),
-    lang: optionalQueryString,
+    lang: localeQueryString.optional(),
   })
   .strict();
 export type QuestQuery = z.infer<typeof questQuerySchema>;
+

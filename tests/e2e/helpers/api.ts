@@ -83,9 +83,11 @@ export async function apiDeleteRaw(
   path: string,
   token?: string,
   headers: Record<string, string> = {},
+  body?: unknown,
 ) {
   return request.delete(`${apiBaseURL}${path}`, {
     headers: authHeaders(token, headers),
+    ...(body === undefined ? {} : { data: body }),
   });
 }
 

@@ -2,10 +2,12 @@ import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:5174';
 const workers = process.env.E2E_WORKERS ? Number(process.env.E2E_WORKERS) : 5;
+const uiTestTimeoutMs = 45_000;
 
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
+  timeout: uiTestTimeoutMs,
   workers,
   globalSetup: './tests/e2e/globalSetup.ts',
   globalTeardown: './tests/e2e/globalTeardown.ts',

@@ -2,9 +2,9 @@ import type { Router } from 'express';
 import { currentUser, requireAuth } from '../../auth.js';
 import { handleError, sendApiError } from '../../errors.js';
 import { sendJson } from '../../http.js';
-import { validateBody } from '../../validation.js';
+import { validateBody, validateQuery } from '../../validation.js';
 import { requireCurrentCoupleForUser } from '../shared/currentCouple.js';
-import { gardenPlacementBodySchema, type GardenPlacementBody } from '../bodySchemas.js';
+import { emptyQuerySchema, gardenPlacementBodySchema, localizedQuerySchema, type GardenPlacementBody } from '../bodySchemas.js';
 import { resolveLocale } from '../support.repository.js';
 import {
   buildGardenPayload,
@@ -20,7 +20,7 @@ type GardenPlacementPayload = NonNullable<Awaited<ReturnType<typeof placeGardenO
 type GardenObjectDetailPayload = NonNullable<Awaited<ReturnType<typeof getGardenObjectDetail>>>;
 
 export function registerGardenRoutes(router: Router) {
-  router.get('/garden', requireAuth, async (request, response) => {
+  router.get('/garden', requireAuth, validateQuery(localizedQuerySchema), async (request, response) => {
     const user = currentUser(request);
     const couple = await requireCurrentCoupleForUser(response, user.id);
     if (!couple) {
@@ -35,7 +35,7 @@ export function registerGardenRoutes(router: Router) {
     }
   });
 
-  router.patch('/garden/objects/:objectId/placement', requireAuth, validateBody(gardenPlacementBodySchema), async (request, response) => {
+  router.patch('/garden/objects/:objectId/placement', requireAuth, validateQuery(emptyQuerySchema), validateBody(gardenPlacementBodySchema), async (request, response) => {
     const user = currentUser(request);
     const objectId = String(request.params.objectId);
     if (!gardenObjectIdPattern.test(objectId)) {
@@ -68,7 +68,7 @@ export function registerGardenRoutes(router: Router) {
     }
   });
 
-  router.get('/garden/objects/:objectId', requireAuth, async (request, response) => {
+  router.get('/garden/objects/:objectId', requireAuth, validateQuery(localizedQuerySchema), async (request, response) => {
     const user = currentUser(request);
     const objectId = String(request.params.objectId);
     if (!gardenObjectIdPattern.test(objectId)) {
@@ -93,5 +93,4 @@ export function registerGardenRoutes(router: Router) {
     }
   });
 }
-
 

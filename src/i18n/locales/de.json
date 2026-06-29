@@ -846,7 +846,7 @@
         "title": "Bitte gib einen Titel ein.",
         "description": "Bitte gib eine Beschreibung ein.",
         "estimatedMinutes": "Minuten müssen größer als 0 sein.",
-        "rewardPoints": "Punkte dürfen nicht negativ sein.",
+        "rewardPoints": "Punkte müssen größer als 0 sein.",
         "questionText": "Bitte gib die Frage ein.",
         "templateText": "Bitte gib den Vorlagentext ein.",
         "save": "{type} konnte nicht gespeichert werden. Prüfe Pflichtfelder und Kategorie."

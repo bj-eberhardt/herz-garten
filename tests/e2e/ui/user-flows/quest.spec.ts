@@ -74,7 +74,7 @@ test.describe('user flow / quest', () => {
         await expect(pageA.getByTestId('quest-card').first()).toBeVisible();
       });
       const initialCount = await pageA.getByTestId('quest-card').count();
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: quest list has multiple cards', async () => {
         expect(initialCount).toBeGreaterThan(3);
       });
 
@@ -86,7 +86,7 @@ test.describe('user flow / quest', () => {
       });
       await expect.poll(() => pageA.getByTestId('quest-card').count()).toBeLessThan(initialCount);
       const filteredCount = await pageA.getByTestId('quest-card').count();
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: quest list has multiple cards', async () => {
         expect(filteredCount).toBeLessThan(initialCount);
       });
       await test.step('Verify quest card', async () => {

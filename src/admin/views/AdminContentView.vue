@@ -146,7 +146,6 @@ function ensureTranslations() {
 
 function resetForm(open = false) {
   replaceForm(emptyForm());
-  form.category = currentCategories.value[0]?.value ?? '';
   ensureTranslations();
   errors.value = {};
   showForm.value = open;
@@ -177,7 +176,7 @@ function validateForm() {
     if (!defaultTranslation.title?.trim()) nextErrors.title = t('admin.content.errors.title');
     if (!defaultTranslation.description?.trim()) nextErrors.description = t('admin.content.errors.description');
     if (!form.estimatedMinutes || form.estimatedMinutes < 1) nextErrors.estimatedMinutes = t('admin.content.errors.estimatedMinutes');
-    if (!form.rewardPoints || form.rewardPoints < 0) nextErrors.rewardPoints = t('admin.content.errors.rewardPoints');
+    if (!form.rewardPoints || form.rewardPoints <= 0) nextErrors.rewardPoints = t('admin.content.errors.rewardPoints');
   }
   if (selectedType.value === 'know-me-catalog' && !defaultTranslation.questionText?.trim()) {
     nextErrors.questionText = t('admin.content.errors.questionText');
@@ -321,7 +320,7 @@ onMounted(async () => {
           <label>{{ t('admin.content.defaultTitle') }}<input v-model="form.translations[defaultLocale.locale].title" data-testid="admin-content-title" /><small v-if="errors.title" class="admin-field-error" data-testid="admin-content-title-error">{{ errors.title }}</small></label>
           <label>{{ t('admin.content.defaultDescription') }}<textarea v-model="form.translations[defaultLocale.locale].description" rows="3" data-testid="admin-content-description" /><small v-if="errors.description" class="admin-field-error" data-testid="admin-content-description-error">{{ errors.description }}</small></label>
         </fieldset>
-        <label>{{ t('admin.content.minutes') }}<input v-model.number="form.estimatedMinutes" min="1" type="number" data-testid="admin-content-minutes" /><small v-if="errors.estimatedMinutes" class="admin-field-error">{{ errors.estimatedMinutes }}</small></label>
+        <label>{{ t('admin.content.minutes') }}<input v-model.number="form.estimatedMinutes" min="1" type="number" data-testid="admin-content-minutes" /><small v-if="errors.estimatedMinutes" class="admin-field-error" data-testid="admin-content-minutes-error">{{ errors.estimatedMinutes }}</small></label>
         <label>
           {{ t('admin.content.effort') }}
           <select v-model="form.effortLevel" data-testid="admin-content-effort">
@@ -330,7 +329,7 @@ onMounted(async () => {
             <option value="high">{{ t('admin.content.effortHigh') }}</option>
           </select>
         </label>
-        <label>{{ t('admin.common.points') }}<input v-model.number="form.rewardPoints" min="0" type="number" data-testid="admin-content-reward-points" /><small v-if="errors.rewardPoints" class="admin-field-error">{{ errors.rewardPoints }}</small></label>
+        <label>{{ t('admin.common.points') }}<input v-model.number="form.rewardPoints" min="1" type="number" data-testid="admin-content-reward-points" /><small v-if="errors.rewardPoints" class="admin-field-error" data-testid="admin-content-reward-points-error">{{ errors.rewardPoints }}</small></label>
         <label>{{ t('admin.content.seed') }}<input v-model="form.rewardSeedType" data-testid="admin-content-seed" /></label>
         <label class="admin-checkbox"><input v-model="form.requiresBothPartners" type="checkbox" data-testid="admin-content-requires-both" /> {{ t('admin.content.requiresBothPartners') }}</label>
       </template>

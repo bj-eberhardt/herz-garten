@@ -4,6 +4,7 @@ const apiErrorKeys = [
   'common.unexpected',
   'common.validation',
   'common.rateLimited',
+  'rejected',
   'auth.missingToken',
   'auth.invalidToken',
   'auth.invalidCredentials',

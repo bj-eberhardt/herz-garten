@@ -2,10 +2,11 @@ import type { Router } from 'express';
 import { currentUser, requireAuth } from '../../auth.js';
 import { handleError, sendApiError } from '../../errors.js';
 import { sendJson } from '../../http.js';
-import { validateBody } from '../../validation.js';
+import { validateBody, validateQuery } from '../../validation.js';
 import {
   knowMeCreateBodySchema,
   knowMeGuessBodySchema,
+  localizedQuerySchema,
   type KnowMeCreateBody,
   type KnowMeGuessBody,
 } from '../bodySchemas.js';
@@ -17,7 +18,7 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 type KnowMePayload = NonNullable<Awaited<ReturnType<typeof buildKnowMePayload>>>;
 
 export function registerKnowMeRoutes(router: Router) {
-  router.get('/know-me', requireAuth, async (request, response) => {
+  router.get('/know-me', requireAuth, validateQuery(localizedQuerySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
 
     try {
@@ -32,7 +33,7 @@ export function registerKnowMeRoutes(router: Router) {
     }
   });
 
-  router.post('/know-me', requireAuth, validateBody(knowMeCreateBodySchema), async (request, response) => {
+  router.post('/know-me', requireAuth, validateQuery(localizedQuerySchema, 'rejected'), validateBody(knowMeCreateBodySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
     const body = request.body as KnowMeCreateBody;
     const freeQuestionText = normalizeText(body.questionText);
@@ -43,17 +44,17 @@ export function registerKnowMeRoutes(router: Router) {
     const correctOptionIndex = Number(body.correctOptionIndex);
 
     if (catalogQuestionId && !uuidPattern.test(catalogQuestionId)) {
-      sendApiError(response, 400, 'knowMe.invalidCatalogQuestionId');
+      sendApiError(response, 400, 'rejected');
       return;
     }
 
     if ((!catalogQuestionId && !freeQuestionText) || options.length < 2 || options.length > 4) {
-      sendApiError(response, 400, 'knowMe.questionInvalid');
+      sendApiError(response, 400, 'rejected');
       return;
     }
 
     if (!Number.isInteger(correctOptionIndex) || correctOptionIndex < 0 || correctOptionIndex >= options.length) {
-      sendApiError(response, 400, 'knowMe.correctOptionInvalid');
+      sendApiError(response, 400, 'rejected');
       return;
     }
 
@@ -68,7 +69,7 @@ export function registerKnowMeRoutes(router: Router) {
         return;
       }
       if (result.status === 'catalogNotFound') {
-        sendApiError(response, 400, 'knowMe.catalogQuestionNotFound');
+        sendApiError(response, 400, 'rejected');
         return;
       }
       if (result.status === 'catalogAlreadyUsed') {
@@ -87,13 +88,13 @@ export function registerKnowMeRoutes(router: Router) {
     }
   });
 
-  router.post('/know-me/:questionId/guess', requireAuth, validateBody(knowMeGuessBodySchema), async (request, response) => {
+  router.post('/know-me/:questionId/guess', requireAuth, validateQuery(localizedQuerySchema, 'rejected'), validateBody(knowMeGuessBodySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
     const body = request.body as KnowMeGuessBody;
     const selectedOptionIndex = Number(body.selectedOptionIndex);
 
     if (!Number.isInteger(selectedOptionIndex) || selectedOptionIndex < 0 || selectedOptionIndex > 3) {
-      sendApiError(response, 400, 'knowMe.selectedOptionInvalid');
+      sendApiError(response, 400, 'rejected');
       return;
     }
 
@@ -121,7 +122,7 @@ export function registerKnowMeRoutes(router: Router) {
         return;
       }
       if (result.status === 'optionDoesNotExist') {
-        sendApiError(response, 400, 'knowMe.optionDoesNotExist');
+        sendApiError(response, 400, 'rejected');
         return;
       }
 

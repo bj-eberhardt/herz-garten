@@ -30,15 +30,10 @@ function defaultLocale() {
   return config.i18nDefaultLocale;
 }
 
+export const defaultTranslationMissingMessage = 'default translation missing';
+
 function categoryTranslations(body: Record<string, unknown>) {
-  const translations = translationsFromBody(body.translations);
-  const locale = defaultLocale();
-  translations[locale] ??= {};
-  const label = normalizeText(body.label);
-  if (label && !normalizeText(translations[locale].label)) {
-    translations[locale].label = label;
-  }
-  return translations;
+  return translationsFromBody(body.translations);
 }
 
 function stringArrayFromBody(value: unknown) {
@@ -116,7 +111,10 @@ export async function saveCategory(body: Record<string, unknown>, id: string = r
   const label = normalizeText(translations[defaultLocale()]?.label);
   const relationshipModes = stringArrayFromBody(body.relationshipModes);
   const contentStyles = stringArrayFromBody(body.contentStyles);
-  if (!isContentType(contentType) || !/^[a-z0-9_-]+$/.test(value) || !label) {
+  if (!label) {
+    throw new Error(defaultTranslationMissingMessage);
+  }
+  if (!isContentType(contentType) || !/^[a-z0-9_-]+$/.test(value)) {
     throw new Error('invalid category');
   }
   if (!(await validatePreferenceValues('relationshipModes', relationshipModes))) {
@@ -157,6 +155,10 @@ export async function saveCategory(body: Record<string, unknown>, id: string = r
 }
 
 export async function deleteCategory(id: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    return { deleted: false, reason: 'not_found' };
+  }
+
   const categoryResult = await pool.query('select content_type as "contentType", value from content_categories where id = $1', [
     id,
   ]);

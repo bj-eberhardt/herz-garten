@@ -1,1 +1,0 @@
-drop index if exists one_daily_question_instance_per_couple;

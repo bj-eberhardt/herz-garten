@@ -41,7 +41,7 @@ test.describe('admin ui / taxonomies', () => {
       await test.step('Click admin category tab daily questions', async () => {
         await page.getByTestId('admin-category-tab-daily-questions').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: used category delete action is disabled', async () => {
         await expect(page.locator('[data-testid^="admin-category-delete-"]').first()).toBeDisabled();
       });
       await test.step('Click admin category new', async () => {
@@ -84,14 +84,14 @@ test.describe('admin ui / taxonomies', () => {
         await page.getByTestId('admin-category-save').click();
       });
       const editedCategoryRow = await tableRowByText(page, 'admin-category-row-', `${categoryLabel} bearbeitet`);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: rendered content includes inaktiv', async () => {
         await expect(editedCategoryRow).toContainText('inaktiv');
       });
       const editedCategoryRowId = await rowSpecificTestId(editedCategoryRow);
       await test.step('Click UI control', async () => {
         await page.getByTestId(editedCategoryRowId.replace('admin-category-row-', 'admin-category-delete-')).click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: deleted category row is removed', async () => {
         await expect(page.getByTestId(editedCategoryRowId)).toHaveCount(0);
       });
     });

@@ -4,10 +4,11 @@ import { config } from '../../config.js';
 import { handleError, sendApiError } from '../../errors.js';
 import { sendJson } from '../../http.js';
 import { createRateLimiter } from '../../security/rateLimit.js';
-import { validateBody } from '../../validation.js';
+import { validateBody, validateQuery } from '../../validation.js';
 import {
   authLoginBodySchema,
   authRegisterBodySchema,
+  emptyQuerySchema,
   forgotPasswordBodySchema,
   resetPasswordBodySchema,
   type AuthLoginBody,
@@ -29,7 +30,7 @@ type AuthUser = Awaited<ReturnType<typeof registerUser>>;
 type AuthPayload = { token: string; user: AuthUser };
 
 export function registerAuthRoutes(router: Router) {
-  router.post('/auth/register', authRateLimit, validateBody(authRegisterBodySchema), async (request, response) => {
+  router.post('/auth/register', authRateLimit, validateQuery(emptyQuerySchema), validateBody(authRegisterBodySchema), async (request, response) => {
     const body = request.body as AuthRegisterBody;
     const email = normalizeEmail(body.email);
     const displayName = normalizeText(body.displayName);
@@ -52,7 +53,7 @@ export function registerAuthRoutes(router: Router) {
     }
   });
 
-  router.post('/auth/login', authRateLimit, validateBody(authLoginBodySchema), async (request, response) => {
+  router.post('/auth/login', authRateLimit, validateQuery(emptyQuerySchema), validateBody(authLoginBodySchema), async (request, response) => {
     const body = request.body as AuthLoginBody;
     const email = normalizeEmail(body.email);
     const password = normalizeText(body.password);
@@ -75,7 +76,7 @@ export function registerAuthRoutes(router: Router) {
     }
   });
 
-  router.post('/auth/forgot-password', authRateLimit, validateBody(forgotPasswordBodySchema), async (request, response) => {
+  router.post('/auth/forgot-password', authRateLimit, validateQuery(emptyQuerySchema, 'rejected'), validateBody(forgotPasswordBodySchema, 'rejected'), async (request, response) => {
     const body = request.body as ForgotPasswordBody;
     const email = normalizeEmail(body.email);
 
@@ -92,7 +93,7 @@ export function registerAuthRoutes(router: Router) {
     }
   });
 
-  router.post('/auth/reset-password', authRateLimit, validateBody(resetPasswordBodySchema), async (request, response) => {
+  router.post('/auth/reset-password', authRateLimit, validateQuery(emptyQuerySchema, 'rejected'), validateBody(resetPasswordBodySchema, 'rejected'), async (request, response) => {
     const body = request.body as ResetPasswordBody;
 
     try {
@@ -108,3 +109,5 @@ export function registerAuthRoutes(router: Router) {
     }
   });
 }
+
+

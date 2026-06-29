@@ -35,6 +35,10 @@ test.describe('admin ui / settings', () => {
         await page.getByTestId('admin-settings-public-base-url').fill('not-a-url');
         await page.getByTestId('admin-settings-save').click();
         await expect(page.getByTestId('admin-settings-error')).toBeVisible();
+
+        await page.getByTestId('admin-settings-public-base-url').fill('ftp://localhost/reset');
+        await page.getByTestId('admin-settings-save').click();
+        await expect(page.getByTestId('admin-settings-error')).toBeVisible();
         await page.getByTestId('admin-settings-public-base-url').fill('http://localhost:5174');
 
         await page.getByTestId('admin-settings-reset-ttl').fill('1');

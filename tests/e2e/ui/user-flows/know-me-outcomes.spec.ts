@@ -67,16 +67,16 @@ test.describe('user flow / know me outcomes', () => {
         partnerA.token,
       );
       const ownQuestion = payload.rounds.find((round) => round.questionText === 'Was waere mein freier Abend?');
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: own know-me question is present', async () => {
         expect(ownQuestion).toBeTruthy();
       });
 
       const response = await apiPostRaw(request, `/api/know-me/${ownQuestion!.id}/guess`, { selectedOptionIndex: 0 }, partnerA.token);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: response status is 403', async () => {
         expect(response.status()).toBe(403);
       });
       const responsePayload = await response.json();
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: own know-me guess is rejected', async () => {
         expect(responsePayload).toEqual(
           expect.objectContaining({
             errorKey: 'knowMe.authorCannotGuessOwnQuestion',

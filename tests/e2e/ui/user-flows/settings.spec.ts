@@ -123,11 +123,11 @@ test.describe('user flow / settings', () => {
       });
 
       const meResponse = await apiGetRaw(request, '/api/me', partnerA.token);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: API response succeeds', async () => {
         expect(meResponse.ok()).toBeTruthy();
       });
       const mePayload = await meResponse.json();
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: profile changes are persisted', async () => {
         expect(mePayload.user).toEqual(expect.objectContaining({ displayName: 'Neuer Profilname', email: updatedEmail }));
       });
 
@@ -143,7 +143,7 @@ test.describe('user flow / settings', () => {
       await test.step('Open /today', async () => {
         await pageA.goto('/today');
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user is on onboarding page', async () => {
         await expect(pageA).toHaveURL(/\/onboarding$/);
       });
       await test.step('Click auth mode login', async () => {
@@ -158,7 +158,7 @@ test.describe('user flow / settings', () => {
       await test.step('Click auth submit', async () => {
         await pageA.getByTestId('auth-submit').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user reaches today page', async () => {
         await expect(pageA).toHaveURL(/\/today$/);
       });
       await test.step('Verify today card', async () => {
@@ -195,11 +195,11 @@ test.describe('user flow / settings', () => {
       });
 
       const meResponse = await apiGetRaw(request, '/api/me', partnerA.token);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: API response succeeds', async () => {
         expect(meResponse.ok()).toBeTruthy();
       });
       const mePayload = await meResponse.json();
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: push notification preference is persisted', async () => {
         expect(mePayload.user.preferences.pushNotificationMode).toBe('actions_only');
       });
 
@@ -234,11 +234,11 @@ test.describe('user flow / settings', () => {
         await pageA.goto('/settings');
       });
       const todayToggle = pageA.getByTestId('settings-feature-explainer-today');
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: feature explainer toggle starts disabled', async () => {
         await expect(todayToggle).not.toBeChecked();
       });
       await todayToggle.check();
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: feature explainer toggle is enabled', async () => {
         await expect(todayToggle).toBeChecked();
       });
       await test.step('Verify settings feature explainer today success', async () => {

@@ -2,16 +2,18 @@ import type { Router } from 'express';
 import { currentUser, requireAuth } from '../../auth.js';
 import { handleError, sendApiError } from '../../errors.js';
 import { sendJson } from '../../http.js';
-import { validateBody } from '../../validation.js';
-import { emptyBodySchema } from '../bodySchemas.js';
+import { validateBody, validateQuery } from '../../validation.js';
+import { emptyBodySchema, emptyQuerySchema } from '../bodySchemas.js';
 import { readAllNotifications, readNotification } from '../notifications/notifications.service.js';
 import { buildNotificationDetailPayload, buildNotificationPayload, resolveLocale } from '../support.repository.js';
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type NotificationsPayload = Awaited<ReturnType<typeof buildNotificationPayload>>;
 type NotificationDetailPayload = NonNullable<Awaited<ReturnType<typeof buildNotificationDetailPayload>>>;
 
 export function registerNotificationRoutes(router: Router) {
-  router.get('/notifications', requireAuth, async (request, response) => {
+  router.get('/notifications', requireAuth, validateQuery(emptyQuerySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
 
     try {
@@ -21,7 +23,7 @@ export function registerNotificationRoutes(router: Router) {
     }
   });
 
-  router.post('/notifications/read-all', requireAuth, validateBody(emptyBodySchema), async (request, response) => {
+  router.post('/notifications/read-all', requireAuth, validateQuery(emptyQuerySchema, 'rejected'), validateBody(emptyBodySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
 
     try {
@@ -31,12 +33,18 @@ export function registerNotificationRoutes(router: Router) {
     }
   });
 
-  router.get('/notifications/:notificationId/detail', requireAuth, async (request, response) => {
+  router.get('/notifications/:notificationId/detail', requireAuth, validateQuery(emptyQuerySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
 
     try {
+      const notificationId = String(request.params.notificationId);
+      if (!uuidPattern.test(notificationId)) {
+        sendApiError(response, 400, 'rejected');
+        return;
+      }
+
       const locale = await resolveLocale(request);
-      const payload = await buildNotificationDetailPayload(user.id, String(request.params.notificationId), locale);
+      const payload = await buildNotificationDetailPayload(user.id, notificationId, locale);
       if (!payload) {
         sendApiError(response, 404, 'notification.notFound');
         return;
@@ -48,11 +56,17 @@ export function registerNotificationRoutes(router: Router) {
     }
   });
 
-  router.post('/notifications/:notificationId/read', requireAuth, validateBody(emptyBodySchema), async (request, response) => {
+  router.post('/notifications/:notificationId/read', requireAuth, validateQuery(emptyQuerySchema, 'rejected'), validateBody(emptyBodySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
 
     try {
-      const payload = await readNotification(user.id, String(request.params.notificationId));
+      const notificationId = String(request.params.notificationId);
+      if (!uuidPattern.test(notificationId)) {
+        sendApiError(response, 400, 'rejected');
+        return;
+      }
+
+      const payload = await readNotification(user.id, notificationId);
       if (!payload) {
         sendApiError(response, 404, 'notification.notFound');
         return;

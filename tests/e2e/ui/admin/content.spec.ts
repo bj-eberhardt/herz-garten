@@ -42,4 +42,40 @@ test.describe('admin ui / content', () => {
       }
     });
   });
+  test('validates required categories and positive quest numbers', async ({ page }) => {
+    await test.step('Flow: validates required categories and positive quest numbers', async () => {
+      await adminLogin(page);
+      await openAdminNavPage(page, { navItem: 'content', url: /\/admin\/content$/, view: 'admin-content' });
+
+      await test.step('Reject daily question without category', async () => {
+        await page.getByTestId('admin-content-new').click();
+        await page.getByTestId('admin-content-text').fill(`UI validation daily ${testRunId()}`);
+        await page.getByTestId('admin-content-save').click();
+        await expect(page.getByTestId('admin-content-category-error')).toBeVisible();
+        await page.getByTestId('admin-content-form-close').click();
+      });
+
+      await test.step('Reject quest without category or positive numeric fields', async () => {
+        await page.getByTestId('admin-content-tab-quests').click();
+        await page.getByTestId('admin-content-new').click();
+        await page.getByTestId('admin-content-title').fill(`UI validation quest ${testRunId()}`);
+        await page.getByTestId('admin-content-description').fill('Beschreibung');
+        await page.getByTestId('admin-content-minutes').fill('0');
+        await page.getByTestId('admin-content-reward-points').fill('0');
+        await page.getByTestId('admin-content-save').click();
+        await expect(page.getByTestId('admin-content-category-error')).toBeVisible();
+        await expect(page.getByTestId('admin-content-minutes-error')).toBeVisible();
+        await expect(page.getByTestId('admin-content-reward-points-error')).toBeVisible();
+        await page.getByTestId('admin-content-form-close').click();
+      });
+
+      await test.step('Reject love-jar template without category', async () => {
+        await page.getByTestId('admin-content-tab-love-jar-templates').click();
+        await page.getByTestId('admin-content-new').click();
+        await page.getByTestId('admin-content-love-jar-text').fill(`UI validation love jar ${testRunId()}`);
+        await page.getByTestId('admin-content-save').click();
+        await expect(page.getByTestId('admin-content-category-error')).toBeVisible();
+      });
+    });
+  });
 });

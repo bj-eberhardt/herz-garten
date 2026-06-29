@@ -15,7 +15,9 @@ export interface MessageTemplateValidationError {
   errorCode:
     | 'admin.messageTemplate.defaultTranslationRequired'
     | 'admin.messageTemplate.defaultDescriptionRequired'
-    | 'admin.messageTemplate.placeholderMismatch';
+    | 'admin.messageTemplate.placeholderMalformed'
+    | 'admin.messageTemplate.placeholderMismatch'
+    | 'admin.messageTemplate.unsupportedLocale';
   params?: Record<string, unknown>;
 }
 
@@ -26,10 +28,16 @@ export class MessageTemplateValidationException extends Error {
 }
 
 const placeholderPattern = /\{(\w+)}/g;
+const placeholderLikePattern = /\{[^}]*}/g;
 const editableNamespaces = new Set(['notifications', 'push', 'email']);
 
 export function extractPlaceholders(text: string) {
   return [...new Set([...text.matchAll(placeholderPattern)].map((match) => match[1]))].sort();
+}
+
+function hasMalformedPlaceholders(text: string) {
+  const withoutClosedPlaceholders = text.replace(placeholderLikePattern, (match) => (/^\{\w+}$/.test(match) ? '' : '{'));
+  return withoutClosedPlaceholders.includes('{') || withoutClosedPlaceholders.includes('}');
 }
 
 function samePlaceholders(found: string[], required: string[]) {
@@ -56,6 +64,12 @@ export async function saveMessageTemplate(key: string, body: MessageTemplateSave
   const defaultLocale = config.i18nDefaultLocale;
   const normalizedTranslations: Array<{ locale: string; text: string; description: string }> = [];
 
+  for (const locale of Object.keys(translations)) {
+    if (!activeLocaleCodes.has(locale)) {
+      errors.push({ locale, errorCode: 'admin.messageTemplate.unsupportedLocale' });
+    }
+  }
+
   for (const locale of activeLocaleCodes) {
     const rawTranslation = translations[locale];
     const currentTranslation = currentTranslations[locale];
@@ -75,6 +89,11 @@ export async function saveMessageTemplate(key: string, body: MessageTemplateSave
     }
     if (!description && locale === defaultLocale) {
       errors.push({ locale, errorCode: 'admin.messageTemplate.defaultDescriptionRequired' });
+      continue;
+    }
+
+    if (hasMalformedPlaceholders(text)) {
+      errors.push({ locale, errorCode: 'admin.messageTemplate.placeholderMalformed' });
       continue;
     }
 

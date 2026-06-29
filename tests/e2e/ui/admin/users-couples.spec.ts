@@ -22,7 +22,7 @@ test.describe('admin ui / users couples', () => {
       await test.step('Click admin users search submit', async () => {
         await page.getByTestId('admin-users-search-submit').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: admin user search shows matching email', async () => {
         await expect(page.locator('.admin-table')).toContainText(userA.email);
       });
 
@@ -30,14 +30,14 @@ test.describe('admin ui / users couples', () => {
       await test.step('Click admin users export json', async () => {
         await page.getByTestId('admin-users-export-json').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: download filename is herzgarten-users.json', async () => {
         expect((await userJsonDownload).suggestedFilename()).toBe('herzgarten-users.json');
       });
       const userCsvDownload = page.waitForEvent('download');
       await test.step('Click admin users export csv', async () => {
         await page.getByTestId('admin-users-export-csv').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: download filename is herzgarten-users.csv', async () => {
         expect((await userCsvDownload).suggestedFilename()).toBe('herzgarten-users.csv');
       });
 
@@ -77,7 +77,7 @@ test.describe('admin ui / users couples', () => {
         await expect(page.getByTestId('admin-user-password-reset-success')).toContainText(userA.displayName);
       });
       const adminResetMail = await latestMailFor(request, userA.email);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: admin reset email has password subject', async () => {
         expect(adminResetMail.Subject).toMatch(/Herzgarten.*(Passwort|password)/i);
       });
 
@@ -93,14 +93,14 @@ test.describe('admin ui / users couples', () => {
       await test.step('Click admin couples export json', async () => {
         await page.getByTestId('admin-couples-export-json').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: download filename is herzgarten-couples.json', async () => {
         expect((await coupleJsonDownload).suggestedFilename()).toBe('herzgarten-couples.json');
       });
       const coupleCsvDownload = page.waitForEvent('download');
       await test.step('Click admin couples export csv', async () => {
         await page.getByTestId('admin-couples-export-csv').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: download filename is herzgarten-couples.csv', async () => {
         expect((await coupleCsvDownload).suggestedFilename()).toBe('herzgarten-couples.csv');
       });
 

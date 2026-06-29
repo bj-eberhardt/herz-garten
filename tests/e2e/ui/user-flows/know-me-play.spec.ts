@@ -38,7 +38,7 @@ test.describe('user flow / know me play', () => {
       await test.step('Click notification detail cta', async () => {
         await pageB.getByTestId('notification-detail-cta').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: notification opens know-me page', async () => {
         await expect(pageB).toHaveURL(/\/know-me$/);
       });
 
@@ -62,7 +62,7 @@ test.describe('user flow / know me play', () => {
 
       await openNotifications(pageA);
       const answeredNotification = pageA.getByTestId('notification-item').first();
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: rendered content includes Kennst-du-mich', async () => {
         await expect(answeredNotification).toContainText('Kennst-du-mich');
       });
       await test.step('Verify notification knowme inline', async () => {

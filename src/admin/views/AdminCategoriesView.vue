@@ -64,11 +64,9 @@ function replaceForm(nextForm: CategoryItem) {
 }
 
 function categoryPayload() {
-  const defaultTranslation = defaultLocale.value ? form.translations[defaultLocale.value.locale] ?? {} : {};
   return {
     contentType: form.contentType,
     value: form.value,
-    label: defaultTranslation.label ?? form.label,
     active: form.active,
     sortOrder: form.sortOrder,
     relationshipModes: form.relationshipModes,
@@ -270,3 +268,4 @@ onMounted(async () => {
     </AdminTable>
   </section>
 </template>
+

@@ -2,8 +2,8 @@ import type { Router } from 'express';
 import { currentUser, requireAuth } from '../../auth.js';
 import { handleError, sendApiError } from '../../errors.js';
 import { sendJson } from '../../http.js';
-import { validateBody } from '../../validation.js';
-import { emptyBodySchema, loveJarNoteBodySchema, type LoveJarNoteBody } from '../bodySchemas.js';
+import { validateBody, validateQuery } from '../../validation.js';
+import { emptyBodySchema, localizedQuerySchema, loveJarNoteBodySchema, type LoveJarNoteBody } from '../bodySchemas.js';
 import { createLoveJarNoteForUser, drawLoveJarNoteForUser } from '../love-jar/love-jar.service.js';
 import { buildLoveJarPayload, buildLoveJarTemplatePayload, normalizeText, resolveLocale } from '../support.repository.js';
 
@@ -11,7 +11,7 @@ type LoveJarTemplatesPayload = Awaited<ReturnType<typeof buildLoveJarTemplatePay
 type LoveJarPayload = NonNullable<Awaited<ReturnType<typeof buildLoveJarPayload>>>;
 
 export function registerLoveJarRoutes(router: Router) {
-  router.get('/love-jar/templates', requireAuth, async (request, response) => {
+  router.get('/love-jar/templates', requireAuth, validateQuery(localizedQuerySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
     try {
       sendJson<LoveJarTemplatesPayload>(response, await buildLoveJarTemplatePayload(user.id, await resolveLocale(request)));
@@ -20,7 +20,7 @@ export function registerLoveJarRoutes(router: Router) {
     }
   });
 
-  router.get('/love-jar', requireAuth, async (request, response) => {
+  router.get('/love-jar', requireAuth, validateQuery(localizedQuerySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
 
     try {
@@ -35,21 +35,21 @@ export function registerLoveJarRoutes(router: Router) {
     }
   });
 
-  router.post('/love-jar', requireAuth, validateBody(loveJarNoteBodySchema), async (request, response) => {
+  router.post('/love-jar', requireAuth, validateQuery(localizedQuerySchema, 'rejected'), validateBody(loveJarNoteBodySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
     const body = request.body as LoveJarNoteBody;
     const text = normalizeText(body.text);
     const category = normalizeText(body.category) || 'compliment';
 
     if (!text) {
-      sendApiError(response, 400, 'loveJar.noteRequired');
+      sendApiError(response, 400, 'rejected');
       return;
     }
 
     try {
       const result = await createLoveJarNoteForUser(user, { text, category }, await resolveLocale(request));
       if (result.status === 'invalidCategory') {
-        sendApiError(response, 400, 'loveJar.invalidCategory');
+        sendApiError(response, 400, 'rejected');
         return;
       }
       if (result.status === 'notConnected') {
@@ -68,7 +68,7 @@ export function registerLoveJarRoutes(router: Router) {
     }
   });
 
-  router.post('/love-jar/draw', requireAuth, validateBody(emptyBodySchema), async (request, response) => {
+  router.post('/love-jar/draw', requireAuth, validateQuery(localizedQuerySchema, 'rejected'), validateBody(emptyBodySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
 
     try {

@@ -22,22 +22,16 @@ test.describe('admin api / users', () => {
         '/api/admin/overview',
         token,
       );
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: admin overview counters and defaults are returned', async () => {
         expect(overview.userCount).toBeGreaterThan(0);
-      });
-      await test.step('Verify expected result', async () => {
         expect(overview.coupleCount).toBeGreaterThan(0);
-      });
-      await test.step('Verify expected result', async () => {
         expect(overview.usesDefaultAdminPassword).toBe(true);
       });
 
       const usersResponse = await apiGetRaw(request, `/api/admin/users?search=${encodeURIComponent(userA.email)}`, token);
       const usersPayload = await expectJson<{ items: unknown[]; }>(usersResponse);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user search hides private content', async () => {
         expect(JSON.stringify(usersPayload)).toContain(userA.email);
-      });
-      await test.step('Verify expected result', async () => {
         expect(JSON.stringify(usersPayload)).not.toContain('private answer text');
       });
 
@@ -47,22 +41,16 @@ test.describe('admin api / users', () => {
         token,
       );
       const injectedUsersPayload = await expectJson<{ items: unknown[]; total: number; }>(injectedUsersResponse);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: injected user search returns no matches', async () => {
         expect(injectedUsersPayload.items).toHaveLength(0);
-      });
-      await test.step('Verify expected result', async () => {
         expect(injectedUsersPayload.total).toBe(0);
       });
 
       const couplesResponse = await apiGetRaw(request, `/api/admin/couples?search=${setup.inviteCode}`, token);
       const couplesPayload = await expectJson<{ items: Array<{ id: string; inviteCode: string; members: unknown[]; }>; }>(couplesResponse);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: couple search returns members without private content', async () => {
         expect(couplesPayload.items[0]?.inviteCode).toBe(setup.inviteCode);
-      });
-      await test.step('Verify expected result', async () => {
         expect(couplesPayload.items[0]?.members).toHaveLength(2);
-      });
-      await test.step('Verify expected result', async () => {
         expect(JSON.stringify(couplesPayload)).not.toContain('private answer text');
       });
 
@@ -72,10 +60,8 @@ test.describe('admin api / users', () => {
         token,
       );
       const injectedCouplesPayload = await expectJson<{ items: unknown[]; total: number; }>(injectedCouplesResponse);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: result set is empty', async () => {
         expect(injectedCouplesPayload.items).toHaveLength(0);
-      });
-      await test.step('Verify expected result', async () => {
         expect(injectedCouplesPayload.total).toBe(0);
       });
 
@@ -84,21 +70,15 @@ test.describe('admin api / users', () => {
         `/api/admin/couples/${couplesPayload.items[0].id}`,
         token,
       );
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: couple detail includes activity and members', async () => {
         expect(detail.couple.dailyAnswerCount).toBeGreaterThanOrEqual(1);
-      });
-      await test.step('Verify expected result', async () => {
         expect(detail.couple.members).toHaveLength(2);
       });
 
       const csvResponse = await apiGetRaw(request, '/api/admin/users?format=csv', token);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: CSV export response is valid', async () => {
         expect(csvResponse.ok()).toBe(true);
-      });
-      await test.step('Verify expected result', async () => {
         expect(csvResponse.headers()['content-type']).toContain('text/csv');
-      });
-      await test.step('Verify expected result', async () => {
         expect(await csvResponse.text()).toContain('email');
       });
     });
@@ -124,7 +104,7 @@ test.describe('admin api / users', () => {
       const resetResponse = await expectJson<{ user: { id: string; email: string; displayName: string; }; }>(
         await apiPostRaw(request, `/api/admin/users/${registered.user.id}/password`, { password: nextPassword }, adminToken),
       );
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: admin password reset returns target user', async () => {
         expect(resetResponse.user).toEqual(
           expect.objectContaining({
             id: registered.user.id,
@@ -144,13 +124,13 @@ test.describe('admin api / users', () => {
       const loginPayload = await expectJson<AuthPayload>(
         await apiPostRaw(request, '/api/auth/login', { email: user.email, password: nextPassword }),
       );
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: reset password allows login as same user', async () => {
         expect(loginPayload.user.id).toBe(registered.user.id);
       });
 
       const notifications = await expectJson<NotificationsPayload>(await apiGetRaw(request, '/api/notifications', loginPayload.token));
       const notification = notifications.notifications.find((item) => String(item.type) === 'admin_password_reset');
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: admin reset notification has account metadata', async () => {
         expect(notification).toEqual(
           expect.objectContaining({
             coupleId: null,
@@ -161,40 +141,40 @@ test.describe('admin api / users', () => {
             readAt: null,
           }),
         );
-      });
-      await test.step('Verify expected result', async () => {
         expect(notification!.title).toContain('Passwort');
-      });
-      await test.step('Verify expected result', async () => {
         expect(notification!.body).toContain('Administrator');
       });
 
       const detail = await expectJson<NotificationDetailPayload>(
         await apiGetRaw(request, `/api/notifications/${notification!.id}/detail`, loginPayload.token),
       );
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: admin reset notification opens settings', async () => {
         expect(detail.targetPageId).toBe('settings');
-      });
-      await test.step('Verify expected result', async () => {
         expect(detail.gardenDetail).toBeNull();
       });
 
       const mail = await latestMailFor(request, user.email);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: admin reset email content omits new password', async () => {
         expect(mail.subject).toBe('Dein Herzgarten-Passwort wurde neu gesetzt');
-      });
-      await test.step('Verify expected result', async () => {
         expect(mail.text).toContain(`Hallo ${user.displayName}`);
-      });
-      await test.step('Verify expected result', async () => {
         expect(mail.text).toContain('dein Herzgarten-Passwort wurde durch einen Administrator neu gesetzt');
-      });
-      await test.step('Verify expected result', async () => {
         expect(mail.text).toContain('enthält diese E-Mail kein Passwort');
-      });
-      await test.step('Verify expected result', async () => {
         expect(mail.text).not.toContain(nextPassword);
       });
+    });
+  });
+  test('rejects invalid admin list query parameters', async ({ request }) => {
+    const token = await adminLogin(request);
+    const overlongSearch = 'x'.repeat(201);
+
+    await test.step('Reject invalid users list queries', async () => {
+      await expectApiError(await apiGetRaw(request, '/api/admin/users?limit=0', token), 400, 'common.validation');
+      await expectApiError(await apiGetRaw(request, '/api/admin/users?limit=101', token), 400, 'common.validation');
+      await expectApiError(await apiGetRaw(request, '/api/admin/users?limit=abc', token), 400, 'common.validation');
+      await expectApiError(await apiGetRaw(request, '/api/admin/users?offset=-1', token), 400, 'common.validation');
+      await expectApiError(await apiGetRaw(request, '/api/admin/users?format=xml', token), 400, 'common.validation');
+      await expectApiError(await apiGetRaw(request, `/api/admin/users?search=${overlongSearch}`, token), 400, 'common.validation');
+      await expectApiError(await apiGetRaw(request, '/api/admin/users?unexpected=true', token), 400, 'common.validation');
     });
   });
 });

@@ -11,7 +11,7 @@ test.describe('admin ui / garden management', () => {
       await test.step('Click admin nav garden', async () => {
         await openAdminNavPage(page, { navItem: 'garden', url: /\/admin\/garden$/, view: 'admin-garden' });
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: first garden level cannot be deleted', async () => {
         await expect(page.locator('[data-testid^="admin-garden-level-delete-"], [data-testid="admin-garden-level-delete"]').first()).toBeDisabled();
       });
       await test.step('Click admin garden level new', async () => {
@@ -70,7 +70,7 @@ test.describe('admin ui / garden management', () => {
       await test.step('Click admin garden level delete', async () => {
         await editedLevelRow.getByTestId('admin-garden-level-delete').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: deleted garden level row is removed', async () => {
         await expect(page.locator('.admin-table')).not.toContainText(editedLevelName);
       });
 
@@ -138,7 +138,7 @@ test.describe('admin ui / garden management', () => {
       await test.step('Click admin garden asset save', async () => {
         await page.getByTestId('admin-garden-asset-save').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: rendered content includes Inaktiv', async () => {
         await expect(await tableRowByText(page, 'admin-garden-asset-row-', `${assetLabel} bearbeitet`)).toContainText('Inaktiv');
       });
     });

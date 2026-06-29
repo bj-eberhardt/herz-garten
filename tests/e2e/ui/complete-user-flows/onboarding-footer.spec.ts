@@ -21,7 +21,7 @@ test.describe('complete user flow / onboarding footer', () => {
       const { partnerA } = await setupCoupleByApi(request, userA, userB);
 
       await authenticatePage(page.context(), page, partnerA.token);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user reaches today page', async () => {
         await expect(page).toHaveURL(/\/today$/);
       });
       await test.step('Verify app version', async () => {

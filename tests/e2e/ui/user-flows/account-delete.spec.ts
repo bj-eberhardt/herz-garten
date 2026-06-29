@@ -30,33 +30,33 @@ test.describe('user flow / account delete', () => {
       await test.step('Click settings confirm accept', async () => {
         await pageA.getByTestId('settings-confirm-accept').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user is on onboarding page', async () => {
         await expect(pageA).toHaveURL(/\/onboarding$/);
       });
       await test.step('Verify auth form', async () => {
         await expect(pageA.getByTestId('auth-form')).toBeVisible();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: auth token is removed from storage', async () => {
         await expect(pageA.evaluate(() => window.localStorage.getItem('herzgarten_token'))).resolves.toBeNull();
       });
 
       const loginResponse = await request.post(`${apiBaseURL}/api/auth/login`, {
         data: { email: userA.email, password: userA.password },
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: response status is 401', async () => {
         expect(loginResponse.status()).toBe(401);
       });
       const loginPayload = await loginResponse.json();
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: login is rejected with invalid credentials', async () => {
         expect(loginPayload).toEqual(expect.objectContaining({ errorKey: 'auth.invalidCredentials' }));
       });
 
       const partnerResponse = await apiGetRaw(request, '/api/me', partnerB.token);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: API response succeeds', async () => {
         expect(partnerResponse.ok()).toBeTruthy();
       });
       const partnerPayload = await partnerResponse.json();
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: partner is no longer connected to a couple', async () => {
         expect(partnerPayload.couple).toBeNull();
       });
 
@@ -75,7 +75,7 @@ test.describe('user flow / account delete', () => {
       await test.step('Click notification detail cta', async () => {
         await pageB.getByTestId('notification-detail-cta').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user is on onboarding page', async () => {
         await expect(pageB).toHaveURL(/\/onboarding$/);
       });
       await test.step('Verify join couple form', async () => {

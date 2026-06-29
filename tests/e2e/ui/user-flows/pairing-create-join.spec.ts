@@ -12,7 +12,7 @@ test.describe('user flow / pairing create join', () => {
       await test.step('Click create couple submit', async () => {
         await page.getByTestId('create-couple-submit').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user is on onboarding page', async () => {
         await expect(page).toHaveURL(/\/onboarding$/);
       });
       await test.step('Verify invite code modal', async () => {
@@ -26,7 +26,7 @@ test.describe('user flow / pairing create join', () => {
       });
 
       const inviteCode = (await page.getByTestId('invite-modal-code').innerText()).trim();
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: generated invite code has expected format', async () => {
         expect(inviteCode).toMatch(/^[a-z]+-[a-z]+-\d{4}$/);
       });
       await test.step('Click invite modal copy', async () => {
@@ -40,7 +40,7 @@ test.describe('user flow / pairing create join', () => {
       await test.step('Click invite modal confirm', async () => {
         await page.getByTestId('invite-modal-confirm').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user is on onboarding page', async () => {
         await expect(page).toHaveURL(/\/onboarding$/);
       });
       await test.step('Verify header couple link', async () => {
@@ -67,7 +67,7 @@ test.describe('user flow / pairing create join', () => {
       await test.step('Click nav brand', async () => {
         await page.getByTestId('nav-brand').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user is on onboarding page', async () => {
         await expect(page).toHaveURL(/\/onboarding$/);
       });
     });
@@ -94,8 +94,7 @@ test.describe('user flow / pairing create join', () => {
       await test.step('Click join couple submit', async () => {
         await partnerB.getByTestId('join-couple-submit').click();
       });
-
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user reaches today page', async () => {
         await expect(partnerB).toHaveURL(/\/today$/);
       });
       await test.step('Verify today card', async () => {
@@ -123,7 +122,7 @@ test.describe('user flow / pairing create join', () => {
         await page.goto('/notifications');
       });
       const joinedNotification = page.getByTestId('notification-item').filter({ hasText: 'Dein Partner ist da' });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: partner joined notification is visible', async () => {
         await expect(joinedNotification).toBeVisible();
       });
       await test.step('Click UI control', async () => {
@@ -136,7 +135,7 @@ test.describe('user flow / pairing create join', () => {
       await test.step('Open /today', async () => {
         await page.goto('/today');
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user reaches today page', async () => {
         await expect(page).toHaveURL(/\/today$/);
       });
       await test.step('Verify today card', async () => {
@@ -186,7 +185,7 @@ test.describe('user flow / pairing create join', () => {
       await test.step('Click join couple submit', async () => {
         await partnerB.getByTestId('join-couple-submit').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user reaches today page', async () => {
         await expect(partnerB).toHaveURL(/\/today$/);
       });
 

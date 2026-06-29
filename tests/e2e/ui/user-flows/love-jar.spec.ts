@@ -48,13 +48,9 @@ test.describe('user flow / love jar', () => {
         await pageB.getByTestId('love-jar-draw').click();
       });
       const drawnNote = pageB.getByTestId('love-jar-note').first();
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: drawn love jar note hides raw category', async () => {
         await expect(drawnNote).toContainText('Danke für deine Ruhe.');
-      });
-      await test.step('Verify expected result', async () => {
         await expect(drawnNote).toContainText('Kompliment');
-      });
-      await test.step('Verify expected result', async () => {
         await expect(drawnNote).not.toContainText('compliment');
       });
       await test.step('Verify love jar draw', async () => {
@@ -64,15 +60,15 @@ test.describe('user flow / love jar', () => {
         await expect(pageB.getByTestId('love-jar-draw-hint')).toContainText('heute schon');
       });
       const duplicateDraw = await apiPostRaw(request, '/api/love-jar/draw', {}, partnerB.token);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: response status is 409', async () => {
         expect(duplicateDraw.status()).toBe(409);
       });
       const duplicateDrawPayload = await duplicateDraw.json();
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: duplicate love jar draw is rejected', async () => {
         expect(duplicateDrawPayload).toEqual(
-          expect.objectContaining({
-            errorKey: 'loveJar.alreadyDrawnToday',
-          }),
+        expect.objectContaining({
+        errorKey: 'loveJar.alreadyDrawnToday',
+        }),
         );
       });
 

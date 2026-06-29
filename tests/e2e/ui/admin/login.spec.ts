@@ -10,10 +10,8 @@ test.describe('admin ui / login', () => {
       await test.step('Open /admin', async () => {
         await page.goto('/admin');
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: anonymous admin visit redirects to login', async () => {
         await expect(page).toHaveURL(/\/admin\/login$/);
-      });
-      await test.step('Verify expected result', async () => {
         await expect(page.locator('.bottom-nav')).toHaveCount(0);
       });
 
@@ -65,10 +63,8 @@ test.describe('admin ui / login', () => {
       await test.step('Click admin logout', async () => {
         await page.getByTestId('admin-logout').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: admin logout returns to login and clears token', async () => {
         await expect(page).toHaveURL(/\/admin\/login$/);
-      });
-      await test.step('Verify expected result', async () => {
         await expect(page.evaluate(() => window.localStorage.getItem('herzgarten_admin_token'))).resolves.toBeNull();
       });
     });

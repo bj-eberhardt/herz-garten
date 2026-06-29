@@ -30,7 +30,12 @@ function assertValidImage(file: Express.Multer.File) {
     throw new Error('unsupported image type');
   }
 
-  const dimensions = imageSize(file.buffer);
+  let dimensions: { width?: number; height?: number };
+  try {
+    dimensions = imageSize(file.buffer);
+  } catch {
+    throw new Error('invalid image');
+  }
   if (!dimensions.width || !dimensions.height) {
     throw new Error('invalid image');
   }

@@ -118,7 +118,10 @@ function validateForm() {
     fieldErrors.replyTo = t('admin.settings.errors.replyTo');
   }
   try {
-    new URL(serverForm.publicBaseUrl);
+    const publicBaseUrl = new URL(serverForm.publicBaseUrl);
+    if (!['http:', 'https:'].includes(publicBaseUrl.protocol)) {
+      fieldErrors.publicBaseUrl = t('admin.settings.errors.publicBaseUrl');
+    }
   } catch {
     fieldErrors.publicBaseUrl = t('admin.settings.errors.publicBaseUrl');
   }

@@ -141,16 +141,9 @@ test.describe('user flow / daily question', () => {
       const firstHistoryItem = pageA.getByTestId('garden-history-item').first();
 
       await firstHistoryItem.scrollIntoViewIfNeeded();
-
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: daily question reward appears in garden history', async () => {
         await expect(firstHistoryItem).toBeVisible();
-      });
-
-      await test.step('Verify expected result', async () => {
         await expect(firstHistoryItem).toContainText('Tagesfrage');
-      });
-
-      await test.step('Verify expected result', async () => {
         await expect(firstHistoryItem).toContainText('+10');
       });
 
@@ -161,8 +154,7 @@ test.describe('user flow / daily question', () => {
       await test.step('Verify garden history context', async () => {
         await expect(firstHistoryItem.getByTestId('garden-history-context')).toBeVisible();
       });
-
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: garden history hides technical reward key', async () => {
         await expect(firstHistoryItem).not.toContainText('conversation_flower');
       });
 

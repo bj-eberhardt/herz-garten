@@ -10,80 +10,65 @@ test.describe('api contracts / content i18n', () => {
       const userB = testUser('api-i18n-b', runId);
       const { partnerA } = await setupCoupleByApi(request, userA, userB);
 
-      const englishQuests = await apiGet<{ quests: Array<{ title: string; description: string; }>; locale: string; }>(
-        request,
-        '/api/quests?lang=en',
-        partnerA.token,
-      );
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: lang=en resolves English quests', async () => {
+        const englishQuests = await apiGet<{ quests: Array<{ title: string; description: string }>; locale: string }>(
+          request,
+          '/api/quests?lang=en',
+          partnerA.token,
+        );
         expect(englishQuests.locale).toBe('en');
-      });
-      await test.step('Verify expected result', async () => {
         expect(englishQuests.quests.some((quest) => quest.title === 'Three Compliments')).toBeTruthy();
       });
 
-      const germanQuests = await apiGet<{ quests: Array<{ title: string; }>; locale: string; }>(
-        request,
-        '/api/quests?lang=de',
-        partnerA.token,
-      );
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: lang=de resolves German quests', async () => {
+        const germanQuests = await apiGet<{ quests: Array<{ title: string }>; locale: string }>(
+          request,
+          '/api/quests?lang=de',
+          partnerA.token,
+        );
         expect(germanQuests.locale).toBe('de');
-      });
-      await test.step('Verify expected result', async () => {
         expect(germanQuests.quests.some((quest) => quest.title === 'Drei Komplimente')).toBeTruthy();
       });
 
-      const headerResponse = await apiGetRaw(request, '/api/quests', partnerA.token, { 'Accept-Language': 'en-US,en;q=0.8' });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: Accept-Language header resolves English quests', async () => {
+        const headerResponse = await apiGetRaw(request, '/api/quests', partnerA.token, { 'Accept-Language': 'en-US,en;q=0.8' });
+        const headerPayload = await headerResponse.json();
         expect(headerResponse.ok()).toBeTruthy();
-      });
-      const headerPayload = await headerResponse.json();
-      await test.step('Verify expected result', async () => {
         expect(headerPayload.locale).toBe('en');
-      });
-      await test.step('Verify expected result', async () => {
-        expect(headerPayload.quests.some((quest: { title: string; }) => quest.title === 'Three Compliments')).toBeTruthy();
+        expect(headerPayload.quests.some((quest: { title: string }) => quest.title === 'Three Compliments')).toBeTruthy();
       });
 
-      const overrideResponse = await apiGetRaw(request, '/api/quests?lang=de', partnerA.token, {
-        'Accept-Language': 'en',
-      });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: lang query overrides Accept-Language header', async () => {
+        const overrideResponse = await apiGetRaw(request, '/api/quests?lang=de', partnerA.token, {
+          'Accept-Language': 'en',
+        });
+        const overridePayload = await overrideResponse.json();
         expect(overrideResponse.ok()).toBeTruthy();
-      });
-      const overridePayload = await overrideResponse.json();
-      await test.step('Verify expected result', async () => {
         expect(overridePayload.locale).toBe('de');
-      });
-      await test.step('Verify expected result', async () => {
-        expect(overridePayload.quests.some((quest: { title: string; }) => quest.title === 'Drei Komplimente')).toBeTruthy();
+        expect(overridePayload.quests.some((quest: { title: string }) => quest.title === 'Drei Komplimente')).toBeTruthy();
       });
 
-      const invalidResponse = await apiGetRaw(request, '/api/quests?lang=fr', partnerA.token);
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: unsupported lang falls back to German', async () => {
+        const invalidResponse = await apiGetRaw(request, '/api/quests?lang=fr', partnerA.token);
+        const invalidPayload = await invalidResponse.json();
         expect(invalidResponse.ok()).toBeTruthy();
-      });
-      const invalidPayload = await invalidResponse.json();
-      await test.step('Verify expected result', async () => {
         expect(invalidPayload.locale).toBe('de');
-      });
-      await test.step('Verify expected result', async () => {
-        expect(invalidPayload.quests.some((quest: { title: string; }) => quest.title === 'Drei Komplimente')).toBeTruthy();
+        expect(invalidPayload.quests.some((quest: { title: string }) => quest.title === 'Drei Komplimente')).toBeTruthy();
       });
 
-      const knowMe = await apiGet<{ catalogQuestions: Array<{ questionText: string; category: string; categoryLabel: string; }>; locale: string; }>(
-        request,
-        '/api/know-me?lang=en',
-        partnerA.token,
-      );
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: know-me catalog resolves English translations', async () => {
+        const knowMe = await apiGet<{
+          catalogQuestions: Array<{ questionText: string; category: string; categoryLabel: string }>;
+          locale: string;
+        }>(request, '/api/know-me?lang=en', partnerA.token);
         expect(knowMe.locale).toBe('en');
-      });
-      await test.step('Verify expected result', async () => {
         expect(knowMe.catalogQuestions).toEqual(
           expect.arrayContaining([
-            expect.objectContaining({ questionText: 'What would my perfect Sunday look like?', category: 'everyday', categoryLabel: 'Everyday life' }),
+            expect.objectContaining({
+              questionText: 'What would my perfect Sunday look like?',
+              category: 'everyday',
+              categoryLabel: 'Everyday life',
+            }),
           ]),
         );
       });

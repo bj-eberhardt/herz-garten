@@ -65,21 +65,3 @@ export function pngHeader(width: number, height: number) {
     0xae, 0x42, 0x60, 0x82,
   ]);
 }
-
-export function gardenLevelMultipart(input: { name: string; pointsToNext?: number | null; accent?: string; translations?: unknown; image?: Buffer; }) {
-  return {
-    name: input.name,
-    pointsToNext: input.pointsToNext === null || input.pointsToNext === undefined ? '' : String(input.pointsToNext),
-    accent: input.accent ?? '#8fb66b',
-    translations: JSON.stringify(input.translations ?? {}),
-    ...(input.image
-      ? {
-        backgroundImage: {
-          name: 'background.png',
-          mimeType: 'image/png',
-          buffer: input.image,
-        },
-      }
-      : {}),
-  };
-}

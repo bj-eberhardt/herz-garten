@@ -22,9 +22,13 @@ test.describe('user flow / know me taxonomy', () => {
           '/api/admin/relationship-modes',
           {
             value: relationshipValue,
-            label: `KM Relationship ${runId}`,
             active: true,
             sortOrder: 1,
+            translations: {
+                'de': {
+                    label: `KM Relationship ${runId}`
+                }
+            }
           },
           adminToken,
         ),
@@ -36,9 +40,13 @@ test.describe('user flow / know me taxonomy', () => {
           '/api/admin/content-styles',
           {
             value: styleValue,
-            label: `KM Style ${runId}`,
             active: true,
             sortOrder: 1,
+            translations: {
+                'de': {
+                    label: `KM Style ${runId}`
+                }
+            }
           },
           adminToken,
         ),
@@ -51,11 +59,15 @@ test.describe('user flow / know me taxonomy', () => {
           {
             contentType: 'know-me-catalog',
             value: preferredCategory,
-            label: `KM Preferred ${runId}`,
             active: true,
             sortOrder: 99,
             relationshipModes: [relationshipValue],
             contentStyles: [styleValue],
+            translations: {
+                'de': {
+                    label: `KM Preferred ${runId}`
+                }
+            }
           },
           adminToken,
         ),
@@ -68,9 +80,13 @@ test.describe('user flow / know me taxonomy', () => {
           {
             contentType: 'know-me-catalog',
             value: neutralCategory,
-            label: `KM Neutral ${runId}`,
             active: true,
             sortOrder: 1,
+            translations: {
+                'de': {
+                    label: `KM Neutral ${runId}`
+                }
+            }
           },
           adminToken,
         ),
@@ -127,10 +143,9 @@ test.describe('user flow / know me taxonomy', () => {
 
       const apiPayload = await apiGet<{
         catalogQuestions: Array<{ questionText: string; }>;
-      }>(request, '/api/know-me', setup.partnerA.token);
-      await test.step('Verify expected result', async () => {
+      }>(request, '/api/know-me', setup.partnerA.token);      await test.step('Assert: preferred know-me category sorts before neutral category', async () => {
         expect(apiPayload.catalogQuestions.findIndex((question) => question.questionText === preferredQuestion)).toBeLessThan(
-          apiPayload.catalogQuestions.findIndex((question) => question.questionText === neutralQuestion),
+        apiPayload.catalogQuestions.findIndex((question) => question.questionText === neutralQuestion),
         );
       });
 
@@ -167,3 +182,4 @@ test.describe('user flow / know me taxonomy', () => {
     });
   });
 });
+

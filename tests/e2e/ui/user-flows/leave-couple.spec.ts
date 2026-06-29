@@ -27,7 +27,7 @@ test.describe('user flow / leave couple', () => {
       await test.step('Click settings confirm accept', async () => {
         await pageA.getByTestId('settings-confirm-accept').click();
       });
-      await test.step('Verify expected result', async () => {
+      await test.step('Assert: user is on onboarding page', async () => {
         await expect(pageA).toHaveURL(/\/onboarding$/);
       });
       await test.step('Verify join couple form', async () => {
