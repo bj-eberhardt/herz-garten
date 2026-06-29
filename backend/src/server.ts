@@ -63,7 +63,7 @@ if (config.staticDir) {
   }
 
   app.use(express.static(staticDir));
-  app.get('*', (request, response, next) => {
+  app.get('/{*splat}', (request, response, next) => {
     if (request.path.startsWith('/api')) {
       next();
       return;
