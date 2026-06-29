@@ -4,11 +4,11 @@ const marker = '<!-- herzgarten-pr-ci-comment -->';
 const playwrightResultsPath = process.env.PLAYWRIGHT_RESULTS_PATH || 'test-results/playwright-results.json';
 
 function iconFor(outcome) {
-  if (outcome === 'success' || outcome === 'passed') return '?';
-  if (outcome === 'failure' || outcome === 'failed' || outcome === 'timedOut') return '?';
-  if (outcome === 'skipped' || outcome === 'not configured') return '?';
-  if (outcome === 'cancelled' || outcome === 'interrupted') return '??';
-  return '?';
+  if (outcome === 'success' || outcome === 'passed') return '\u2705';
+  if (outcome === 'failure' || outcome === 'failed' || outcome === 'timedOut') return '\u274c';
+  if (outcome === 'skipped' || outcome === 'not configured') return '\u26aa';
+  if (outcome === 'cancelled' || outcome === 'interrupted') return '\u26a0\ufe0f';
+  return '\u2754';
 }
 
 function labelFor(outcome) {
