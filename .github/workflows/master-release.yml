@@ -63,7 +63,6 @@ jobs:
 
       - name: Tag and push Docker image
         if: success()
-        working-directory: docker/prod
         run: |
          docker buildx build -f Dockerfile.prod --platform linux/amd64,linux/arm64 -t "${{ secrets.DOCKERHUB_USERNAME }}/herzgarten:latest" -t "${{ secrets.DOCKERHUB_USERNAME }}/herzgarten:${{ steps.get-version.outputs.version }}" --push .
 
