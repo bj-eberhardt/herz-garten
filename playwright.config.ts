@@ -12,7 +12,7 @@ export default defineConfig({
   globalSetup: './tests/e2e/globalSetup.ts',
   globalTeardown: './tests/e2e/globalTeardown.ts',
   retries: process.env.CI ? 2 : 0,
-  reporter: [['list'], ['html', { open: 'never' }]],
+  reporter: [['list'], ['json', { outputFile: 'test-results/playwright-results.json' }], ['html', { open: 'never' }]],
   use: {
     baseURL,
     trace: 'on-first-retry',
