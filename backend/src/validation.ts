@@ -33,7 +33,11 @@ export function validateQuery<T>(schema: ZodType<T>, errorKey: ApiErrorKey = 'co
       return;
     }
 
-    request.query = parsed.data as Request['query'];
+    Object.defineProperty(request, 'query', {
+      value: parsed.data as Request['query'],
+      configurable: true,
+      enumerable: true,
+    });
     next();
   };
 }
