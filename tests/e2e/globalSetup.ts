@@ -17,6 +17,38 @@ function runDocker(args: string[]) {
   });
 }
 
+async function createQueryStatsExtension() {
+  await runDocker([
+    ...composeArgs,
+    'exec',
+    '-T',
+    'db',
+    'psql',
+    '-U',
+    'herzgarten',
+    '-d',
+    'herzgarten',
+    '-c',
+    'CREATE EXTENSION IF NOT EXISTS pg_stat_statements;',
+  ]);
+}
+
+async function resetQueryStats() {
+  await runDocker([
+    ...composeArgs,
+    'exec',
+    '-T',
+    'db',
+    'psql',
+    '-U',
+    'herzgarten',
+    '-d',
+    'herzgarten',
+    '-c',
+    'SELECT pg_stat_statements_reset();',
+  ]);
+}
+
 async function waitFor(url: string, label: string) {
   const deadline = Date.now() + 120_000;
   let lastError = '';
@@ -39,7 +71,11 @@ export default async function globalSetup() {
   if (process.env.E2E_SKIP_DOCKER !== '1') {
     await runDocker([...composeArgs, 'down', '-v', '--remove-orphans']);
     await runDocker([...composeArgs, 'up', '--build', '-d']);
+    await createQueryStatsExtension();
   }
   await waitFor(process.env.E2E_BACKEND_HEALTH_URL ?? 'http://localhost:3001/health', 'Backend');
   await waitFor(process.env.E2E_BASE_URL ?? 'http://localhost:5174', 'Frontend');
+  if (process.env.E2E_SKIP_DOCKER !== '1') {
+    await resetQueryStats();
+  }
 }

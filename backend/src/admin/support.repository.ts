@@ -253,43 +253,92 @@ export async function listCouples(request: Request) {
   const params = [...filters.params, limit, offset];
   const result = await pool.query(
     `
-      select
-        c.id,
-        c.invite_code as "inviteCode",
-        c.relationship_type as "relationshipType",
-        c.content_preference as "contentPreference",
-        c.heart_points as "heartPoints",
-        c.garden_stage as "gardenStage",
-        c.created_at as "createdAt",
-        coalesce(
+      with base_couples as (
+        select
+          c.id,
+          c.invite_code,
+          c.relationship_type,
+          c.content_preference,
+          c.heart_points,
+          c.garden_stage,
+          c.created_at
+        from couples c
+        ${filters.clause()}
+        order by c.created_at desc
+        limit $${params.length - 1} offset $${params.length}
+      ),
+      members as (
+        select
+          cm.couple_id,
           jsonb_agg(
-            distinct jsonb_build_object(
+            jsonb_build_object(
               'id', p.id,
               'email', p.email,
               'displayName', p.display_name,
               'role', cm.role,
               'joinedAt', cm.joined_at
             )
-          ) filter (where p.id is not null),
-          '[]'::jsonb
-        ) as members,
-        count(distinct dqa.id)::int as "dailyAnswerCount",
-        count(distinct cq.id) filter (where cq.status = 'completed')::int as "completedQuestCount",
-        count(distinct ljn.id)::int as "loveJarNoteCount",
-        count(distinct me.id)::int as "memoryCount",
-        count(distinct km.id) filter (where km.status = 'answered')::int as "knowMeRoundCount"
-      from couples c
-      left join couple_members cm on cm.couple_id = c.id
-      left join profiles p on p.id = cm.user_id
-      left join daily_question_answers dqa on dqa.couple_id = c.id
-      left join couple_quests cq on cq.couple_id = c.id
-      left join love_jar_notes ljn on ljn.couple_id = c.id
-      left join memory_entries me on me.couple_id = c.id
-      left join know_me_questions km on km.couple_id = c.id
-      ${filters.clause()}
-      group by c.id
-      order by c.created_at desc
-      limit $${params.length - 1} offset $${params.length}
+            order by p.email
+          ) as members
+        from couple_members cm
+        join profiles p on p.id = cm.user_id
+        join base_couples bc on bc.id = cm.couple_id
+        group by cm.couple_id
+      ),
+      daily_answers as (
+        select dqa.couple_id, count(*)::int as answer_count
+        from daily_question_answers dqa
+        join base_couples bc on bc.id = dqa.couple_id
+        group by dqa.couple_id
+      ),
+      completed_quests as (
+        select cq.couple_id, count(*)::int as quest_count
+        from couple_quests cq
+        join base_couples bc on bc.id = cq.couple_id
+        where cq.status = 'completed'
+        group by cq.couple_id
+      ),
+      love_jar_counts as (
+        select ljn.couple_id, count(*)::int as note_count
+        from love_jar_notes ljn
+        join base_couples bc on bc.id = ljn.couple_id
+        group by ljn.couple_id
+      ),
+      memory_counts as (
+        select me.couple_id, count(*)::int as memory_count
+        from memory_entries me
+        join base_couples bc on bc.id = me.couple_id
+        group by me.couple_id
+      ),
+      know_me_counts as (
+        select km.couple_id, count(*)::int as round_count
+        from know_me_questions km
+        join base_couples bc on bc.id = km.couple_id
+        where km.status = 'answered'
+        group by km.couple_id
+      )
+      select
+        bc.id,
+        bc.invite_code as "inviteCode",
+        bc.relationship_type as "relationshipType",
+        bc.content_preference as "contentPreference",
+        bc.heart_points as "heartPoints",
+        bc.garden_stage as "gardenStage",
+        bc.created_at as "createdAt",
+        coalesce(members.members, '[]'::jsonb) as members,
+        coalesce(daily_answers.answer_count, 0) as "dailyAnswerCount",
+        coalesce(completed_quests.quest_count, 0) as "completedQuestCount",
+        coalesce(love_jar_counts.note_count, 0) as "loveJarNoteCount",
+        coalesce(memory_counts.memory_count, 0) as "memoryCount",
+        coalesce(know_me_counts.round_count, 0) as "knowMeRoundCount"
+      from base_couples bc
+      left join members on members.couple_id = bc.id
+      left join daily_answers on daily_answers.couple_id = bc.id
+      left join completed_quests on completed_quests.couple_id = bc.id
+      left join love_jar_counts on love_jar_counts.couple_id = bc.id
+      left join memory_counts on memory_counts.couple_id = bc.id
+      left join know_me_counts on know_me_counts.couple_id = bc.id
+      order by bc.created_at desc
     `,
     params,
   );
