@@ -3,7 +3,8 @@ import { listPreferenceOptions } from '../../admin/preferences.repository.js';
 import { config } from '../../config.js';
 import { handleError } from '../../errors.js';
 import { sendJson } from '../../http.js';
-import { configResponseSchema, type ConfigResponse } from '../bodySchemas.js';
+import { validateQuery } from '../../validation.js';
+import { configResponseSchema, localizedQuerySchema, type ConfigResponse } from '../bodySchemas.js';
 import { listSupportedLocales } from '../config.repository.js';
 import { resolveLocale } from '../support.repository.js';
 import { isEmailAvailable } from '../../email/email.service.js';
@@ -31,7 +32,7 @@ export function registerConfigRoutes(router: Router) {
     }
   });
 
-  router.get('/config/preferences', async (request, response) => {
+  router.get('/config/preferences', validateQuery(localizedQuerySchema, 'rejected'), async (request, response) => {
     try {
       sendJson<PreferenceOptionsPayload>(response, await listPreferenceOptions(await resolveLocale(request)));
     } catch (error) {
@@ -39,3 +40,4 @@ export function registerConfigRoutes(router: Router) {
     }
   });
 }
+

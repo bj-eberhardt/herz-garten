@@ -1,6 +1,7 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import type { Request } from 'express';
 import { config } from '../config.js';
+import { validatedQuery } from '../validation.js';
 import { pool } from '../db.js';
 import { normalizeLocale, parseAcceptLanguage } from '../i18n/locales.js';
 import {
@@ -23,6 +24,7 @@ import {
   gardenStageForPoints,
   nextGardenUnlock,
 } from './garden/levels.repository.js';
+import type { LocalizedQuery } from './bodySchemas.js';
 import {
   assetKeyForGardenObject,
   assetKeyForQuest,
@@ -390,8 +392,8 @@ export function todayIsoDate() {
 }
 
 export async function resolveLocale(request: Request) {
-  const requestedLocale =
-    normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || config.i18nDefaultLocale;
+  const query = validatedQuery<LocalizedQuery>(request);
+  const requestedLocale = normalizeLocale(query.lang) || parseAcceptLanguage(request.header('accept-language')) || config.i18nDefaultLocale;
   const result = await pool.query<{ locale: string; isDefault: boolean }>(
     `
       select locale, is_default as "isDefault"
@@ -1833,3 +1835,4 @@ export async function createUniqueInviteCode(locale = 'de') {
 
   throw new Error('Could not create unique invite code');
 }
+

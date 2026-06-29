@@ -2,7 +2,7 @@ import type { Router } from 'express';
 import { currentUser, requireAuth } from '../../auth.js';
 import { handleError, sendApiError } from '../../errors.js';
 import { sendJson } from '../../http.js';
-import { validateBody, validateQuery } from '../../validation.js';
+import { validateBody, validateQuery, validatedQuery } from '../../validation.js';
 import { emptyBodySchema, localizedQuerySchema, questQuerySchema, type QuestQuery } from '../bodySchemas.js';
 import { acceptQuest, completeQuest } from '../quests/quests.service.js';
 import { buildQuestPayload, normalizeQuestFilters, resolveLocale } from '../support.repository.js';
@@ -14,7 +14,7 @@ type QuestsPayload = NonNullable<Awaited<ReturnType<typeof buildQuestPayload>>>;
 export function registerQuestRoutes(router: Router) {
   router.get('/quests', requireAuth, validateQuery(questQuerySchema, 'rejected'), async (request, response) => {
     const user = currentUser(request);
-    const query = request.query as QuestQuery;
+    const query = validatedQuery<QuestQuery>(request);
 
     try {
       const locale = await resolveLocale(request);
@@ -91,3 +91,4 @@ export function registerQuestRoutes(router: Router) {
     }
   });
 }
+

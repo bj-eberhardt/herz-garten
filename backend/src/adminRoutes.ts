@@ -4,7 +4,7 @@ import { requireAdminAuth, signAdminToken } from './adminAuth.js';
 import { config } from './config.js';
 import { handleError, sendApiError } from './errors.js';
 import { createRateLimiter } from './security/rateLimit.js';
-import { validateBody, validateQuery } from './validation.js';
+import { validateBody, validateQuery, validatedQuery } from './validation.js';
 import { deleteUploadedImageIfManaged, saveUploadedImage, upload } from './admin/uploads.js';
 import {
   adminCouplePreferencesBodySchema,
@@ -14,6 +14,9 @@ import {
   adminLocalizedQuerySchema,
   adminMessageTemplatesQuerySchema,
   emptyQuerySchema,
+  type AdminCategoriesQuery,
+  type AdminLocalizedQuery,
+  type AdminMessageTemplatesQuery,
   adminLoginBodySchema,
   adminSettingsBodySchema,
   adminUserPasswordBodySchema,
@@ -521,8 +524,9 @@ export function adminRouter(): Router {
 
   router.get('/message-templates', requireAdminAuth, validateQuery(adminMessageTemplatesQuerySchema), async (request, response) => {
     try {
-      const namespace = normalizeText(request.query.namespace) || 'notifications';
-      const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || config.i18nDefaultLocale;
+      const query = validatedQuery<AdminMessageTemplatesQuery>(request);
+      const namespace = normalizeText(query.namespace) || 'notifications';
+      const locale = normalizeLocale(query.lang) || parseAcceptLanguage(request.header('accept-language')) || config.i18nDefaultLocale;
       response.json({ items: await listMessageTemplates(namespace, locale) });
     } catch (error) {
       handleError(response, error);
@@ -532,7 +536,8 @@ export function adminRouter(): Router {
   router.patch('/message-templates/:key', requireAdminAuth, validateQuery(adminLocalizedQuerySchema), validateBody(messageTemplateBodySchema), async (request, response) => {
     try {
       const key = String(request.params.key);
-      const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || config.i18nDefaultLocale;
+      const query = validatedQuery<AdminLocalizedQuery>(request);
+      const locale = normalizeLocale(query.lang) || parseAcceptLanguage(request.header('accept-language')) || config.i18nDefaultLocale;
       const result = await saveMessageTemplate(key, request.body, locale);
       if (result.status === 'notFound') {
         sendAdminError(response, 404, 'admin.messageTemplateNotFound', 'Message template not found.');
@@ -553,7 +558,8 @@ export function adminRouter(): Router {
 
   router.get('/garden/levels', requireAdminAuth, validateQuery(adminLocalizedQuerySchema), async (request, response) => {
     try {
-      const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
+      const query = validatedQuery<AdminLocalizedQuery>(request);
+      const locale = normalizeLocale(query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
       const payload: AdminGardenLevelsResponse = { items: await listGardenLevels(locale) };
       response.json(payload);
     } catch (error) {
@@ -564,7 +570,8 @@ export function adminRouter(): Router {
   router.post('/garden/levels', requireAdminAuth, validateQuery(adminLocalizedQuerySchema), upload.single('backgroundImage'), async (request, response) => {
     let uploadedImage: { path: string; absolutePath: string; width: number; height: number } | null = null;
     try {
-      const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
+      const query = validatedQuery<AdminLocalizedQuery>(request);
+      const locale = normalizeLocale(query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
       if (!request.file) {
         sendAdminError(response, 400, 'admin.gardenLevel.backgroundRequired', 'Garden level background image is required.');
         return;
@@ -612,7 +619,8 @@ export function adminRouter(): Router {
         sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Garden level not found.');
         return;
       }
-      const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
+      const query = validatedQuery<AdminLocalizedQuery>(request);
+      const locale = normalizeLocale(query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
       oldBackgroundImage = (await listGardenLevels(locale)).find((level) => level.id === levelId)?.backgroundImage;
       const parsedBody = gardenLevelMultipartBody(request);
       if (!parsedBody.ok) {
@@ -662,7 +670,8 @@ export function adminRouter(): Router {
         sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Garden level not found.');
         return;
       }
-      const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
+      const query = validatedQuery<AdminLocalizedQuery>(request);
+      const locale = normalizeLocale(query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
       const result = await deleteGardenLevel(levelId, locale);
       if (result.status === 'not_found') {
         sendAdminError(response, 404, 'admin.gardenLevelNotFound', 'Garden level not found.');
@@ -766,7 +775,8 @@ export function adminRouter(): Router {
   });
 
   async function handlePreferenceList(kind: PreferenceKind, request: Request, response: Response) {
-    const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
+    const query = validatedQuery<AdminLocalizedQuery>(request);
+    const locale = normalizeLocale(query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
     response.json({ items: await listPreferences(kind, locale) });
   }
 
@@ -855,8 +865,9 @@ export function adminRouter(): Router {
 
   router.get('/categories', requireAdminAuth, validateQuery(adminCategoriesQuerySchema), async (request, response) => {
     try {
-      const type = normalizeText(request.query.type);
-      const locale = normalizeLocale(request.query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
+      const query = validatedQuery<AdminCategoriesQuery>(request);
+      const type = normalizeText(query.type);
+      const locale = normalizeLocale(query.lang) || parseAcceptLanguage(request.header('accept-language')) || 'de';
       if (type && !isContentType(type)) {
         sendAdminError(response, 404, 'content.notFound', 'Content type not found.');
         return;
@@ -928,7 +939,7 @@ export function adminRouter(): Router {
     }
   });
 
-  router.post('/content/:type', requireAdminAuth, validateEditableContentBody, async (request, response) => {
+  router.post('/content/:type', requireAdminAuth, validateQuery(adminContentListQuerySchema), validateEditableContentBody, async (request, response) => {
     try {
       const type = String(request.params.type);
       if (!isEditableContentType(type)) {
@@ -943,7 +954,7 @@ export function adminRouter(): Router {
     }
   });
 
-  router.patch('/content/:type/:id', requireAdminAuth, validateEditableContentBody, async (request, response) => {
+  router.patch('/content/:type/:id', requireAdminAuth, validateQuery(adminContentListQuerySchema), validateEditableContentBody, async (request, response) => {
     try {
       const type = String(request.params.type);
       if (!isEditableContentType(type)) {
@@ -960,4 +971,6 @@ export function adminRouter(): Router {
 
   return router;
 }
+
+
 
