@@ -58,6 +58,16 @@ export default tseslint.config(
     },
   },
   {
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  {
     files: ["vite.config.ts", "playwright.config.ts", "tests/**/*.ts"],
     languageOptions: {
       globals: {

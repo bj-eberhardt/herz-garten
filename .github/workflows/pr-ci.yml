@@ -1,0 +1,158 @@
+name: PR CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  actions: read
+
+jobs:
+  build-lint-e2e:
+    name: Build, lint and E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Build frontend
+        id: frontend-build
+        continue-on-error: true
+        run: npm run build
+
+      - name: Build backend
+        id: backend-build
+        continue-on-error: true
+        run: npm run build
+        working-directory: backend
+
+      - name: Lint frontend
+        id: frontend-lint
+        continue-on-error: true
+        run: |
+          if npm pkg get scripts.lint | grep -qv '{}'; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            npm run lint
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "No frontend lint script found."
+          fi
+
+      - name: Lint backend
+        id: backend-lint
+        continue-on-error: true
+        run: |
+          if npm pkg get scripts.lint | grep -qv '{}'; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            npm run lint
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "No backend lint script found."
+          fi
+        working-directory: backend
+
+      - name: Run E2E tests
+        id: e2e
+        continue-on-error: true
+        env:
+          CI: "true"
+          E2E_COMPOSE_PROJECT: herzgarten-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        id: playwright-report-artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: warn
+
+      - name: Upload test results and DB logs
+        id: test-results-artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          if-no-files-found: warn
+
+      - name: Create PR comment body
+        id: comment-body
+        if: always()
+        env:
+          FRONTEND_BUILD_OUTCOME: ${{ steps.frontend-build.outcome }}
+          BACKEND_BUILD_OUTCOME: ${{ steps.backend-build.outcome }}
+          FRONTEND_LINT_OUTCOME: ${{ steps.frontend-lint.outcome }}
+          FRONTEND_LINT_CONFIGURED: ${{ steps.frontend-lint.outputs.configured }}
+          BACKEND_LINT_OUTCOME: ${{ steps.backend-lint.outcome }}
+          BACKEND_LINT_CONFIGURED: ${{ steps.backend-lint.outputs.configured }}
+          E2E_OUTCOME: ${{ steps.e2e.outcome }}
+          PLAYWRIGHT_REPORT_URL: ${{ steps.playwright-report-artifact.outputs.artifact-url }}
+          TEST_RESULTS_URL: ${{ steps.test-results-artifact.outputs.artifact-url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node scripts/pr-ci-comment.mjs > pr-ci-comment.md
+
+      - name: Replace PR comment
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const marker = '<!-- herzgarten-pr-ci-comment -->';
+            const body = fs.readFileSync('pr-ci-comment.md', 'utf8');
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            for (const comment of comments) {
+              if (comment.user.type === 'Bot' && comment.body?.includes(marker)) {
+                await github.rest.issues.deleteComment({
+                  owner,
+                  repo,
+                  comment_id: comment.id,
+                });
+              }
+            }
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number,
+              body,
+            });
+
+      - name: Fail on unsuccessful checks
+        if: >-
+          steps.frontend-build.outcome != 'success' ||
+          steps.backend-build.outcome != 'success' ||
+          steps.frontend-lint.outcome != 'success' ||
+          steps.backend-lint.outcome != 'success' ||
+          steps.e2e.outcome != 'success'
+        run: exit 1
