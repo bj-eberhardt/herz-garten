@@ -19,14 +19,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            backend/package-lock.json
+      - name: Setup project
+        uses: ./.github/actions/setup-node-project
 
       - name: Install frontend dependencies
         run: npm ci
