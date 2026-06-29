@@ -52,7 +52,7 @@ app.use('/api/admin', adminRouter());
 app.use('/api', apiRouter());
 
 const uploadDir = path.resolve(config.uploadDir);
-app.use('/uploads', express.static(uploadDir));
+app.use('/uploads', express.static(uploadDir, { dotfiles: 'allow' /* Express 5: preserve v4 behavior */ }));
 
 if (config.staticDir) {
   const staticDir = path.resolve(config.staticDir);
@@ -62,14 +62,14 @@ if (config.staticDir) {
     throw new Error(`Static frontend index not found: ${indexFile}`);
   }
 
-  app.use(express.static(staticDir));
-  app.get('*', (request, response, next) => {
+  app.use(express.static(staticDir, { dotfiles: 'allow' /* Express 5: preserve v4 behavior */ }));
+  app.get('/{*splat}', (request, response, next) => {
     if (request.path.startsWith('/api')) {
       next();
       return;
     }
 
-    response.sendFile(indexFile);
+    response.sendFile(indexFile, { dotfiles: 'allow' /* Express 5: preserve v4 behavior */ });
   });
 }
 

@@ -10,6 +10,9 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },
   server: {
+    watch: {
+      ignored: ['**/playwright-report/**', '**/test-results/**'],
+    },
     proxy: {
       '/uploads': {
         target: proxyTarget,

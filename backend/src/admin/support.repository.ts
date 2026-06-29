@@ -6,10 +6,10 @@ import { pool } from '../db.js';
 import { withTransaction } from '../db/transaction.js';
 import { SqlWhereBuilder } from '../db/queryBuilder.js';
 import { normalizeLocale, parseAcceptLanguage } from '../i18n/locales.js';
-import { validateBody } from '../validation.js';
+import { validateBody, validatedQuery } from '../validation.js';
 import { createNotifications } from '../api/support.repository.js';
 import { renderEmailTemplate, sendMail } from '../email/email.service.js';
-import { contentBodySchema } from './bodySchemas.js';
+import { contentBodySchema, type AdminContentListQuery, type AdminListQuery } from './bodySchemas.js';
 import {
   isContentType,
   isEditableContentType,
@@ -38,13 +38,15 @@ export function normalizeInteger(value: unknown, fallback: number) {
 }
 
 export function pagination(request: Request) {
-  const limit = Math.min(Math.max(normalizeInteger(request.query.limit, 25), 1), 100);
-  const offset = Math.max(normalizeInteger(request.query.offset, 0), 0);
+  const query = validatedQuery<AdminListQuery>(request);
+  const limit = Math.min(Math.max(normalizeInteger(query.limit, 25), 1), 100);
+  const offset = Math.max(normalizeInteger(query.offset, 0), 0);
   return { limit, offset };
 }
 
 export function requestedFormat(request: Request) {
-  return normalizeText(request.query.format) === 'csv' ? 'csv' : 'json';
+  const query = validatedQuery<AdminListQuery>(request);
+  return normalizeText(query.format) === 'csv' ? 'csv' : 'json';
 }
 
 export function csvEscape(value: unknown) {
@@ -133,7 +135,8 @@ export async function buildOverview() {
 
 export async function listUsers(request: Request) {
   const { limit, offset } = pagination(request);
-  const search = normalizeText(request.query.search);
+  const query = validatedQuery<AdminListQuery>(request);
+  const search = normalizeText(query.search);
   const filters = new SqlWhereBuilder();
 
   if (search) {
@@ -234,7 +237,8 @@ export async function resetUserPasswordByAdmin(userId: string, password: string,
 
 export async function listCouples(request: Request) {
   const { limit, offset } = pagination(request);
-  const search = normalizeText(request.query.search);
+  const query = validatedQuery<AdminListQuery>(request);
+  const search = normalizeText(query.search);
   const filters = new SqlWhereBuilder();
 
   if (search) {
@@ -421,9 +425,10 @@ export async function updateCouplePreferences(id: string, relationshipType: stri
 }
 
 export async function listDailyQuestions(request: Request) {
-  const active = normalizeText(request.query.active);
-  const search = normalizeText(request.query.search);
-  const category = normalizeText(request.query.category);
+  const query = validatedQuery<AdminContentListQuery>(request);
+  const active = normalizeText(query.active);
+  const search = normalizeText(query.search);
+  const category = normalizeText(query.category);
   const params: unknown[] = [];
   const where: string[] = [];
   if (active === 'true') where.push('q.active = true');
@@ -502,9 +507,10 @@ export async function saveDailyQuestion(body: Record<string, unknown>, id: strin
 }
 
 export async function listQuests(request: Request) {
-  const active = normalizeText(request.query.active);
-  const search = normalizeText(request.query.search);
-  const category = normalizeText(request.query.category);
+  const query = validatedQuery<AdminContentListQuery>(request);
+  const active = normalizeText(query.active);
+  const search = normalizeText(query.search);
+  const category = normalizeText(query.category);
   const params: unknown[] = [];
   const where: string[] = [];
   if (active === 'true') where.push('q.active = true');
@@ -612,9 +618,10 @@ export async function saveQuest(body: Record<string, unknown>, id: string = rand
 }
 
 export async function listKnowMeCatalog(request: Request) {
-  const active = normalizeText(request.query.active);
-  const search = normalizeText(request.query.search);
-  const category = normalizeText(request.query.category);
+  const query = validatedQuery<AdminContentListQuery>(request);
+  const active = normalizeText(query.active);
+  const search = normalizeText(query.search);
+  const category = normalizeText(query.category);
   const params: unknown[] = [];
   const where: string[] = [];
   if (active === 'true') where.push('q.active = true');
@@ -693,9 +700,10 @@ export async function saveKnowMeCatalog(body: Record<string, unknown>, id: strin
 }
 
 export async function listLoveJarTemplates(request: Request) {
-  const active = normalizeText(request.query.active);
-  const search = normalizeText(request.query.search);
-  const category = normalizeText(request.query.category);
+  const query = validatedQuery<AdminContentListQuery>(request);
+  const active = normalizeText(query.active);
+  const search = normalizeText(query.search);
+  const category = normalizeText(query.category);
   const params: unknown[] = [];
   const where: string[] = [];
   if (active === 'true') where.push('t.active = true');
@@ -792,5 +800,6 @@ export const validateEditableContentBody = (request: Request, response: Response
   }
   validateBody(contentBodySchema(type))(request, response, next);
 };
+
 
 

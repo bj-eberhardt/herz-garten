@@ -77,6 +77,7 @@ export const adminListQuerySchema = z
     format: z.enum(['json', 'csv']).optional(),
   })
   .strict();
+export type AdminListQuery = z.infer<typeof adminListQuerySchema>;
 
 export const adminContentListQuerySchema = z
   .object({
@@ -85,6 +86,7 @@ export const adminContentListQuerySchema = z
     active: z.enum(['true', 'false']).optional(),
   })
   .strict();
+export type AdminContentListQuery = z.infer<typeof adminContentListQuerySchema>;
 
 export const adminCategoriesQuerySchema = z
   .object({
@@ -92,12 +94,14 @@ export const adminCategoriesQuerySchema = z
     lang: localeQueryString.optional(),
   })
   .strict();
+export type AdminCategoriesQuery = z.infer<typeof adminCategoriesQuerySchema>;
 
 export const adminLocalizedQuerySchema = z
   .object({
     lang: localeQueryString.optional(),
   })
   .strict();
+export type AdminLocalizedQuery = z.infer<typeof adminLocalizedQuerySchema>;
 
 export const adminMessageTemplatesQuerySchema = z
   .object({
@@ -105,6 +109,7 @@ export const adminMessageTemplatesQuerySchema = z
     lang: localeQueryString.optional(),
   })
   .strict();
+export type AdminMessageTemplatesQuery = z.infer<typeof adminMessageTemplatesQuerySchema>;
 
 export const categoryBodySchema = z
   .object({
@@ -222,3 +227,4 @@ export function contentBodySchema(type: string) {
   if (type === 'know-me-catalog') return knowMeCatalogBodySchema;
   return loveJarTemplateBodySchema;
 }
+
