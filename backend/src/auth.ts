@@ -4,6 +4,7 @@ import { getAuthSettings } from './admin/settings.service.js';
 import { config } from './config.js';
 import { pool } from './db.js';
 import { sendApiError } from './errors.js';
+import { errorMetadata, logger } from './logger.js';
 
 export interface AuthUser {
   id: string;
@@ -38,6 +39,11 @@ export async function requireAuth(request: Request, response: Response, next: Ne
   const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : undefined;
 
   if (!token) {
+    logger.warn('Auth rejected: missing bearer token', {
+      path: request.path,
+      method: request.method,
+      hasAuthorizationHeader: Boolean(header),
+    });
     sendApiError(response, 401, 'auth.missingToken');
     return;
   }
@@ -58,13 +64,28 @@ export async function requireAuth(request: Request, response: Response, next: Ne
 
     const user = result.rows[0];
     if (!user) {
+      logger.warn('Auth rejected: token subject not found', {
+        path: request.path,
+        method: request.method,
+        subject: payload.sub,
+      });
       sendApiError(response, 401, 'auth.invalidToken');
       return;
     }
 
+    logger.debug('Auth accepted', {
+      path: request.path,
+      method: request.method,
+      userId: user.id,
+    });
     request.user = user;
     next();
-  } catch {
+  } catch (error) {
+    logger.warn('Auth rejected: JWT verification failed', {
+      path: request.path,
+      method: request.method,
+      ...errorMetadata(error),
+    });
     sendApiError(response, 401, 'auth.invalidToken');
   }
 }
