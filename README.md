@@ -34,6 +34,7 @@ Beispiel `.env`:
 
 ```env
 HERZGARTEN_TAG=0.1.0 # docker image version, siehe z.B. die Github Release Versionen
+LOG_LEVEL=info # debug, info, warn, error oder silent
 
 
 # Database (Postgres)

@@ -6,6 +6,7 @@ import { config } from './config.js';
 import { checkDatabase, pool } from './db.js';
 import { adminRouter } from './adminRoutes.js';
 import { sendApiError } from './errors.js';
+import { logger } from './logger.js';
 import { apiRouter } from './routes.js';
 
 const app = express();
@@ -16,8 +17,26 @@ app.use(
   }),
 );
 app.use(express.json());
+app.use((request, response, next) => {
+  const startedAt = Date.now();
+  response.on('finish', () => {
+    logger.debug('HTTP request completed', {
+      method: request.method,
+      path: request.path,
+      statusCode: response.statusCode,
+      durationMs: Date.now() - startedAt,
+      hasAuthorizationHeader: Boolean(request.header('authorization')),
+      userAgent: request.header('user-agent'),
+    });
+  });
+  next();
+});
 app.use((error: unknown, request: Request, response: Response, next: NextFunction) => {
   if (request.path.startsWith('/api') && error instanceof SyntaxError) {
+    logger.warn('Invalid JSON request body', {
+      path: request.path,
+      method: request.method,
+    });
     sendApiError(response, 400, 'common.validation');
     return;
   }
@@ -74,10 +93,20 @@ if (config.staticDir) {
 }
 
 const server = app.listen(config.port, () => {
-  console.log(`Herzgarten backend listening on port ${config.port}`);
+  logger.info('Herzgarten backend started', {
+    port: config.port,
+    nodeEnv: config.nodeEnv,
+    logLevel: config.logLevel,
+    corsOrigin: config.corsOrigin,
+    staticDirConfigured: Boolean(config.staticDir),
+    jwtIssuer: config.jwtIssuer,
+    userJwtAudience: config.userJwtAudience,
+    adminJwtAudience: config.adminJwtAudience,
+  });
 });
 
 async function shutdown() {
+  logger.info('Herzgarten backend shutting down');
   server.close();
   await pool.end();
   process.exit(0);

@@ -7,6 +7,7 @@ const defaultUploadDir = fileURLToPath(new URL('../../public/uploads', import.me
 const nodeEnv = process.env.NODE_ENV ?? 'development';
 const pushEnabledEnv = process.env.PUSH_ENABLED?.trim().toLowerCase();
 const emailEnabledEnv = process.env.EMAIL_ENABLED?.trim().toLowerCase();
+const logLevel = process.env.LOG_LEVEL?.trim().toLowerCase() ?? (nodeEnv === 'production' ? 'info' : 'debug');
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY ?? '';
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY ?? '';
 const pushKeysConfigured = Boolean(vapidPublicKey && vapidPrivateKey);
@@ -20,6 +21,7 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL ?? 'postgresql://herzgarten:herzgarten@localhost:5432/herzgarten',
   migrationsDir: process.env.MIGRATIONS_DIR ?? '../database/migrations',
   i18nDefaultLocale: process.env.I18N_DEFAULT_LOCALE ?? 'de',
+  logLevel,
   jwtSecret: process.env.JWT_SECRET ?? defaultJwtSecret,
   adminPassword: process.env.ADMIN_PASSWORD ?? defaultAdminPassword,
   adminJwtSecret: process.env.ADMIN_JWT_SECRET ?? process.env.JWT_SECRET ?? defaultJwtSecret,

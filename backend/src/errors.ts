@@ -1,4 +1,5 @@
 import type { Response } from 'express';
+import { errorMetadata, logger } from './logger.js';
 
 const apiErrorKeys = [
   'common.unexpected',
@@ -63,6 +64,6 @@ export function sendApiError(
 }
 
 export function handleError(response: Response, error: unknown) {
-  console.error(error);
+  logger.error('Unhandled API error', errorMetadata(error));
   sendApiError(response, 500, 'common.unexpected');
 }
