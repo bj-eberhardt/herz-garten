@@ -14,7 +14,7 @@
     "@types/multer": "^2.3.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
-    "dotenv": "^18.0.6",
+    "dotenv": "^18.0.8",
     "express": "^5.2.1",
     "image-size": "^2.0.4",
     "jsonwebtoken": "^9.0.3",
